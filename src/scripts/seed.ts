@@ -11,6 +11,8 @@ if (!MONGODB_URI) {
   throw new Error("MONGODB_URI environment variable is not set");
 }
 
+const MONGODB_URI_DEFINED = MONGODB_URI;
+
 const RoleSchema = new mongoose.Schema({
   name: String,
   slug: String,
@@ -72,7 +74,7 @@ const DEFAULT_ROLES = [
 
 async function seed() {
   try {
-    await mongoose.connect(MONGODB_URI);
+    await mongoose.connect(MONGODB_URI_DEFINED);
     console.log("Connected to MongoDB");
 
     // Seed roles
