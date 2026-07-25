@@ -1,7 +1,15 @@
+import dotenv from "dotenv";
+import path from "path";
 import bcrypt from "bcryptjs";
+
+dotenv.config({ path: path.resolve(process.cwd(), ".env.local") });
 import mongoose from "mongoose";
 
-const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/wallvnext";
+const MONGODB_URI = process.env.MONGODB_URI;
+
+if (!MONGODB_URI) {
+  throw new Error("MONGODB_URI environment variable is not set");
+}
 
 const RoleSchema = new mongoose.Schema({
   name: String,
@@ -16,7 +24,7 @@ const UserSchema = new mongoose.Schema({
   email: String,
   password: String,
   slug: String,
-  role: { type: mongoose.Schema.Types.ObjectId, ref: "Role" },
+  role: String,
   isEmailVerified: { type: Boolean, default: true },
   isActive: { type: Boolean, default: true },
 }, { timestamps: true });
@@ -79,21 +87,22 @@ async function seed() {
     }
 
     // Create default admin user
-    const adminRole = await Role.findOne({ slug: "super-admin" });
     const existingAdmin = await User.findOne({ email: "admin@wall-v.com" });
 
-    if (!existingAdmin && adminRole) {
+    if (!existingAdmin) {
       const hashedPassword = await bcrypt.hash("admin123", 12);
       await User.create({
         name: "Admin",
         email: "admin@wall-v.com",
         password: hashedPassword,
         slug: "admin",
-        role: adminRole._id,
+        role: "super-admin",
         isEmailVerified: true,
         isActive: true,
       });
       console.log("Created admin user: admin@wall-v.com / admin123");
+    } else {
+      console.log("Admin user already exists");
     }
 
     console.log("Seed completed successfully!");
