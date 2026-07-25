@@ -1,0 +1,88 @@
+import { NextResponse } from "next/server";
+import bcrypt from "bcryptjs";
+import { connectToDatabase } from "@/lib/mongodb";
+import User from "@/models/user";
+import Role from "@/models/role";
+import { signToken } from "@/lib/jwt";
+import { cookies } from "next/headers";
+
+export async function POST(request: Request) {
+  try {
+    await connectToDatabase();
+    const body = await request.json();
+    const { email, password } = body;
+
+    if (!email || !password) {
+      return NextResponse.json(
+        { error: "Email and password are required" },
+        { status: 400 }
+      );
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase() })
+      .select("+password");
+
+    if (!user) {
+      return NextResponse.json(
+        { error: "Invalid email or password" },
+        { status: 401 }
+      );
+    }
+
+    if (!user.isActive) {
+      return NextResponse.json(
+        { error: "Account is deactivated" },
+        { status: 403 }
+      );
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return NextResponse.json(
+        { error: "Invalid email or password" },
+        { status: 401 }
+      );
+    }
+
+    user.lastLogin = new Date();
+    user.loginCount += 1;
+    await user.save();
+
+    const roleSlug = typeof user.role === "string" ? user.role : "customer";
+
+    const token = signToken({
+      userId: user._id.toString(),
+      email: user.email,
+      role: roleSlug,
+    });
+
+    const cookieStore = await cookies();
+    cookieStore.set("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24 * 7,
+      path: "/",
+    });
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          avatar: user.avatar,
+          role: roleSlug,
+        },
+        token,
+      },
+    });
+  } catch (error) {
+    console.error("Login error:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}

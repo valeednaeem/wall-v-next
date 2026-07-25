@@ -1,0 +1,39 @@
+import { NextResponse } from "next/server";
+import { connectToDatabase } from "@/lib/mongodb";
+import Lead from "@/models/lead";
+
+export async function GET(request: Request) {
+  try {
+    await connectToDatabase();
+    const { searchParams } = new URL(request.url);
+    const status = searchParams.get("status");
+    const search = searchParams.get("search");
+
+    const query: Record<string, unknown> = {};
+    if (status) query.status = status;
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    const leads = await Lead.find(query).sort({ createdAt: -1 }).lean();
+    return NextResponse.json({ success: true, data: leads });
+  } catch (error) {
+    console.error("Leads GET error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    await connectToDatabase();
+    const body = await request.json();
+    const lead = await Lead.create(body);
+    return NextResponse.json({ success: true, data: lead }, { status: 201 });
+  } catch (error) {
+    console.error("Leads POST error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
