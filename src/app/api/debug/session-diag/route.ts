@@ -2,8 +2,13 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { cookies } from "next/headers";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
+    const url = new URL(req.url);
+    const error = url.searchParams.get("error");
+    const code = url.searchParams.get("code");
+    const state = url.searchParams.get("state");
+
     const cookieStore = await cookies();
     const allCookies = cookieStore.getAll();
 
@@ -12,6 +17,7 @@ export async function GET() {
         c.name.includes("authjs") ||
         c.name.includes("next-auth") ||
         c.name.includes("__Secure-") ||
+        c.name.includes("__Host-") ||
         c.name === "token"
     );
 
@@ -19,14 +25,16 @@ export async function GET() {
 
     const secret = process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET;
     const secretLen = secret?.length || 0;
-    const secretFirst4 = secret?.substring(0, 4) || "none";
 
     return NextResponse.json(
       {
+        url: req.url,
+        error,
+        code: code ? code.substring(0, 10) + "..." : null,
+        state,
         secret: {
-          source: process.env.NEXTAUTH_SECRET ? "NEXTAUTH_SECRET" : process.env.AUTH_SECRET ? "AUTH_SECRET" : "NONE",
+          source: process.env.NEXTAUTH_SECRET ? "NEXTAUTH_SECRET" : "AUTH_SECRET",
           length: secretLen,
-          first4: secretFirst4,
         },
         sessionResult: session
           ? { user: session.user, expires: session.expires }
@@ -35,17 +43,13 @@ export async function GET() {
         authCookies: nextAuthCookies.map((c) => ({
           name: c.name,
           valueLength: c.value.length,
-          valueFirst20: c.value.substring(0, 20),
+          valuePreview: c.value.substring(0, 30),
         })),
         allCookieNames: allCookies.map((c) => c.name),
-        trustHost: true,
       },
       { status: 200 }
     );
   } catch (err) {
-    return NextResponse.json(
-      { error: String(err) },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: String(err) }, { status: 500 });
   }
 }

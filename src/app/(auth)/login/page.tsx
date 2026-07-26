@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
+import { signIn } from "next-auth/react";
 
 
 export default function LoginPage() {
@@ -46,8 +47,7 @@ export default function LoginPage() {
   };
 
   const handleSocialLogin = (provider: string) => {
-    const callbackUrl = encodeURIComponent("/dashboard");
-    window.location.href = `/api/auth/signin/${provider}?callbackUrl=${callbackUrl}`;
+    signIn(provider, { callbackUrl: "/dashboard" });
   };
 
   const hasSocialProviders = Object.values(availableProviders).some(Boolean);
