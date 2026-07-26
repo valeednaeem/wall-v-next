@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { signIn } from "next-auth/react";
+
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -45,8 +45,9 @@ export default function LoginPage() {
     }
   };
 
-  const handleSocialLogin = async (provider: string) => {
-    await signIn(provider, { callbackUrl: "/dashboard" });
+  const handleSocialLogin = (provider: string) => {
+    const callbackUrl = encodeURIComponent("/dashboard");
+    window.location.href = `/api/auth/signin/${provider}?callbackUrl=${callbackUrl}`;
   };
 
   const hasSocialProviders = Object.values(availableProviders).some(Boolean);
