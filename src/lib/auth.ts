@@ -127,34 +127,30 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
     async signIn({ user, account }) {
       if (account?.provider !== "credentials" && user?.email) {
-        const email = user.email;
-        const name = user.name || "User";
-        const avatar = user.image;
-        const provider = account?.provider;
-        const providerAccountId = account?.providerAccountId;
-
-        connectToDatabase()
-          .then(() => User.findOne({ email }))
-          .then((existingUser) => {
-            if (!existingUser) {
-              return User.create({
-                name,
-                email,
-                avatar,
-                slug: generateSlug(name.toLowerCase().replace(/[^a-z0-9]+/g, "-")),
-                role: "customer",
-                provider,
-                providerAccountId,
-                emailVerified: new Date(),
-                isEmailVerified: true,
-              });
-            }
-            return User.updateOne(
+        try {
+          await connectToDatabase();
+          const existingUser = await User.findOne({ email: user.email });
+          if (!existingUser) {
+            await User.create({
+              name: user.name || "User",
+              email: user.email,
+              avatar: user.image,
+              slug: generateSlug(user.name?.toLowerCase().replace(/[^a-z0-9]+/g, "-") || "user"),
+              role: "customer",
+              provider: account?.provider,
+              providerAccountId: account?.providerAccountId,
+              emailVerified: new Date(),
+              isEmailVerified: true,
+            });
+          } else {
+            await User.updateOne(
               { _id: existingUser._id },
               { $set: { emailVerified: new Date(), isEmailVerified: true, lastLogin: new Date() } }
             );
-          })
-          .catch((err) => console.error("[Auth] OAuth DB sync error:", err));
+          }
+        } catch (err) {
+          console.error("[Auth] OAuth DB sync error:", err);
+        }
       }
       return true;
     },
