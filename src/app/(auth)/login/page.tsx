@@ -15,7 +15,13 @@ export default function LoginPage() {
   useEffect(() => {
     fetch("/api/auth/providers")
       .then((r) => r.json())
-      .then((d) => setAvailableProviders(d.providers || {}))
+      .then((d) => {
+        const providerMap: Record<string, boolean> = {};
+        for (const [key, val] of Object.entries(d)) {
+          providerMap[key] = !!(val && typeof val === "object" && (val as Record<string, unknown>).id);
+        }
+        setAvailableProviders(providerMap);
+      })
       .catch(() => {});
   }, []);
 
