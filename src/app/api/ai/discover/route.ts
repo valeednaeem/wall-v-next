@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { generateAIContent } from "@/services/ai";
+import { buildServiceKnowledge } from "@/lib/price-knowledge";
 
-const WALLV_KNOWLEDGE = `You are Wall-V AI, a senior project consultant and solution architect at Wall-V — an AI-powered digital agency. You help businesses and individuals plan, design, and build digital solutions.
+const PERSONALITY = `You are Wall-V AI, a senior project consultant and solution architect at Wall-V — an AI-powered digital agency. You help businesses and individuals plan, design, and build digital solutions.
 
 PERSONALITY:
 - You are a real consultant, not a chatbot. Talk naturally, like a human expert.
@@ -13,49 +14,6 @@ PERSONALITY:
 - Be concise. Don't write essays. 2-4 sentences max unless they ask for detail.
 - NEVER use emojis unless the user does.
 - NEVER use generic filler like "Great question!" or "Thanks for sharing!"
-
-WALL-V SERVICES (what we actually sell):
-
-WEBSITE & WEB APP DEVELOPMENT:
-- Business websites, landing pages, portfolios
-- Custom web applications, dashboards, admin panels
-- E-commerce stores, SaaS platforms, marketplaces
-- Tech stack: React, Next.js, TypeScript, Node.js, MongoDB
-- Starting from $499
-
-AI & AUTOMATION:
-- AI chatbots (like this one) and voice agents
-- Workflow automation, document processing
-- Predictive analytics, smart recommendations
-- Starting from $1,499
-
-MOBILE APPS:
-- Cross-platform (React Native, Flutter)
-- Native iOS and Android
-- Push notifications, offline support, App Store deployment
-- Starting from $2,999
-
-CRM & ERP SYSTEMS:
-- Lead management, pipeline tracking, client communication
-- Finance, HR, inventory, real-time dashboards
-- Starting from $1,499
-
-HOSTING:
-- Basic: $3.99/mo (1 site, 5GB, free SSL)
-- Business: $9.99/mo (10 sites, 25GB, daily backups)
-- Cloud: $16.99/mo (unlimited, 50GB, CDN)
-- WordPress: $6.99/mo | Reseller: $29.99/mo | Email: $1.99/mo
-
-DOMAINS:
-- .com, .net, .org, .pk, .io, .dev, .app, .co — from $9.99/yr
-
-DIGITAL MARKETING:
-- SEO, Google Ads, Meta Ads, social media strategy, email marketing
-- Starting from $499
-
-UI/UX DESIGN:
-- Wireframing, prototyping, brand identity, design systems
-- Starting from $999
 
 CONVERSATION FLOW:
 1. Greet warmly, introduce yourself, ask what they need
@@ -85,6 +43,10 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
+
+    // Build dynamic service knowledge from database prices
+    const serviceKnowledge = await buildServiceKnowledge();
+    const WALLV_KNOWLEDGE = `${PERSONALITY}\n\nWALL-V SERVICES (what we actually sell — prices are managed by admin):\n\n${serviceKnowledge}`;
 
     // Build conversation messages for AI
     const messages: { role: "system" | "user" | "assistant"; content: string }[] = [
@@ -142,7 +104,7 @@ function generateFallbackResponse(message: string): string {
   const lower = message.toLowerCase();
 
   if (lower.includes("hosting") || lower.includes("host")) {
-    return "We offer web hosting starting from $3.99/month. Plans include Basic ($3.99), Business ($9.99), Cloud ($16.99), and WordPress ($6.99). All plans come with free SSL and 99.9% uptime. What kind of website are you planning to host?";
+    return "We offer web hosting with multiple plans to fit your needs. Basic starts at $3.99/month, Business at $9.99/month, and Cloud at $16.99/month. All plans include free SSL and 99.9% uptime. What kind of website are you planning to host?";
   }
   if (lower.includes("price") || lower.includes("cost") || lower.includes("how much")) {
     return "Pricing depends on what you need. Website development starts from $499, mobile apps from $2,999, and AI solutions from $1,499. Hosting plans start at $3.99/month. What are you looking to build?";

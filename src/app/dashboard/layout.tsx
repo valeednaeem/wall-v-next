@@ -45,6 +45,7 @@ const sidebarItems: SidebarItem[] = [
   ]},
   { label: "Settings", href: "/dashboard/settings", icon: <Settings className="h-4 w-4" />, children: [
     { label: "General", href: "/dashboard/settings" },
+    { label: "Pricing", href: "/dashboard/settings/pricing" },
     { label: "Profile", href: "/dashboard/settings/profile" },
     { label: "Security", href: "/dashboard/settings/auth" },
     { label: "Payment", href: "/dashboard/settings/payment" },

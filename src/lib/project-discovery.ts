@@ -821,3 +821,94 @@ Ask the NEXT most important question based on what's missing. Don't overwhelm th
 
   return prompt;
 }
+
+// ─── Dynamic Service Pricing ─────────────────────────────────────────────────
+
+/**
+ * Load current service prices from the database and return a lookup map.
+ * Falls back to hardcoded WALLV_SERVICES values if database is unavailable.
+ */
+export async function getDynamicServices(): Promise<typeof WALLV_SERVICES> {
+  try {
+    const { connectToDatabase } = await import("@/lib/mongodb");
+    const { default: ServicePrice } = await import("@/models/service-price");
+
+    await connectToDatabase();
+    const dbPrices = await ServicePrice.find({ active: true }).lean();
+
+    if (dbPrices.length === 0) return WALLV_SERVICES;
+
+    const services = { ...WALLV_SERVICES };
+
+    for (const dp of dbPrices) {
+      const key = dp.serviceKey.replace(/-/g, "");
+      const matchKey = Object.keys(services).find(
+        (k) => k.toLowerCase().replace(/[^a-z]/g, "") === key || k.toLowerCase().includes(key.slice(0, 5))
+      );
+
+      if (matchKey && services[matchKey as keyof typeof services]) {
+        const svc = { ...services[matchKey as keyof typeof services] };
+        if ("startingPrice" in svc) {
+          (svc as { startingPrice: number }).startingPrice = dp.basePrice;
+        }
+        if (dp.tiers && "plans" in svc) {
+          (svc as { plans: { name: string; price: number; period: string; features: string[] }[] }).plans = dp.tiers.map((t) => ({
+            name: t.name,
+            price: t.price,
+            period: "mo",
+            features: t.features,
+          }));
+        }
+        (services as Record<string, unknown>)[matchKey] = svc;
+      }
+    }
+
+    return services;
+  } catch {
+    return WALLV_SERVICES;
+  }
+}
+
+/**
+ * Build a compact price string for the AI system prompt from database prices.
+ */
+export async function getAgentPriceSummary(): Promise<string> {
+  try {
+    const { connectToDatabase } = await import("@/lib/mongodb");
+    const { default: ServicePrice } = await import("@/models/service-price");
+
+    await connectToDatabase();
+    const prices = await ServicePrice.find({ active: true, agentVisible: true })
+      .sort({ displayOrder: 1 })
+      .lean();
+
+    if (prices.length === 0) {
+      return Object.entries(WALLV_SERVICES)
+        .map(([key, svc]) => {
+          if ("plans" in svc) {
+            const plans = (svc as { plans: { name: string; price: number }[] }).plans;
+            return `- ${svc.name}: ${plans.map((p) => `${p.name} $${p.price}`).join(", ")}`;
+          }
+          const sp = "startingPrice" in svc ? (svc as { startingPrice: number }).startingPrice : 0;
+          return `- ${svc.name}: from $${sp}`;
+        })
+        .join("\n");
+    }
+
+    return prices
+      .map((p) => {
+        let priceStr = "";
+        if (p.type === "tiered" && p.tiers?.length) {
+          priceStr = p.tiers.map((t) => `${t.name} $${t.price}`).join(", ");
+        } else if (p.type === "hourly" && p.hourlyRate) {
+          priceStr = `$${p.hourlyRate}/hr`;
+        } else {
+          priceStr = `from $${p.basePrice}`;
+        }
+        return `- ${p.name}: ${priceStr}`;
+      })
+      .join("\n");
+  } catch {
+    return "";
+  }
+}
