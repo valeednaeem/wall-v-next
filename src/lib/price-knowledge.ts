@@ -42,7 +42,7 @@ export async function buildServiceKnowledge(): Promise<string> {
       for (const item of items) {
         let priceStr = "";
         if (item.type === "tiered" && item.tiers?.length) {
-          const tierList = item.tiers.map((t) => `${t.name}: $${t.price}`).join(", ");
+          const tierList = item.tiers.map((t: { name: string; price: number }) => `${t.name}: $${t.price}`).join(", ");
           priceStr = `(${tierList})`;
         } else if (item.type === "hourly" && item.hourlyRate) {
           priceStr = `$${item.hourlyRate}/hr`;

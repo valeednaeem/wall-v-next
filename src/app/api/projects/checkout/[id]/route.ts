@@ -29,12 +29,12 @@ export async function GET(
         quote: project.quote,
         client: project.client,
         demoId: project.demoId,
-        milestones: (project.milestones || []).map((m, i) => ({
+        milestones: (project.milestones || []).map((m: { name: string; description: string; status: string; amount?: number; dueDate?: string }, i: number) => ({
           index: i,
           name: m.name,
           description: m.description,
           status: m.status,
-          amount: (m as Record<string, unknown>).amount || 0,
+          amount: m.amount || 0,
           dueDate: m.dueDate,
         })),
         budget: project.budget,

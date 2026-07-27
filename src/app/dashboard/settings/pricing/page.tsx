@@ -448,14 +448,14 @@ export default function PricingPage() {
                     <input
                       type="number"
                       value={form.estimatedHours?.min || ""}
-                      onChange={(e) => setForm({ ...form, estimatedHours: { ...form.estimatedHours, min: Number(e.target.value) } })}
+                      onChange={(e) => setForm({ ...form, estimatedHours: { min: Number(e.target.value), max: form.estimatedHours?.max || 0 } })}
                       placeholder="min"
                       className="w-full rounded-lg border px-3 py-2 text-sm"
                     />
                     <input
                       type="number"
                       value={form.estimatedHours?.max || ""}
-                      onChange={(e) => setForm({ ...form, estimatedHours: { ...form.estimatedHours, max: Number(e.target.value) } })}
+                      onChange={(e) => setForm({ ...form, estimatedHours: { min: form.estimatedHours?.min || 0, max: Number(e.target.value) } })}
                       placeholder="max"
                       className="w-full rounded-lg border px-3 py-2 text-sm"
                     />
@@ -467,14 +467,14 @@ export default function PricingPage() {
                     <input
                       type="number"
                       value={form.estimatedWeeks?.min || ""}
-                      onChange={(e) => setForm({ ...form, estimatedWeeks: { ...form.estimatedWeeks, min: Number(e.target.value) } })}
+                      onChange={(e) => setForm({ ...form, estimatedWeeks: { min: Number(e.target.value), max: form.estimatedWeeks?.max || 0 } })}
                       placeholder="min"
                       className="w-full rounded-lg border px-3 py-2 text-sm"
                     />
                     <input
                       type="number"
                       value={form.estimatedWeeks?.max || ""}
-                      onChange={(e) => setForm({ ...form, estimatedWeeks: { ...form.estimatedWeeks, max: Number(e.target.value) } })}
+                      onChange={(e) => setForm({ ...form, estimatedWeeks: { min: form.estimatedWeeks?.min || 0, max: Number(e.target.value) } })}
                       placeholder="max"
                       className="w-full rounded-lg border px-3 py-2 text-sm"
                     />

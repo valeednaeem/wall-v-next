@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import Project from "@/models/project";
 import Invoice from "@/models/invoice";
+import { sendEmail, milestonePaidEmail } from "@/services/email";
+import { notifyAdmins } from "@/lib/notify";
 
 export async function POST(request: Request) {
   try {
@@ -71,6 +73,16 @@ export async function POST(request: Request) {
         zip: billingDetails.zip || "",
       } : undefined,
     });
+
+    // Send email notifications (non-blocking)
+    const milestoneName = milestoneIndex !== null
+      ? project.milestones[milestoneIndex]?.name || "Project Phase"
+      : project.name;
+    if (project.client?.email) {
+      const emailData = milestonePaidEmail(project.name, milestoneName, amount, invoiceNumber);
+      sendEmail({ ...emailData, to: project.client.email }).catch(() => {});
+    }
+    notifyAdmins("Payment Received", `${project.client?.name || "Client"} paid $${amount} for "${project.name}" — ${milestoneName}`, "success", `/dashboard/invoices`).catch(() => {});
 
     let redirectUrl = "";
 

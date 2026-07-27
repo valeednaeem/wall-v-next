@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { generateAIContent } from "@/services/ai";
 import { buildServiceKnowledge } from "@/lib/price-knowledge";
+import { connectToDatabase } from "@/lib/mongodb";
+import Conversation from "@/models/conversation";
 
 const PERSONALITY = `You are Wall-V AI, a senior project consultant and solution architect at Wall-V — an AI-powered digital agency. You help businesses and individuals plan, design, and build digital solutions.
 
@@ -35,7 +37,7 @@ RESPONSE RULES:
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { message, conversationHistory = [], language = "en" } = body;
+    const { message, conversationHistory = [], language = "en", sessionId } = body;
 
     if (!message || typeof message !== "string") {
       return NextResponse.json(
@@ -82,6 +84,36 @@ export async function POST(request: Request) {
 
     // Try to extract suggestions from the AI response
     const suggestions = extractSuggestions(aiResponse, message);
+
+    // Persist conversation for analytics
+    try {
+      await connectToDatabase();
+      const sid = sessionId || `session_${Date.now()}`;
+      const incomingMessages = [
+        ...conversationHistory.map((m: { role: string; content: string }) => ({
+          role: m.role,
+          content: m.content,
+          timestamp: new Date(),
+        })),
+        { role: "user" as const, content: message, timestamp: new Date() },
+        { role: "assistant" as const, content: aiResponse, timestamp: new Date() },
+      ];
+
+      await Conversation.findOneAndUpdate(
+        { sessionId: sid },
+        {
+          sessionId: sid,
+          language,
+          agentType: "discovery",
+          messages: incomingMessages,
+          messageCount: incomingMessages.length,
+          $setOnInsert: { startedAt: new Date() },
+        },
+        { upsert: true, new: true }
+      );
+    } catch (trackErr) {
+      console.error("[Discover] Conversation tracking failed:", trackErr);
+    }
 
     return NextResponse.json({
       success: true,

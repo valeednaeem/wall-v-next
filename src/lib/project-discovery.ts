@@ -852,7 +852,7 @@ export async function getDynamicServices(): Promise<typeof WALLV_SERVICES> {
           (svc as { startingPrice: number }).startingPrice = dp.basePrice;
         }
         if (dp.tiers && "plans" in svc) {
-          (svc as { plans: { name: string; price: number; period: string; features: string[] }[] }).plans = dp.tiers.map((t) => ({
+          (svc as { plans: { name: string; price: number; period: string; features: string[] }[] }).plans = dp.tiers.map((t: { name: string; price: number; period?: string; features: string[] }) => ({
             name: t.name,
             price: t.price,
             period: "mo",
@@ -899,7 +899,7 @@ export async function getAgentPriceSummary(): Promise<string> {
       .map((p) => {
         let priceStr = "";
         if (p.type === "tiered" && p.tiers?.length) {
-          priceStr = p.tiers.map((t) => `${t.name} $${t.price}`).join(", ");
+          priceStr = p.tiers.map((t: { name: string; price: number }) => `${t.name} $${t.price}`).join(", ");
         } else if (p.type === "hourly" && p.hourlyRate) {
           priceStr = `$${p.hourlyRate}/hr`;
         } else {

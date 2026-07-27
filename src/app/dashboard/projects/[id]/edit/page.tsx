@@ -33,6 +33,7 @@ interface Project {
   client: { name?: string; email?: string } | string;
   tags: string[];
   notes?: string;
+  demoId?: string;
 }
 
 export default function EditProjectPage() {

@@ -3,6 +3,8 @@ import { connectToDatabase } from "@/lib/mongodb";
 import Project from "@/models/project";
 import Lead from "@/models/lead";
 import Inquiry from "@/models/inquiry";
+import { sendEmail, projectCreatedEmail, adminNewProjectEmail } from "@/services/email";
+import { notifyAdmins } from "@/lib/notify";
 
 function slugify(text: string): string {
   return text
@@ -125,6 +127,16 @@ export async function POST(request: Request) {
       tags: ["ai-generated", projectType].filter(Boolean),
       notes: `Created by AI chatbot. Inquiry: ${inquiry._id}`,
     });
+
+    // Send email notifications (non-blocking)
+    const previewUrl = `${process.env.NEXT_PUBLIC_APP_URL || "https://wall-v-next-six.vercel.app"}/preview/${project._id}`;
+    if (clientEmail) {
+      const clientEmailData = projectCreatedEmail(name, clientName || "there", previewUrl);
+      sendEmail({ ...clientEmailData, to: clientEmail }).catch(() => {});
+    }
+    const adminEmailData = adminNewProjectEmail(name, clientName || "Web Visitor", projectType || "website", budget || "TBD");
+    sendEmail({ ...adminEmailData, to: process.env.ADMIN_EMAIL || "admin@wall-v.com" }).catch(() => {});
+    notifyAdmins("New Project Created", `"${name}" was created by AI agent`, "success", `/dashboard/projects/${project._id}/edit`).catch(() => {});
 
     return NextResponse.json({
       success: true,
