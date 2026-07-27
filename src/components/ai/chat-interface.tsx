@@ -81,6 +81,7 @@ export function AIChatInterface({ className }: { className?: string }) {
   const [agentType, setAgentType] = useState("general");
   const [language, setLanguage] = useState("en");
   const [isLoading, setIsLoading] = useState(false);
+  const [creatingProject, setCreatingProject] = useState(false);
   const [langDropdownOpen, setLangDropdownOpen] = useState(false);
   const [conversationState, setConversationState] = useState<ConversationState | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -170,6 +171,53 @@ export function AIChatInterface({ className }: { className?: string }) {
       setIsLoading(false);
     }
   }, [input, isLoading, messages, language, agentType, conversationState]);
+
+  const handleCreateProject = useCallback(async () => {
+    if (creatingProject) return;
+    setCreatingProject(true);
+
+    try {
+      const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant");
+      const conversationSummary = messages.map((m) => `${m.role}: ${m.content}`).join("\n");
+
+      const res = await fetch("/api/ai/create-project", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: `Project from Chat — ${new Date().toLocaleDateString()}`,
+          description: conversationSummary.slice(0, 2000),
+          projectType: conversationState?.brief?.projectType || "website",
+          features: conversationState?.brief?.features || [],
+          budget: conversationState?.brief?.estimatedBudget || "",
+          timeline: conversationState?.brief?.desiredTimeline || "",
+          estimatedQuote: { min: 500, max: 5000, currency: "USD" },
+          clientName: "",
+          clientEmail: "",
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success && data.project) {
+        setMessages([...messages, {
+          role: "assistant",
+          content: `Your project has been created! Here are your links:\n\n**Preview:** ${data.project.previewUrl}\n**Checkout:** ${data.project.checkoutUrl}\n\nClick "Proceed to Checkout" to pay the first milestone and get started.`,
+          suggestions: ["Proceed to Checkout", "View Demo"],
+        }]);
+      } else {
+        setMessages([...messages, {
+          role: "assistant",
+          content: "I had trouble creating the project. Please try again or contact our team directly.",
+        }]);
+      }
+    } catch {
+      setMessages([...messages, {
+        role: "assistant",
+        content: "Something went wrong while creating the project. Please try again.",
+      }]);
+    } finally {
+      setCreatingProject(false);
+    }
+  }, [messages, conversationState, creatingProject]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -289,12 +337,37 @@ export function AIChatInterface({ className }: { className?: string }) {
             {messages[messages.length - 1].suggestions!.map((suggestion) => (
               <button
                 key={suggestion}
-                onClick={() => sendMessage(suggestion)}
-                className="text-xs px-3 py-1.5 rounded-full border bg-white hover:bg-primary/5 hover:border-primary/30 transition-colors text-muted-foreground hover:text-foreground"
+                onClick={() => {
+                  if (suggestion === "Looks good, save it") {
+                    handleCreateProject();
+                  } else if (suggestion === "Proceed to Checkout") {
+                    window.open("/dashboard/projects", "_blank");
+                  } else if (suggestion === "View Demo") {
+                    window.open("/dashboard/projects", "_blank");
+                  } else {
+                    sendMessage(suggestion);
+                  }
+                }}
+                disabled={creatingProject}
+                className={cn(
+                  "text-xs px-3 py-1.5 rounded-full border bg-white hover:bg-primary/5 hover:border-primary/30 transition-colors text-muted-foreground hover:text-foreground",
+                  creatingProject && "opacity-50 cursor-not-allowed"
+                )}
               >
                 {suggestion}
               </button>
             ))}
+            {!messages[messages.length - 1].suggestions!.includes("Looks good, save it") &&
+             agentType === "discovery" &&
+             conversationState?.brief?.projectType && (
+              <button
+                onClick={handleCreateProject}
+                disabled={creatingProject}
+                className="text-xs px-3 py-1.5 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
+              >
+                {creatingProject ? "Creating..." : "Create Project & Proceed"}
+              </button>
+            )}
           </div>
         )}
 
