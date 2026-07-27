@@ -17,11 +17,19 @@ PERSONALITY:
 - NEVER use emojis unless the user does.
 - NEVER use generic filler like "Great question!" or "Thanks for sharing!"
 
+COMPETITIVE POSITIONING:
+- We build custom solutions that OWN the code — clients never pay monthly SaaS fees for features they control.
+- vs. Wix/Squarespace ($17–$49/mo): Our custom websites start at $1,999 one-time, pay for themselves in 3–4 years, plus full ownership and no platform lock-in.
+- vs. Tidio/Intercom ($29–$2,999/mo): Our AI chatbots start at $2,499 one-time — pays for itself in 3–8 months vs. SaaS.
+- vs. Hiring in-house: We deliver agency-quality work at freelancer prices. No payroll, no benefits, no management overhead.
+- Our hosting starts at $3.99/mo — cheaper than Wix ($17/mo) and Squarespace ($16/mo).
+- We offer tiered packages (Basic/Standard/Premium) so clients can start small and scale.
+
 CONVERSATION FLOW:
 1. Greet warmly, introduce yourself, ask what they need
 2. Listen actively — extract project type, goals, features from what they say
 3. Ask smart follow-ups (one at a time) to fill gaps
-4. Give recommendations based on what they've told you
+4. Give recommendations based on what they've told you, including pricing tiers
 5. Summarize when ready and offer to save as a project inquiry
 6. Don't force the flow — if they ask about pricing, answer. If they ask about tech, answer. Then continue naturally.
 
@@ -136,19 +144,19 @@ function generateFallbackResponse(message: string): string {
   const lower = message.toLowerCase();
 
   if (lower.includes("hosting") || lower.includes("host")) {
-    return "We offer web hosting with multiple plans to fit your needs. Basic starts at $3.99/month, Business at $9.99/month, and Cloud at $16.99/month. All plans include free SSL and 99.9% uptime. What kind of website are you planning to host?";
+    return "We offer hosting from $3.99/month — cheaper than Wix ($17/mo) and Squarespace ($16/mo). Basic at $3.99, Business at $9.99, and Cloud at $16.99. All plans include free SSL and 99.9% uptime. What kind of website are you planning to host?";
   }
   if (lower.includes("price") || lower.includes("cost") || lower.includes("how much")) {
-    return "Pricing depends on what you need. Website development starts from $499, mobile apps from $2,999, and AI solutions from $1,499. Hosting plans start at $3.99/month. What are you looking to build?";
+    return "Pricing depends on what you need. Web development starts from $1,999, mobile apps from $4,999, AI chatbots from $2,499, and e-commerce from $3,999. Hosting starts at $3.99/month. All projects include tiered packages — Basic, Standard, and Premium. What are you looking to build?";
   }
   if (lower.includes("domain")) {
-    return "We register domains in .com, .net, .org, .pk, .io, .dev, .app, and .co starting from $9.99/year. Do you have a specific domain in mind?";
+    return "We register domains from $9.99/year — .com, .net, .org, .pk, .io, .dev, .app, and .co. Do you have a specific domain in mind?";
   }
   if (lower.includes("ai") || lower.includes("chatbot") || lower.includes("voice")) {
-    return "We specialize in AI solutions — chatbots, voice agents, workflow automation, and predictive analytics. Our AI services start from $1,499. What kind of AI features are you thinking about?";
+    return "We specialize in AI solutions — custom chatbots from $2,499, voice agents from $3,999, and process automation from $1,999. Our AI solutions pay for themselves in 3–6 months vs. SaaS platforms ($29–$2,999/mo). What kind of AI features are you thinking about?";
   }
 
-  return "I'm having trouble connecting to my AI backend right now. Could you rephrase your question, or I can help you with web development, mobile apps, AI solutions, hosting, or digital marketing?";
+  return "I'm having trouble connecting to my AI backend right now. Could you rephrase your question, or I can help you with web development (from $1,999), mobile apps (from $4,999), AI solutions (from $1,999), hosting (from $3.99/mo), or digital marketing (from $999/mo)?";
 }
 
 function extractSuggestions(aiResponse: string, userMessage: string): string[] {
