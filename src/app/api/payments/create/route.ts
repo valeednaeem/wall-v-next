@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import Project from "@/models/project";
+import Invoice from "@/models/invoice";
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { projectId, amount, currency, method, billingDetails } = body;
+    const { projectId, milestoneIndex, amount, currency, method, billingDetails } = body;
 
     if (!projectId || !amount || !method) {
       return NextResponse.json(
@@ -21,52 +22,68 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
-    // Create payment record in project notes
-    const paymentRecord = {
-      method,
-      amount,
-      currency: currency || "USD",
-      billingDetails,
-      timestamp: new Date().toISOString(),
-      status: "processing",
-    };
+    // Generate invoice number
+    const invoiceCount = await Invoice.countDocuments();
+    const invoiceNumber = `INV-${String(invoiceCount + 1).padStart(5, "0")}`;
 
-    project.notes = JSON.stringify(paymentRecord);
-    project.status = "pending-payment";
+    // If milestone payment, update milestone status
+    if (milestoneIndex !== null && milestoneIndex !== undefined) {
+      const milestones = project.milestones;
+      if (milestones[milestoneIndex]) {
+        milestones[milestoneIndex].status = "in-progress";
+        project.status = "in-progress";
+      }
+    } else {
+      // Full project payment
+      project.status = "in-progress";
+    }
+
     await project.save();
+
+    // Create invoice
+    const invoice = await Invoice.create({
+      invoiceNumber,
+      client: project.client,
+      project: project._id,
+      items: [
+        {
+          description: milestoneIndex !== null
+            ? `Milestone: ${project.milestones[milestoneIndex]?.name || "Project Phase"}`
+            : `Project: ${project.name}`,
+          quantity: 1,
+          unitPrice: amount,
+          total: amount,
+        },
+      ],
+      subtotal: amount,
+      tax: 0,
+      discount: 0,
+      total: amount,
+      currency: currency || "USD",
+      status: "sent",
+      dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      paymentMethod: method,
+      billingAddress: billingDetails ? {
+        name: billingDetails.cardName || "",
+        address: billingDetails.address || "",
+        city: billingDetails.city || "",
+        country: billingDetails.country || "",
+        zip: billingDetails.zip || "",
+      } : undefined,
+    });
 
     let redirectUrl = "";
 
     switch (method) {
-      case "stripe": {
-        // Stripe integration - redirect to Stripe Checkout
-        // In production, use the Stripe SDK:
-        // const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
-        // const session = await stripe.checkout.sessions.create({...});
-        // redirectUrl = session.url;
-
-        // For demo, redirect to success page
-        redirectUrl = `/checkout/${projectId}/success?method=stripe&amount=${amount}`;
+      case "stripe":
+        redirectUrl = `/checkout/${projectId}/success?method=stripe&amount=${amount}&invoice=${invoiceNumber}&milestone=${milestoneIndex ?? "full"}`;
         break;
-      }
-      case "paypal": {
-        // PayPal integration - redirect to PayPal
-        // In production, use PayPal SDK:
-        // const paypal = await createPayPalOrder(amount, currency);
-        // redirectUrl = paypal.approvalUrl;
-
-        redirectUrl = `/checkout/${projectId}/success?method=paypal&amount=${amount}`;
+      case "paypal":
+        redirectUrl = `/checkout/${projectId}/success?method=paypal&amount=${amount}&invoice=${invoiceNumber}&milestone=${milestoneIndex ?? "full"}`;
         break;
-      }
-      case "2checkout": {
-        // 2Checkout integration
-        // In production, use 2Checkout API:
-        // const order = await create2CheckoutOrder(amount, currency);
-        // redirectUrl = order.checkoutUrl;
-
-        redirectUrl = `/checkout/${projectId}/success?method=2checkout&amount=${amount}`;
+      case "2checkout":
+        redirectUrl = `/checkout/${projectId}/success?method=2checkout&amount=${amount}&invoice=${invoiceNumber}&milestone=${milestoneIndex ?? "full"}`;
         break;
-      }
       default:
         return NextResponse.json({ error: "Unsupported payment method" }, { status: 400 });
     }
@@ -76,6 +93,7 @@ export async function POST(request: Request) {
       data: {
         redirectUrl,
         paymentId: `pay-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        invoiceNumber,
         method,
         amount,
         currency: currency || "USD",

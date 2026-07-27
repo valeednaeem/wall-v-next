@@ -6,6 +6,15 @@ import Link from "next/link";
 import { ArrowLeft, CreditCard, Lock, Loader2, CheckCircle, Shield, Globe } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+interface MilestoneData {
+  index: number;
+  name: string;
+  description: string;
+  status: string;
+  amount: number;
+  dueDate?: string;
+}
+
 interface ProjectData {
   id: string;
   name: string;
@@ -27,6 +36,9 @@ interface ProjectData {
     email: string;
   };
   demoId: string;
+  milestones: MilestoneData[];
+  budget: number;
+  currency: string;
 }
 
 type PaymentMethod = "stripe" | "paypal" | "2checkout";
@@ -39,6 +51,7 @@ export default function CheckoutPage() {
   const [error, setError] = useState("");
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>("stripe");
   const [processing, setProcessing] = useState(false);
+  const [selectedMilestoneIdx, setSelectedMilestoneIdx] = useState<number | null>(null);
   const [formData, setFormData] = useState({
     cardName: "",
     cardNumber: "",
@@ -65,13 +78,18 @@ export default function CheckoutPage() {
     if (!project) return;
     setProcessing(true);
 
+    const paymentAmount = selectedMilestoneIdx !== null && project.milestones[selectedMilestoneIdx]
+      ? project.milestones[selectedMilestoneIdx].amount
+      : project.quote?.min || 1000;
+
     try {
       const res = await fetch("/api/payments/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           projectId: project.id,
-          amount: project.quote?.min || 1000,
+          milestoneIndex: selectedMilestoneIdx,
+          amount: paymentAmount,
           currency: project.quote?.currency || "USD",
           method: selectedMethod,
           billingDetails: formData,
@@ -127,7 +145,11 @@ export default function CheckoutPage() {
     );
   }
 
-  const amount = project.quote?.min || 1000;
+  const amount = selectedMilestoneIdx !== null && project.milestones[selectedMilestoneIdx]
+    ? project.milestones[selectedMilestoneIdx].amount
+    : project.quote?.min || 1000;
+
+  const unpaidMilestones = project.milestones.filter((m) => m.status !== "completed");
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -320,6 +342,43 @@ export default function CheckoutPage() {
                   {project.requirements?.projectType?.replace(/-/g, " ") || "Custom Project"}
                 </p>
               </div>
+
+              {/* Milestone Selection */}
+              {unpaidMilestones.length > 0 && (
+                <div className="border-b pb-4 mb-4">
+                  <p className="text-xs font-medium text-muted-foreground mb-2">SELECT MILESTONE TO PAY</p>
+                  <div className="space-y-2">
+                    <button
+                      onClick={() => setSelectedMilestoneIdx(null)}
+                      className={`w-full text-left p-2 rounded-lg border text-sm transition-colors ${
+                        selectedMilestoneIdx === null ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50"
+                      }`}
+                    >
+                      <div className="flex justify-between">
+                        <span className="font-medium">Full Project</span>
+                        <span className="font-medium">${(project.quote?.min || 0).toLocaleString()}</span>
+                      </div>
+                    </button>
+                    {unpaidMilestones.map((m) => (
+                      <button
+                        key={m.index}
+                        onClick={() => setSelectedMilestoneIdx(m.index)}
+                        className={`w-full text-left p-2 rounded-lg border text-sm transition-colors ${
+                          selectedMilestoneIdx === m.index ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50"
+                        }`}
+                      >
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <p className="font-medium">{m.name}</p>
+                            {m.description && <p className="text-xs text-muted-foreground truncate">{m.description}</p>}
+                          </div>
+                          <span className="font-medium">${m.amount.toLocaleString()}</span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div className="space-y-2 text-sm border-b pb-4 mb-4">
                 <div className="flex justify-between">

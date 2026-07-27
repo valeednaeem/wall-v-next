@@ -11,7 +11,7 @@ export async function GET(
     await connectToDatabase();
 
     const project = await Project.findById(id)
-      .select("name title description status requirements quote client demoId")
+      .select("name title description status requirements quote client demoId milestones budget currency")
       .lean();
 
     if (!project) {
@@ -29,6 +29,16 @@ export async function GET(
         quote: project.quote,
         client: project.client,
         demoId: project.demoId,
+        milestones: (project.milestones || []).map((m, i) => ({
+          index: i,
+          name: m.name,
+          description: m.description,
+          status: m.status,
+          amount: (m as Record<string, unknown>).amount || 0,
+          dueDate: m.dueDate,
+        })),
+        budget: project.budget,
+        currency: project.currency,
       },
     });
   } catch (error) {
