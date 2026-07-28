@@ -400,6 +400,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true, conversationId: conversation._id });
   } catch (error) {
     console.error("[Dograh Webhook] Error:", error);
-    return NextResponse.json({ error: "Webhook processing failed" }, { status: 500 });
+    const message = error instanceof Error ? error.message : String(error);
+    return NextResponse.json({ error: "Webhook processing failed", detail: message }, { status: 500 });
   }
 }
