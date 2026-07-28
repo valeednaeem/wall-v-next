@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import HtmlEditor from "@/components/editor/html-editor";
 
 interface Category {
   _id: string;
@@ -71,7 +72,14 @@ export default function NewBlogPostPage() {
         </div>
         <div>
           <label className="text-sm font-medium">Content *</label>
-          <textarea value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm min-h-[300px]" placeholder="Write your blog post content here..." required />
+          <div className="mt-1">
+            <HtmlEditor
+              value={form.content}
+              onChange={(html) => setForm({ ...form, content: html })}
+              placeholder="Write your blog post content here..."
+              minHeight="400px"
+            />
+          </div>
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div>

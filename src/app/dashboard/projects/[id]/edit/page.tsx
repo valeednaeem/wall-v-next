@@ -7,6 +7,7 @@ import {
   DollarSign, Trash2, GripVertical, Calendar
 } from "lucide-react";
 import Link from "next/link";
+import HtmlEditor from "@/components/editor/html-editor";
 
 interface Milestone {
   name: string;
@@ -215,12 +216,14 @@ export default function EditProjectPage() {
             </div>
             <div>
               <label className="text-sm font-medium">Description</label>
-              <textarea
-                value={project.description}
-                onChange={(e) => setProject({ ...project, description: e.target.value })}
-                rows={4}
-                className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
-              />
+              <div className="mt-1">
+                <HtmlEditor
+                  value={project.description}
+                  onChange={(html) => setProject({ ...project, description: html })}
+                  placeholder="Project description..."
+                  minHeight="150px"
+                />
+              </div>
             </div>
             <div className="grid grid-cols-3 gap-4">
               <div>
