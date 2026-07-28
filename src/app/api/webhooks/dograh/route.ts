@@ -17,11 +17,22 @@ function slugify(text: string): string {
 function extractCallerInfoFromTranscript(
   transcript: string,
   messages?: { role: string; content: string }[]
-): { name?: string; email?: string; phone?: string } {
-  const text = (transcript || "").toLowerCase();
+): {
+  name?: string;
+  email?: string;
+  phone?: string;
+  company?: string;
+  budget?: string;
+  timeline?: string;
+  projectType?: string;
+} {
   let name: string | undefined;
   let email: string | undefined;
   let phone: string | undefined;
+  let company: string | undefined;
+  let budget: string | undefined;
+  let timeline: string | undefined;
+  let projectType: string | undefined;
 
   // Extract email
   const emailMatch = transcript.match(/[\w.+-]+@[\w-]+\.[\w.-]+/);
@@ -31,7 +42,65 @@ function extractCallerInfoFromTranscript(
   const phoneMatch = transcript.match(/(?:\+?1[\s.-]?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}/);
   if (phoneMatch) phone = phoneMatch[0].trim();
 
-  // Try to extract name from messages (more reliable than full transcript)
+  // Extract company name
+  const companyPatterns = [
+    /(?:company|business|work(?:ing)?\s+(?:at|for|with))\s+(?:called\s+|named\s+|the\s+)?([A-Z][\w\s&,.']{1,40})/i,
+    /(?:i(?:'m| am)\s+(?:from|at|with|with the company))\s+([A-Z][\w\s&,.']{1,40})/i,
+    /(?:my company|our company|my business|our business)\s+(?:is|'s)?\s*(?:called|named)?\s*([A-Z][\w\s&,.']{1,40})/i,
+  ];
+  for (const pattern of companyPatterns) {
+    const match = transcript.match(pattern);
+    if (match && match[1]) {
+      const candidate = match[1].trim();
+      if (candidate.length > 1 && candidate.length < 60) {
+        company = candidate;
+        break;
+      }
+    }
+  }
+
+  // Extract budget
+  const budgetPatterns = [
+    /(?:budget|spend(?:ing)?|looking\s+(?:at|to\s+spend|to\s+invest))[:\s]*(?:of\s+|around\s+|about\s+|roughly\s+|approximately\s+)?\$?\s*([\d,]+(?:\.\d{2})?)\s*(k|K)?/i,
+    /(?:under|less\s+than|up\s+to)\s+\$?\s*([\d,]+(?:\.\d{2})?)\s*(k|K)?/i,
+    /(\$?\s*[\d,]+(?:\.\d{2})?\s*(?:k|K)?\s*(?:to|-)\s*\$?\s*[\d,]+(?:\.\d{2})?\s*(?:k|K)?)/i,
+    /(?:around|about|roughly|approximately)\s+\$?\s*([\d,]+(?:\.\d{2})?)\s*(k|K)?/i,
+  ];
+  for (const pattern of budgetPatterns) {
+    const match = transcript.match(pattern);
+    if (match) {
+      budget = match[0].trim();
+      break;
+    }
+  }
+
+  // Extract timeline
+  const timelinePatterns = [
+    /(?:timeline|deadline|when|by when|time(?:frame)?|ready|done|complete|launch)[:\s]*(?:is\s+|looking\s+(?:at|for)\s+|need\s+(?:it\s+)?(?:by|in|within)\s+)?((?:ASAP|asap|immediately|urgently|within\s+\d+\s*(?:day|week|month)s?|\d+\s*(?:day|week|month)s?|(?:next|this)\s+(?:week|month|quarter)|\d+\s*-\s*\d+\s*(?:day|week|month)s?|(?:flexible|no\s+(?:rush|hurry|deadline))))/i,
+    /(?:i(?:'m| am)\s+(?:looking|hoping|need(?:ing)?)\s+(?:to\s+)?(?:get\s+(?:it\s+)?(?:done|completed|launched|started|finished))?\s*(?:by|in|within)\s+)((?:ASAP|asap|immediately|urgently|within\s+\d+\s*(?:day|week|month)s?|\d+\s*(?:day|week|month)s?|(?:next|this)\s+(?:week|month|quarter)|\d+\s*-\s*\d+\s*(?:day|week|month)s?))/i,
+  ];
+  for (const pattern of timelinePatterns) {
+    const match = transcript.match(pattern);
+    if (match) {
+      timeline = (match[1] || match[0]).trim();
+      break;
+    }
+  }
+
+  // Extract project type
+  const projectTypePatterns = [
+    /(?:looking\s+(?:for|to\s+(?:get|build|create|have)))\s+(?:a\s+|an\s+)?((?:website|web\s*(?:app|application|site|development)|mobile\s*app|chatbot|ai\s*(?:chatbot|voice\s*agent|automation)|crm|erp|(?:e-?commerce|online)\s*store|seo|(?:digital\s*)?marketing|landing\s*page|portfolio|blog)\b)/i,
+    /(?:i\s+(?:need|want|would\s+like))\s+(?:a\s+|an\s+)?((?:website|web\s*(?:app|application|site|development)|mobile\s*app|chatbot|ai\s*(?:chatbot|voice\s*agent|automation)|crm|erp|(?:e-?commerce|online)\s*store|seo|(?:digital\s*)?marketing|landing\s*page|portfolio|blog)\b)/i,
+  ];
+  for (const pattern of projectTypePatterns) {
+    const match = transcript.match(pattern);
+    if (match && match[1]) {
+      projectType = match[1].trim();
+      break;
+    }
+  }
+
+  // Also try to extract name from messages (more reliable than full transcript)
   const sourceTexts = messages
     ?.filter((m) => m.role === "user")
     .map((m) => m.content) || [];
@@ -47,7 +116,6 @@ function extractCallerInfoFromTranscript(
       const match = source.match(pattern);
       if (match && match[1]) {
         const candidate = match[1].trim();
-        // Filter out common false positives
         const falsePositives = ["yes", "no", "sure", "okay", "hello", "hi", "hey", "thanks", "good", "great", "fine", "right", "well", "yeah", "yep", "nah", "um", "uh"];
         if (!falsePositives.includes(candidate.toLowerCase()) && candidate.length > 1 && candidate.length < 50) {
           name = candidate;
@@ -73,7 +141,7 @@ function extractCallerInfoFromTranscript(
     }
   }
 
-  return { name, email, phone };
+  return { name, email, phone, company, budget, timeline, projectType };
 }
 
 interface ServiceMatch {
@@ -275,6 +343,10 @@ export async function POST(request: Request) {
       name: callerInfo?.name || extracted.name || "",
       email: callerInfo?.email || extracted.email || "",
       phone: callerInfo?.phone || extracted.phone || "",
+      company: callerInfo?.company || extracted.company || "",
+      budget: extracted.budget || "",
+      timeline: extracted.timeline || "",
+      projectType: extracted.projectType || "",
     };
 
     // Auto-create lead, inquiry, client, and project if we have any caller info
@@ -282,6 +354,7 @@ export async function POST(request: Request) {
       const clientName = mergedCaller.name || "Voice Caller";
       const clientEmail = mergedCaller.email || `${clientName.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-voice-${Date.now()}@dynamic.local`;
       const clientPhone = mergedCaller.phone || "";
+      const clientCompany = mergedCaller.company || "";
 
       // 1. Create Lead
       let leadId = null;
@@ -296,10 +369,11 @@ export async function POST(request: Request) {
             name: clientName,
             email: clientEmail,
             phone: clientPhone,
+            company: clientCompany,
             source: "voice-agent",
             status: "new",
             score: 60,
-            requirements: summary || "Inquiry from voice agent call",
+            requirements: summary || mergedCaller.projectType || "Inquiry from voice agent call",
             tags: ["voice-agent", "dograh"],
           });
           leadId = lead._id;
@@ -311,7 +385,8 @@ export async function POST(request: Request) {
         name: clientName,
         email: clientEmail,
         phone: clientPhone,
-        subject: `Voice Agent Call — ${summary || "Inquiry"}`,
+        company: clientCompany,
+        subject: `Voice Agent Call — ${mergedCaller.projectType || summary || "Inquiry"}`,
         message: transcript || summary || "Voice agent call completed",
         type: "sales",
         status: "new",
@@ -332,10 +407,16 @@ export async function POST(request: Request) {
             name: clientName,
             email: clientEmail,
             phone: clientPhone,
-            type: "individual",
+            company: clientCompany,
+            type: clientCompany ? "business" : "individual",
             status: "prospect",
             source: "voice-agent",
-            notes: `Created from voice agent call. Summary: ${summary || "N/A"}`,
+            notes: [
+              summary ? `Summary: ${summary}` : "",
+              mergedCaller.budget ? `Budget: ${mergedCaller.budget}` : "",
+              mergedCaller.timeline ? `Timeline: ${mergedCaller.timeline}` : "",
+              mergedCaller.projectType ? `Project type: ${mergedCaller.projectType}` : "",
+            ].filter(Boolean).join(" | "),
             tags: ["voice-agent", "dograh"],
             totalProjects: 0,
             totalSpent: 0,
@@ -394,6 +475,8 @@ export async function POST(request: Request) {
         client: {
           name: clientName,
           email: clientEmail,
+          phone: clientPhone,
+          company: clientCompany,
         },
         status: "planning",
         priority: "medium",
@@ -405,10 +488,10 @@ export async function POST(request: Request) {
           amount: milestoneAmounts[i] || 0,
         })),
         requirements: {
-          projectType: primaryService?.serviceKey || "website",
+          projectType: primaryService?.serviceKey || mergedCaller.projectType || "website",
           features: matchedServices.map((s) => s.name),
-          budget: estimatedQuote ? `$${estimatedQuote.min.toLocaleString()} - $${estimatedQuote.max.toLocaleString()}` : "",
-          timeline: primaryService ? `${primaryService.tiers?.[0]?.name || "Standard"}` : "",
+          budget: mergedCaller.budget || (estimatedQuote ? `$${estimatedQuote.min.toLocaleString()} - $${estimatedQuote.max.toLocaleString()}` : ""),
+          timeline: mergedCaller.timeline || primaryService ? `${primaryService?.tiers?.[0]?.name || "Standard"}` : "",
         },
         quote: estimatedQuote
           ? {
