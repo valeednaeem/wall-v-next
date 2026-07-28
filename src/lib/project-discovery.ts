@@ -792,6 +792,7 @@ BEHAVIOR RULES:
 - Use simple language, avoid technical jargon
 - Be friendly but professional
 - Confirm important details before proceeding
+- Ask for the visitor's name early if not provided. Once you know it, use it naturally 1-2 times during the conversation (when making recommendations or summarizing). Don't overuse it.
 - Always respond in ${lang}
 
 WALL-V SERVICES:
