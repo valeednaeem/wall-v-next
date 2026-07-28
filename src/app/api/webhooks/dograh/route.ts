@@ -14,6 +14,68 @@ function slugify(text: string): string {
     .replace(/^-|-$/g, "") + `-${Date.now()}`;
 }
 
+function extractCallerInfoFromTranscript(
+  transcript: string,
+  messages?: { role: string; content: string }[]
+): { name?: string; email?: string; phone?: string } {
+  const text = (transcript || "").toLowerCase();
+  let name: string | undefined;
+  let email: string | undefined;
+  let phone: string | undefined;
+
+  // Extract email
+  const emailMatch = transcript.match(/[\w.+-]+@[\w-]+\.[\w.-]+/);
+  if (emailMatch) email = emailMatch[0];
+
+  // Extract phone (US format)
+  const phoneMatch = transcript.match(/(?:\+?1[\s.-]?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}/);
+  if (phoneMatch) phone = phoneMatch[0].trim();
+
+  // Try to extract name from messages (more reliable than full transcript)
+  const sourceTexts = messages
+    ?.filter((m) => m.role === "user")
+    .map((m) => m.content) || [];
+
+  // Common patterns the voice agent uses to ask for name
+  const namePatterns = [
+    /(?:my name is|i'm|i am|this is|it's|it is|call me|name's?)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2})/i,
+    /^([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2})$/m, // Just a name as a standalone response
+  ];
+
+  for (const source of sourceTexts) {
+    for (const pattern of namePatterns) {
+      const match = source.match(pattern);
+      if (match && match[1]) {
+        const candidate = match[1].trim();
+        // Filter out common false positives
+        const falsePositives = ["yes", "no", "sure", "okay", "hello", "hi", "hey", "thanks", "good", "great", "fine", "right", "well", "yeah", "yep", "nah", "um", "uh"];
+        if (!falsePositives.includes(candidate.toLowerCase()) && candidate.length > 1 && candidate.length < 50) {
+          name = candidate;
+          break;
+        }
+      }
+    }
+    if (name) break;
+  }
+
+  // Also try full transcript for name
+  if (!name) {
+    for (const pattern of namePatterns) {
+      const match = transcript.match(pattern);
+      if (match && match[1]) {
+        const candidate = match[1].trim();
+        const falsePositives = ["yes", "no", "sure", "okay", "hello", "hi", "hey", "thanks", "good", "great", "fine", "right", "well", "yeah", "yep"];
+        if (!falsePositives.includes(candidate.toLowerCase()) && candidate.length > 1 && candidate.length < 50) {
+          name = candidate;
+          break;
+        }
+      }
+    }
+  }
+
+  return { name, email, phone };
+}
+
 interface ServiceMatch {
   serviceKey: string;
   name: string;
@@ -207,16 +269,26 @@ export async function POST(request: Request) {
       { upsert: true, new: true }
     );
 
-    // Auto-create lead, inquiry, client, and project if caller info provided
-    if (callerInfo?.email || callerInfo?.name) {
-      const clientName = callerInfo.name || "Voice Agent Caller";
-      const clientEmail = callerInfo.email || "";
-      const clientPhone = callerInfo.phone || "";
+    // Merge callerInfo with transcript extraction
+    const extracted = extractCallerInfoFromTranscript(transcript || "", messages);
+    const mergedCaller = {
+      name: callerInfo?.name || extracted.name || "",
+      email: callerInfo?.email || extracted.email || "",
+      phone: callerInfo?.phone || extracted.phone || "",
+    };
+
+    // Auto-create lead, inquiry, client, and project if we have any caller info
+    if (mergedCaller.email || mergedCaller.name) {
+      const clientName = mergedCaller.name || "Voice Caller";
+      const clientEmail = mergedCaller.email || `${clientName.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-voice-${Date.now()}@dynamic.local`;
+      const clientPhone = mergedCaller.phone || "";
 
       // 1. Create Lead
       let leadId = null;
-      if (clientEmail) {
-        const existingLead = await Lead.findOne({ email: clientEmail });
+      if (clientEmail || clientName) {
+        const existingLead = clientEmail
+          ? await Lead.findOne({ email: clientEmail })
+          : null;
         if (existingLead) {
           leadId = existingLead._id;
         } else {
@@ -251,8 +323,10 @@ export async function POST(request: Request) {
 
       // 3. Create Client
       let client = null;
-      if (clientEmail) {
-        client = await Client.findOne({ email: clientEmail });
+      if (clientEmail || clientName) {
+        client = clientEmail
+          ? await Client.findOne({ email: clientEmail })
+          : null;
         if (!client) {
           client = await Client.create({
             name: clientName,
