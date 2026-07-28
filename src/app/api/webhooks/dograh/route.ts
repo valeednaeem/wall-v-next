@@ -178,6 +178,7 @@ export async function POST(request: Request) {
     }
 
     const conversationData: Record<string, unknown> = {
+      sessionId: sessionId || `dograh_${workflowRunId || Date.now()}`,
       agentType: "voice-agent",
       channel: "voice",
       endedAt: new Date(),
