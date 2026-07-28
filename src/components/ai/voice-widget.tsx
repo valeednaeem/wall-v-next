@@ -13,6 +13,20 @@ export function FloatingVoiceWidget({ position = "bottom-left" }: FloatingVoiceW
   const [showWelcome, setShowWelcome] = useState(false);
   const [dismissed, setDismissed] = useState(false);
 
+  const handleCallEnd = useCallback((data: { agentId: string; workflowRunId: string; durationSeconds: number }) => {
+    console.log("[Voice Widget] Call ended, saving:", data);
+    fetch("/api/voice-agent/call-ended", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        agentId: data.agentId,
+        workflowRunId: data.workflowRunId,
+        durationSeconds: data.durationSeconds,
+        status: "completed",
+      }),
+    }).catch((err) => console.error("[Voice Widget] Failed to save call:", err));
+  }, []);
+
   const {
     status,
     scriptLoaded,
@@ -24,6 +38,7 @@ export function FloatingVoiceWidget({ position = "bottom-left" }: FloatingVoiceW
     duration,
   } = useDograh({
     mode: "headless",
+    onCallDisconnected: handleCallEnd,
   });
 
   useEffect(() => {

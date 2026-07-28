@@ -39,11 +39,12 @@ interface VoiceAgentConfig {
 
 function loadDograhScript(url: string): Promise<void> {
   return new Promise((resolve, reject) => {
-    if (document.querySelector(`script[src="${url}"]`)) {
+    if (document.getElementById("dograh-widget-script")) {
       resolve();
       return;
     }
     const script = document.createElement("script");
+    script.id = "dograh-widget-script";
     script.src = url;
     script.async = true;
     script.onload = () => resolve();
@@ -63,24 +64,37 @@ export function useDograh(config: VoiceAgentConfig) {
   // Load the Dograh widget script
   useEffect(() => {
     const url = widgetScriptUrl || process.env.NEXT_PUBLIC_DOGRAH_WIDGET_URL;
-    if (!url) return;
+    console.log("[Dograh] Widget URL:", url);
+    if (!url) {
+      console.warn("[Dograh] No widget URL configured");
+      setScriptError("Voice agent not configured");
+      return;
+    }
 
     loadDograhScript(url)
       .then(() => {
+        console.log("[Dograh] Script loaded successfully");
         setScriptLoaded(true);
         setScriptError(null);
       })
-      .catch(() => {
-        setScriptError("Voice agent unavailable — Dograh not deployed");
+      .catch((err) => {
+        console.error("[Dograh] Script load failed:", err);
+        setScriptError("Voice agent unavailable — failed to load");
       });
   }, [widgetScriptUrl]);
 
   // Subscribe to Dograh widget events
   // Event names per official docs: onStatusChange, onCallStart, onCallEnd, onError
   useEffect(() => {
-    if (!scriptLoaded || !window.DograhWidget) return;
+    if (!scriptLoaded || !window.DograhWidget) {
+      console.log("[Dograh] Not subscribing yet — scriptLoaded:", scriptLoaded, "DograhWidget:", !!window.DograhWidget);
+      return;
+    }
+
+    console.log("[Dograh] Subscribing to widget events");
 
     window.DograhWidget.onStatusChange((s, text, subtext) => {
+      console.log("[Dograh] Status changed:", s, text, subtext);
       setStatus(s);
       onStatusChange?.(s, text, subtext);
     });
@@ -136,7 +150,11 @@ export function useDograh(config: VoiceAgentConfig) {
   // The calling component (voice-widget.tsx, inline-voice-panel.tsx) ensures this
   // is called from an onClick handler. We do NOT call start() automatically.
   const startCall = useCallback(() => {
-    if (!window.DograhWidget) return;
+    console.log("[Dograh] startCall called — DograhWidget exists:", !!window.DograhWidget);
+    if (!window.DograhWidget) {
+      console.error("[Dograh] Cannot start — widget not loaded. Check NEXT_PUBLIC_DOGRAH_WIDGET_URL env var.");
+      return;
+    }
     window.DograhWidget.start();
   }, []);
 

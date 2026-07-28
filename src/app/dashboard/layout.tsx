@@ -7,7 +7,7 @@ import { useSession, signOut } from "next-auth/react";
 import {
   LayoutDashboard, Package, FileText, FolderKanban, Users, Receipt,
   Cloud, Globe, Headphones, Settings, ShoppingBag, Tags, ChevronRight,
-  Menu, X, LogOut, User, CreditCard, Shield, Search, Bell, MessageSquare
+  Menu, X, LogOut, User, CreditCard, Shield, Search, Bell, MessageSquare, Phone
 } from "lucide-react";
 
 interface SidebarItem {
@@ -30,6 +30,7 @@ const sidebarItems: SidebarItem[] = [
   ]},
   { label: "Projects", href: "/dashboard/projects", icon: <FolderKanban className="h-4 w-4" /> },
   { label: "AI Conversations", href: "/dashboard/ai-conversations", icon: <MessageSquare className="h-4 w-4" /> },
+  { label: "Voice Agent Calls", href: "/dashboard/voice-agent-conversations", icon: <Phone className="h-4 w-4" /> },
   { label: "CRM", href: "/dashboard/crm", icon: <Users className="h-4 w-4" />, children: [
     { label: "Overview", href: "/dashboard/crm" },
     { label: "Leads", href: "/dashboard/crm/leads" },

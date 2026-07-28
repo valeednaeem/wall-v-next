@@ -4,7 +4,8 @@ export interface IConversation extends Document {
   sessionId: string;
   visitorId?: string;
   language: string;
-  agentType: string;
+  agentType: "discovery" | "voice-agent";
+  channel: "chat" | "voice";
   messages: {
     role: "user" | "assistant";
     content: string;
@@ -17,6 +18,15 @@ export interface IConversation extends Document {
     timeline?: string;
     clientName?: string;
     clientEmail?: string;
+    clientPhone?: string;
+  };
+  voiceAgent?: {
+    dograhAgentId?: string;
+    workflowRunId?: string;
+    durationSeconds?: number;
+    callStatus?: string;
+    transcript?: string;
+    summary?: string;
   };
   outcome: "none" | "inquiry-created" | "project-created" | "payment-completed";
   projectId?: mongoose.Types.ObjectId;
@@ -35,7 +45,8 @@ const ConversationSchema = new Schema<IConversation>(
     sessionId: { type: String, required: true },
     visitorId: String,
     language: { type: String, default: "en" },
-    agentType: { type: String, default: "discovery" },
+    agentType: { type: String, enum: ["discovery", "voice-agent"], default: "discovery" },
+    channel: { type: String, enum: ["chat", "voice"], default: "chat" },
     messages: [
       {
         role: { type: String, enum: ["user", "assistant"], required: true },
@@ -50,6 +61,15 @@ const ConversationSchema = new Schema<IConversation>(
       timeline: String,
       clientName: String,
       clientEmail: String,
+      clientPhone: String,
+    },
+    voiceAgent: {
+      dograhAgentId: String,
+      workflowRunId: String,
+      durationSeconds: Number,
+      callStatus: String,
+      transcript: String,
+      summary: String,
     },
     outcome: {
       type: String,
@@ -69,6 +89,8 @@ const ConversationSchema = new Schema<IConversation>(
 
 ConversationSchema.index({ sessionId: 1 });
 ConversationSchema.index({ outcome: 1 });
+ConversationSchema.index({ agentType: 1 });
+ConversationSchema.index({ channel: 1 });
 ConversationSchema.index({ createdAt: -1 });
 
 export default mongoose.models.Conversation ||
