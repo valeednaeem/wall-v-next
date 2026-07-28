@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Save, Globe, Search, Share2, Key, Eye, EyeOff, Loader2 } from "lucide-react";
+import HtmlEditor from "@/components/editor/html-editor";
 
 interface SiteSettings {
   siteName: string;
@@ -298,7 +299,9 @@ BEHAVIOR:
             </div>
             <div>
               <label className="text-sm font-medium">Site Description</label>
-              <textarea value={site.siteDescription} onChange={(e) => setSite({ ...site, siteDescription: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" rows={3} />
+              <div className="mt-1">
+                <HtmlEditor value={site.siteDescription} onChange={(html) => setSite({ ...site, siteDescription: html })} placeholder="About your site..." minHeight="100px" />
+              </div>
             </div>
             <div className="grid md:grid-cols-2 gap-4">
               <div>

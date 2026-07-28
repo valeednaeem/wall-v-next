@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import ImageUpload from "@/components/media/image-upload";
+import HtmlEditor from "@/components/editor/html-editor";
 
 interface CategoryFormProps {
   category?: any;
@@ -53,7 +54,9 @@ export default function CategoryForm({ category }: CategoryFormProps) {
         </div>
         <div>
           <label className="text-sm font-medium">Description</label>
-          <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm min-h-[100px]" />
+          <div className="mt-1">
+            <HtmlEditor value={form.description} onChange={(html) => setForm({ ...form, description: html })} placeholder="Category description..." minHeight="100px" />
+          </div>
         </div>
       </div>
 

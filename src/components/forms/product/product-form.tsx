@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import ImageUpload from "@/components/media/image-upload";
 import GalleryUpload from "@/components/media/gallery-upload";
+import HtmlEditor from "@/components/editor/html-editor";
 
 interface Category {
   _id: string;
@@ -110,11 +111,15 @@ export default function ProductForm({ product }: ProductFormProps) {
         </div>
         <div>
           <label className="text-sm font-medium">Short Description</label>
-          <textarea value={form.shortDescription} onChange={(e) => setForm({ ...form, shortDescription: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm min-h-[80px]" />
+          <div className="mt-1">
+            <HtmlEditor value={form.shortDescription} onChange={(html) => setForm({ ...form, shortDescription: html })} placeholder="Brief product description..." minHeight="100px" />
+          </div>
         </div>
         <div>
           <label className="text-sm font-medium">Description *</label>
-          <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm min-h-[200px]" required />
+          <div className="mt-1">
+            <HtmlEditor value={form.description} onChange={(html) => setForm({ ...form, description: html })} placeholder="Full product description..." minHeight="200px" />
+          </div>
         </div>
       </div>
 

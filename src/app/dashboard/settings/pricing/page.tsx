@@ -5,6 +5,7 @@ import {
   Plus, Pencil, Trash2, DollarSign, ToggleLeft, ToggleRight,
   GripVertical, Search, Save, X, Loader2
 } from "lucide-react";
+import HtmlEditor from "@/components/editor/html-editor";
 
 interface PriceTier {
   name: string;
@@ -399,12 +400,14 @@ export default function PricingPage() {
 
               <div>
                 <label className="text-sm font-medium">Description</label>
-                <textarea
-                  value={form.description || ""}
-                  onChange={(e) => setForm({ ...form, description: e.target.value })}
-                  rows={2}
-                  className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
-                />
+                <div className="mt-1">
+                  <HtmlEditor
+                    value={form.description || ""}
+                    onChange={(html) => setForm({ ...form, description: html })}
+                    placeholder="Service description..."
+                    minHeight="80px"
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-3 gap-4">
@@ -576,13 +579,14 @@ export default function PricingPage() {
               <div>
                 <label className="text-sm font-medium">Agent Description</label>
                 <p className="text-xs text-muted-foreground mb-1">How the AI agent should describe this service to visitors</p>
-                <textarea
-                  value={form.agentDescription || ""}
-                  onChange={(e) => setForm({ ...form, agentDescription: e.target.value })}
-                  rows={2}
-                  placeholder="Custom description for the AI agent..."
-                  className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
-                />
+                <div className="mt-1">
+                  <HtmlEditor
+                    value={form.agentDescription || ""}
+                    onChange={(html) => setForm({ ...form, agentDescription: html })}
+                    placeholder="Custom description for the AI agent..."
+                    minHeight="80px"
+                  />
+                </div>
               </div>
 
               {/* Toggles */}

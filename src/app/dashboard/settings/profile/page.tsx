@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { Save, Loader2, Camera, Plus, Trash2, ExternalLink } from "lucide-react";
+import HtmlEditor from "@/components/editor/html-editor";
 
 interface ProfileData {
   name: string;
@@ -299,7 +300,9 @@ export default function ProfileSettingsPage() {
               </div>
               <div>
                 <label className="text-sm font-medium">Description</label>
-                <textarea value={item.description} onChange={(e) => updatePortfolioItem(index, "description", e.target.value)} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" rows={2} placeholder="Brief description" />
+                <div className="mt-1">
+                  <HtmlEditor value={item.description} onChange={(html) => updatePortfolioItem(index, "description", html)} placeholder="Brief description" minHeight="60px" />
+                </div>
               </div>
               <div>
                 <label className="text-sm font-medium">Image URL</label>

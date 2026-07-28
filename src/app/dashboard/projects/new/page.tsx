@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { ArrowLeft, Save, Loader2, Plus, X } from "lucide-react";
 import Link from "next/link";
+import HtmlEditor from "@/components/editor/html-editor";
 
 export default function NewProjectPage() {
   const router = useRouter();
@@ -108,13 +109,14 @@ export default function NewProjectPage() {
 
         <div>
           <label className="text-sm font-medium">Description *</label>
-          <textarea
-            value={form.description}
-            onChange={(e) => setForm({ ...form, description: e.target.value })}
-            rows={4}
-            placeholder="Project description, goals, requirements..."
-            className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
-          />
+          <div className="mt-1">
+            <HtmlEditor
+              value={form.description}
+              onChange={(html) => setForm({ ...form, description: html })}
+              placeholder="Project description, goals, requirements..."
+              minHeight="150px"
+            />
+          </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
