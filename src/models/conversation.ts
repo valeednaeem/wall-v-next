@@ -30,6 +30,12 @@ export interface IConversation extends Document {
   };
   outcome: "none" | "inquiry-created" | "project-created" | "payment-completed";
   projectId?: mongoose.Types.ObjectId;
+  projectName?: string;
+  projectQuote?: {
+    min: number;
+    max: number;
+    currency: string;
+  };
   inquiryId?: mongoose.Types.ObjectId;
   leadId?: mongoose.Types.ObjectId;
   convertedAt?: Date;
@@ -77,6 +83,12 @@ const ConversationSchema = new Schema<IConversation>(
       default: "none",
     },
     projectId: { type: Schema.Types.ObjectId, ref: "Project" },
+    projectName: String,
+    projectQuote: {
+      min: Number,
+      max: Number,
+      currency: { type: String, default: "USD" },
+    },
     inquiryId: { type: Schema.Types.ObjectId, ref: "Inquiry" },
     leadId: { type: Schema.Types.ObjectId, ref: "Lead" },
     convertedAt: Date,

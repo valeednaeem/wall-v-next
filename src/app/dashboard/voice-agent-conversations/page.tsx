@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import {
   Loader2, Phone, Clock, User, Bot, ArrowRight,
   Filter, TrendingUp, Eye, Calendar, PhoneCall, PhoneOff,
-  Search, Play
+  Search, FolderKanban, DollarSign, ExternalLink
 } from "lucide-react";
 
 interface Message {
@@ -37,6 +38,9 @@ interface VoiceConversation {
     clientPhone?: string;
   };
   outcome: "none" | "inquiry-created" | "project-created" | "payment-completed";
+  projectId?: string;
+  projectName?: string;
+  projectQuote?: { min: number; max: number; currency: string };
   inquiryId?: string;
   leadId?: string;
   startedAt: string;
@@ -64,6 +68,14 @@ function formatDuration(seconds: number) {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
+function formatPrice(amount: number, currency: string = "USD") {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency,
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
+
 export default function VoiceAgentConversationsPage() {
   const [conversations, setConversations] = useState<VoiceConversation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -75,7 +87,6 @@ export default function VoiceAgentConversationsPage() {
     try {
       const res = await fetch("/api/ai/conversations");
       const data = await res.json();
-      // Filter to only voice agent conversations
       const voiceConvs = (data.conversations || []).filter(
         (c: VoiceConversation) => c.channel === "voice" || c.agentType === "voice-agent"
       );
@@ -98,7 +109,8 @@ export default function VoiceAgentConversationsPage() {
         c.voiceAgent?.transcript?.toLowerCase().includes(term) ||
         c.voiceAgent?.summary?.toLowerCase().includes(term) ||
         c.projectBrief?.clientName?.toLowerCase().includes(term) ||
-        c.projectBrief?.clientEmail?.toLowerCase().includes(term)
+        c.projectBrief?.clientEmail?.toLowerCase().includes(term) ||
+        c.projectName?.toLowerCase().includes(term)
       );
     }
     return true;
@@ -109,6 +121,7 @@ export default function VoiceAgentConversationsPage() {
     completed: conversations.filter((c) => c.voiceAgent?.callStatus === "completed").length,
     totalDuration: conversations.reduce((sum, c) => sum + (c.voiceAgent?.durationSeconds || 0), 0),
     converted: conversations.filter((c) => c.outcome !== "none").length,
+    projectsCreated: conversations.filter((c) => c.outcome === "project-created").length,
     conversionRate: conversations.length > 0
       ? Math.round((conversations.filter((c) => c.outcome !== "none").length / conversations.length) * 100)
       : 0,
@@ -130,7 +143,7 @@ export default function VoiceAgentConversationsPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <div className="bg-white rounded-xl border p-4">
           <div className="flex items-center gap-2">
             <PhoneCall className="h-4 w-4 text-muted-foreground" />
@@ -154,6 +167,13 @@ export default function VoiceAgentConversationsPage() {
         </div>
         <div className="bg-white rounded-xl border p-4">
           <div className="flex items-center gap-2">
+            <FolderKanban className="h-4 w-4 text-blue-600" />
+            <p className="text-xs text-muted-foreground">Projects Created</p>
+          </div>
+          <p className="text-2xl font-bold text-blue-600">{stats.projectsCreated}</p>
+        </div>
+        <div className="bg-white rounded-xl border p-4">
+          <div className="flex items-center gap-2">
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
             <p className="text-xs text-muted-foreground">Conversion Rate</p>
           </div>
@@ -167,7 +187,7 @@ export default function VoiceAgentConversationsPage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <input
             type="text"
-            placeholder="Search transcripts, names..."
+            placeholder="Search transcripts, names, projects..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-9 pr-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20"
@@ -260,27 +280,71 @@ export default function VoiceAgentConversationsPage() {
                       </div>
                     )}
 
-                    {/* Caller Info */}
-                    {conv.projectBrief && (conv.projectBrief.clientName || conv.projectBrief.clientEmail) && (
-                      <div className="bg-muted/30 rounded-lg p-3">
-                        <p className="text-xs font-medium text-muted-foreground mb-2">CALLER INFO</p>
-                        <div className="grid grid-cols-2 gap-3 text-sm">
-                          {conv.projectBrief.clientName && (
-                            <div className="flex items-center gap-1">
-                              <User className="h-3 w-3 text-muted-foreground" />
-                              {conv.projectBrief.clientName}
-                            </div>
-                          )}
-                          {conv.projectBrief.clientEmail && (
-                            <div>{conv.projectBrief.clientEmail}</div>
-                          )}
-                          {conv.projectBrief.clientPhone && (
-                            <div>{conv.projectBrief.clientPhone}</div>
-                          )}
-                          {conv.projectBrief.budget && (
-                            <div>Budget: {conv.projectBrief.budget}</div>
-                          )}
+                    {/* Project & Client Info */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Client Info */}
+                      {conv.projectBrief && (conv.projectBrief.clientName || conv.projectBrief.clientEmail) && (
+                        <div className="bg-muted/30 rounded-lg p-3">
+                          <p className="text-xs font-medium text-muted-foreground mb-2">CLIENT INFO</p>
+                          <div className="space-y-1.5 text-sm">
+                            {conv.projectBrief.clientName && (
+                              <div className="flex items-center gap-1.5">
+                                <User className="h-3 w-3 text-muted-foreground" />
+                                <span className="font-medium">{conv.projectBrief.clientName}</span>
+                              </div>
+                            )}
+                            {conv.projectBrief.clientEmail && (
+                              <div className="text-muted-foreground">{conv.projectBrief.clientEmail}</div>
+                            )}
+                            {conv.projectBrief.clientPhone && (
+                              <div className="text-muted-foreground">{conv.projectBrief.clientPhone}</div>
+                            )}
+                          </div>
                         </div>
+                      )}
+
+                      {/* Project Info */}
+                      {conv.outcome === "project-created" && conv.projectId && (
+                        <div className="bg-green-50 rounded-lg p-3">
+                          <p className="text-xs font-medium text-green-700 mb-2">PROJECT</p>
+                          <div className="space-y-1.5 text-sm">
+                            <div className="flex items-center gap-1.5">
+                              <FolderKanban className="h-3 w-3 text-green-600" />
+                              <Link
+                                href={`/dashboard/projects/${conv.projectId}/edit`}
+                                className="font-medium text-green-800 hover:underline flex items-center gap-1"
+                              >
+                                {conv.projectBrief?.clientName
+                                  ? `${conv.projectBrief.features?.[0] || "Project"} — ${conv.projectBrief.clientName}`
+                                  : "View Project"}
+                                <ExternalLink className="h-3 w-3" />
+                              </Link>
+                            </div>
+                            {conv.projectBrief?.budget && (
+                              <div className="flex items-center gap-1.5">
+                                <DollarSign className="h-3 w-3 text-green-600" />
+                                <span className="font-semibold text-green-800">{conv.projectBrief.budget}</span>
+                              </div>
+                            )}
+                            {conv.projectBrief?.features && conv.projectBrief.features.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {conv.projectBrief.features.map((f, i) => (
+                                  <span key={i} className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded">
+                                    {f}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Budget Estimate */}
+                    {conv.projectBrief?.budget && conv.outcome !== "project-created" && (
+                      <div className="bg-amber-50 rounded-lg p-3">
+                        <p className="text-xs font-medium text-amber-700 mb-1">ESTIMATED BUDGET</p>
+                        <p className="text-sm font-semibold text-amber-900">{conv.projectBrief.budget}</p>
                       </div>
                     )}
 
@@ -318,10 +382,18 @@ export default function VoiceAgentConversationsPage() {
 
                     {/* Actions */}
                     <div className="flex items-center gap-3 text-sm pt-2 border-t">
+                      {conv.projectId && (
+                        <Link
+                          href={`/dashboard/projects/${conv.projectId}/edit`}
+                          className="flex items-center gap-1 text-green-700 hover:underline font-medium"
+                        >
+                          <FolderKanban className="h-3 w-3" /> View Project
+                        </Link>
+                      )}
                       {conv.inquiryId && (
-                        <a href={`/dashboard/crm/inquiries`} className="flex items-center gap-1 text-primary hover:underline">
+                        <Link href="/dashboard/crm/inquiries" className="flex items-center gap-1 text-primary hover:underline">
                           <Eye className="h-3 w-3" /> View Inquiry
-                        </a>
+                        </Link>
                       )}
                       <span className="text-muted-foreground text-xs ml-auto">
                         Session: {conv.sessionId.slice(0, 20)}...
