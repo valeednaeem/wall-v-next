@@ -105,12 +105,16 @@ export default function LegalManagementPage() {
 
   async function handleDuplicate(page: LegalPage) {
     try {
+      const fullRes = await fetch(`/api/legal/${page.slug}?dashboard=true`);
+      const fullData = await fullRes.json();
+      const content = fullData.success ? fullData.data.content : "";
+
       const res = await fetch("/api/legal", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: `${page.title} (Copy)`,
-          content: page.content,
+          content,
           type: page.type,
           seo: page.seo,
           status: "draft",
@@ -122,8 +126,12 @@ export default function LegalManagementPage() {
     }
   }
 
-  function exportHtml(page: LegalPage) {
-    const blob = new Blob([page.content || ""], { type: "text/html" });
+  async function exportHtml(page: LegalPage) {
+    try {
+      const res = await fetch(`/api/legal/${page.slug}?dashboard=true`);
+      const data = await res.json();
+      const content = data.success ? data.data.content : "";
+      const blob = new Blob([content], { type: "text/html" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
