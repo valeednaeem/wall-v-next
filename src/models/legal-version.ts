@@ -22,11 +22,7 @@ const LegalVersionSchema = new Schema<ILegalVersion>(
     content: { type: String, required: true },
     title: { type: String, required: true },
     changeNote: String,
-    snapshot: {
-      seo: Schema.Types.Mixed,
-      type: String,
-      slug: String,
-    },
+    snapshot: Schema.Types.Mixed,
     createdBy: { type: Schema.Types.ObjectId, ref: "User" },
   },
   { timestamps: true }

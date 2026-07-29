@@ -1,14 +1,18 @@
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import path from "path";
+import dns from "dns";
 
 dotenv.config({ path: path.resolve(process.cwd(), ".env.local") });
+
+// Fix DNS SRV resolution on Windows
+dns.setServers(["8.8.8.8", "8.8.4.4"]);
 
 const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/wallvnext";
 
 async function seed() {
   console.log("Connecting to MongoDB...");
-  await mongoose.connect(MONGODB_URI);
+  await mongoose.connect(MONGODB_URI, { dbName: "wallvnext" });
   console.log("Connected.\n");
 
   // Import models
@@ -44,16 +48,16 @@ async function seed() {
   // ==================== COOKIE DEFINITIONS ====================
   console.log("Seeding cookie definitions...");
   const cookies = [
-    { name: "session_id", description: "Maintains your session state across page requests", category: necessaryCat!._id, provider: "Wall-V", purpose: "Session management", duration: "Session", type: "first-party", isRequired: true, sortOrder: 1 },
-    { name: "csrf_token", description: "Protects against cross-site request forgery attacks", category: necessaryCat!._id, provider: "Wall-V", purpose: "Security", duration: "Session", type: "first-party", isRequired: true, sortOrder: 2 },
-    { name: "auth_token", description: "Authenticates logged-in users", category: necessaryCat!._id, provider: "Wall-V", purpose: "Authentication", duration: "30 days", type: "first-party", isRequired: true, sortOrder: 3 },
-    { name: "cookie_consent", description: "Stores your cookie preference selections", category: necessaryCat!._id, provider: "Wall-V", purpose: "Compliance", duration: "1 year", type: "first-party", isRequired: true, sortOrder: 4 },
-    { name: "language_pref", description: "Remembers your preferred language", category: functionalCat!._id, provider: "Wall-V", purpose: "Language preference", duration: "1 year", type: "first-party", isRequired: false, sortOrder: 5 },
-    { name: "theme_mode", description: "Stores your dark/light mode preference", category: functionalCat!._id, provider: "Wall-V", purpose: "Theme preference", duration: "1 year", type: "first-party", isRequired: false, sortOrder: 6 },
-    { name: "_ga", description: "Distinguishes unique users by assigning a randomly generated number", category: analyticsCat!._id, provider: "Google Analytics", purpose: "Analytics", duration: "2 years", type: "third-party", isRequired: false, sortOrder: 7 },
-    { name: "_gid", description: "Distinguishes unique users", category: analyticsCat!._id, provider: "Google Analytics", purpose: "Analytics", duration: "24 hours", type: "third-party", isRequired: false, sortOrder: 8 },
-    { name: "_fbp", description: "Used by Facebook to deliver advertising", category: marketingCat!._id, provider: "Meta", purpose: "Advertising", duration: "3 months", type: "third-party", isRequired: false, sortOrder: 9 },
-    { name: "_gcl_au", description: "Used by Google AdSense for experimentating ad efficiency", category: marketingCat!._id, provider: "Google", purpose: "Advertising", duration: "3 months", type: "third-party", isRequired: false, sortOrder: 10 },
+    { name: "session_id", slug: "session-id", description: "Maintains your session state across page requests", category: necessaryCat!._id, provider: "Wall-V", purpose: "Session management", duration: "Session", type: "first-party" as const, isRequired: true, sortOrder: 1 },
+    { name: "csrf_token", slug: "csrf-token", description: "Protects against cross-site request forgery attacks", category: necessaryCat!._id, provider: "Wall-V", purpose: "Security", duration: "Session", type: "first-party" as const, isRequired: true, sortOrder: 2 },
+    { name: "auth_token", slug: "auth-token", description: "Authenticates logged-in users", category: necessaryCat!._id, provider: "Wall-V", purpose: "Authentication", duration: "30 days", type: "first-party" as const, isRequired: true, sortOrder: 3 },
+    { name: "cookie_consent", slug: "cookie-consent", description: "Stores your cookie preference selections", category: necessaryCat!._id, provider: "Wall-V", purpose: "Compliance", duration: "1 year", type: "first-party" as const, isRequired: true, sortOrder: 4 },
+    { name: "language_pref", slug: "language-pref", description: "Remembers your preferred language", category: functionalCat!._id, provider: "Wall-V", purpose: "Language preference", duration: "1 year", type: "first-party" as const, isRequired: false, sortOrder: 5 },
+    { name: "theme_mode", slug: "theme-mode", description: "Stores your dark/light mode preference", category: functionalCat!._id, provider: "Wall-V", purpose: "Theme preference", duration: "1 year", type: "first-party" as const, isRequired: false, sortOrder: 6 },
+    { name: "_ga", slug: "ga", description: "Distinguishes unique users by assigning a randomly generated number", category: analyticsCat!._id, provider: "Google Analytics", purpose: "Analytics", duration: "2 years", type: "third-party" as const, isRequired: false, sortOrder: 7 },
+    { name: "_gid", slug: "gid", description: "Distinguishes unique users", category: analyticsCat!._id, provider: "Google Analytics", purpose: "Analytics", duration: "24 hours", type: "third-party" as const, isRequired: false, sortOrder: 8 },
+    { name: "_fbp", slug: "fbp", description: "Used by Facebook to deliver advertising", category: marketingCat!._id, provider: "Meta", purpose: "Advertising", duration: "3 months", type: "third-party" as const, isRequired: false, sortOrder: 9 },
+    { name: "_gcl_au", slug: "gcl-au", description: "Used by Google AdSense for experimentating ad efficiency", category: marketingCat!._id, provider: "Google", purpose: "Advertising", duration: "3 months", type: "third-party" as const, isRequired: false, sortOrder: 10 },
   ];
 
   for (const cookie of cookies) {
