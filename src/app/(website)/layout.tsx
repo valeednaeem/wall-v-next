@@ -3,6 +3,7 @@ import { Footer } from "@/components/footer";
 import { SalesChatbot } from "@/components/ai/sales-chatbot";
 import { FloatingVoiceWidget } from "@/components/ai/voice-widget";
 import { DograhWidgetLoader } from "@/components/ai/dograh-widget-loader";
+import { CartProvider } from "@/lib/cart-context";
 
 export default function WebsiteLayout({
   children,
@@ -11,9 +12,11 @@ export default function WebsiteLayout({
 }) {
   return (
     <div className="flex min-h-screen flex-col">
-      <Navbar />
-      <main className="flex-1">{children}</main>
-      <Footer />
+      <CartProvider>
+        <Navbar />
+        <main className="flex-1">{children}</main>
+        <Footer />
+      </CartProvider>
       <SalesChatbot />
       <DograhWidgetLoader />
       <FloatingVoiceWidget />

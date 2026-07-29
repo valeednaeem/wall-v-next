@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import Product from "@/models/product";
+import { getAuthUser } from "@/lib/auth";
 
 export async function GET(
   request: Request,
@@ -32,6 +33,11 @@ export async function PUT(
   { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
+    const user = await getAuthUser();
+    if (!user || !["super-admin", "admin", "manager", "staff"].includes(user.role)) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     await connectToDatabase();
     const { slug } = await params;
     const body = await request.json();
@@ -53,6 +59,11 @@ export async function DELETE(
   { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
+    const user = await getAuthUser();
+    if (!user || !["super-admin", "admin", "manager", "staff"].includes(user.role)) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     await connectToDatabase();
     const { slug } = await params;
 

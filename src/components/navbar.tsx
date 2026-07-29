@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { useState } from "react";
 import { usePathname } from "next/navigation";
-import { Menu, X, ChevronDown, LogOut, LayoutDashboard } from "lucide-react";
+import { Menu, X, ChevronDown, LogOut, LayoutDashboard, ShoppingCart } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSession, signOut } from "next-auth/react";
+import { useCart } from "@/lib/cart-context";
 
 const services = [
   { title: "AI Automation", description: "Intelligent agents & workflows", href: "/services" },
@@ -31,6 +32,7 @@ export function Navbar() {
   const [servicesOpen, setServicesOpen] = useState(false);
   const { data: session } = useSession();
   const pathname = usePathname();
+  const { itemCount } = useCart();
 
   const user = session?.user;
 
@@ -96,6 +98,14 @@ export function Navbar() {
         </nav>
 
         <div className="hidden lg:flex items-center gap-3">
+          <Link href="/cart" className="relative p-2 text-muted-foreground hover:text-primary transition-colors">
+            <ShoppingCart className="h-5 w-5" />
+            {itemCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-medium text-primary-foreground">
+                {itemCount > 99 ? "99+" : itemCount}
+              </span>
+            )}
+          </Link>
           {user ? (
             <div className="flex items-center gap-3">
               <Link href="/dashboard" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary">
@@ -149,6 +159,10 @@ export function Navbar() {
             </Link>
           ))}
           <hr className="my-2" />
+          <Link href="/cart" className="flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg hover:bg-accent" onClick={() => setOpen(false)}>
+            <span className="flex items-center gap-2"><ShoppingCart className="h-4 w-4" /> Cart</span>
+            {itemCount > 0 && <span className="rounded-full bg-primary px-2 py-0.5 text-xs text-primary-foreground">{itemCount}</span>}
+          </Link>
           {user ? (
             <>
               <Link href="/dashboard" className="block px-3 py-2 text-sm font-medium rounded-lg hover:bg-accent" onClick={() => setOpen(false)}>

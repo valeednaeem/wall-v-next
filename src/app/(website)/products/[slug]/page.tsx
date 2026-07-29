@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { ShoppingCart, Check } from "lucide-react";
+import { useCart } from "@/lib/cart-context";
 
 interface Product {
   _id: string;
@@ -33,6 +35,9 @@ export default function ProductDetailPage() {
   const [error, setError] = useState("");
   const [selectedVariant, setSelectedVariant] = useState(0);
   const [quantity, setQuantity] = useState(1);
+  const [added, setAdded] = useState(false);
+  const { addItem } = useCart();
+  const router = useRouter();
 
   useEffect(() => {
     if (!params.slug) return;
@@ -160,8 +165,52 @@ export default function ProductDetailPage() {
               </div>
             </div>
 
-            <button className="w-full bg-primary text-primary-foreground py-3 rounded-xl font-medium hover:bg-primary/90 transition-colors">
-              Add to Cart
+            <button
+              onClick={() => {
+                addItem(
+                  {
+                    productId: product._id,
+                    name: product.name,
+                    slug: product.slug,
+                    price: product.price,
+                    salePrice: product.salePrice,
+                    image: product.featuredImage,
+                    variant: product.variants?.[selectedVariant]?.name,
+                    stock: 999,
+                  },
+                  quantity
+                );
+                setAdded(true);
+                setTimeout(() => setAdded(false), 2000);
+              }}
+              className="w-full bg-primary text-primary-foreground py-3 rounded-xl font-medium hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
+            >
+              {added ? (
+                <><Check className="h-5 w-5" /> Added to Cart</>
+              ) : (
+                <><ShoppingCart className="h-5 w-5" /> Add to Cart</>
+              )}
+            </button>
+            <button
+              onClick={() => {
+                addItem(
+                  {
+                    productId: product._id,
+                    name: product.name,
+                    slug: product.slug,
+                    price: product.price,
+                    salePrice: product.salePrice,
+                    image: product.featuredImage,
+                    variant: product.variants?.[selectedVariant]?.name,
+                    stock: 999,
+                  },
+                  quantity
+                );
+                router.push("/checkout");
+              }}
+              className="w-full mt-2 border border-primary text-primary py-3 rounded-xl font-medium hover:bg-primary/5 transition-colors"
+            >
+              Buy Now
             </button>
           </div>
 

@@ -14,9 +14,10 @@ interface Category {
 
 interface ProductFormProps {
   product?: any;
+  onSave?: (product: any) => void;
 }
 
-export default function ProductForm({ product }: ProductFormProps) {
+export default function ProductForm({ product, onSave }: ProductFormProps) {
   const router = useRouter();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
@@ -69,7 +70,11 @@ export default function ProductForm({ product }: ProductFormProps) {
       const url = product ? `/api/products/${product.slug}` : "/api/products";
       const method = product ? "PUT" : "POST";
       const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-      if (res.ok) router.push("/dashboard/ecommerce/products");
+      if (res.ok) {
+        const data = await res.json();
+        if (onSave) onSave(data.data);
+        else router.push("/dashboard/ecommerce/products");
+      }
     } catch (err) {
       console.error(err);
     } finally {
