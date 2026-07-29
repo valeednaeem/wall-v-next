@@ -34,9 +34,12 @@ const footerSections = [
     links: [
       { name: "Privacy Policy", href: "/privacy" },
       { name: "Terms & Conditions", href: "/terms" },
-      { name: "Cookie Policy", href: "/cookie" },
+      { name: "Disclaimer", href: "/disclaimer" },
       { name: "Refund Policy", href: "/refund" },
-      { name: "Sitemap", href: "/sitemap.xml" },
+      { name: "Cookie Policy", href: "/cookie-policy" },
+      { name: "Accessibility", href: "/accessibility" },
+      { name: "AI Usage & Limitations", href: "/ai-usage" },
+      { name: "Sitemap", href: "/sitemap" },
     ],
   },
 ];
@@ -100,7 +103,8 @@ export function Footer() {
           <div className="flex gap-4">
             <Link href="/privacy" className="hover:text-primary">Privacy</Link>
             <Link href="/terms" className="hover:text-primary">Terms</Link>
-            <Link href="/cookie" className="hover:text-primary">Cookies</Link>
+            <Link href="/cookie-policy" className="hover:text-primary">Cookies</Link>
+            <Link href="/sitemap" className="hover:text-primary">Sitemap</Link>
           </div>
         </div>
       </div>

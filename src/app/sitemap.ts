@@ -1,9 +1,13 @@
 import type { MetadataRoute } from "next";
+import { connectToDatabase } from "@/lib/mongodb";
+import LegalPage from "@/models/legal-page";
+import Post from "@/models/blog-post";
+import Product from "@/models/product";
 
-export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://wall-v.com";
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://wall-v-next-six.vercel.app";
 
-  return [
+  const entries: MetadataRoute.Sitemap = [
     {
       url: baseUrl,
       lastModified: new Date(),
@@ -64,5 +68,114 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "yearly",
       priority: 0.3,
     },
+    {
+      url: `${baseUrl}/disclaimer`,
+      lastModified: new Date(),
+      changeFrequency: "yearly",
+      priority: 0.3,
+    },
+    {
+      url: `${baseUrl}/refund`,
+      lastModified: new Date(),
+      changeFrequency: "yearly",
+      priority: 0.3,
+    },
+    {
+      url: `${baseUrl}/cookie-policy`,
+      lastModified: new Date(),
+      changeFrequency: "yearly",
+      priority: 0.3,
+    },
+    {
+      url: `${baseUrl}/sitemap`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.2,
+    },
+    {
+      url: `${baseUrl}/accessibility`,
+      lastModified: new Date(),
+      changeFrequency: "yearly",
+      priority: 0.3,
+    },
+    {
+      url: `${baseUrl}/acceptable-use`,
+      lastModified: new Date(),
+      changeFrequency: "yearly",
+      priority: 0.3,
+    },
+    {
+      url: `${baseUrl}/ai-usage`,
+      lastModified: new Date(),
+      changeFrequency: "yearly",
+      priority: 0.3,
+    },
+    {
+      url: `${baseUrl}/data-processing`,
+      lastModified: new Date(),
+      changeFrequency: "yearly",
+      priority: 0.3,
+    },
+    {
+      url: `${baseUrl}/copyright`,
+      lastModified: new Date(),
+      changeFrequency: "yearly",
+      priority: 0.3,
+    },
+    {
+      url: `${baseUrl}/legal-notices`,
+      lastModified: new Date(),
+      changeFrequency: "yearly",
+      priority: 0.3,
+    },
   ];
+
+  try {
+    await connectToDatabase();
+
+    const [posts, products, legalPages] = await Promise.all([
+      Post.find({ status: "published" }).select("slug updatedAt").limit(1000).lean(),
+      Product.find({ isActive: true }).select("slug updatedAt").limit(1000).lean(),
+      LegalPage.find({ isActive: true, status: "published" }).select("slug updatedAt").lean(),
+    ]);
+
+    for (const post of posts) {
+      entries.push({
+        url: `${baseUrl}/blog/${post.slug}`,
+        lastModified: post.updatedAt ? new Date(post.updatedAt) : new Date(),
+        changeFrequency: "weekly",
+        priority: 0.7,
+      });
+    }
+
+    for (const product of products) {
+      entries.push({
+        url: `${baseUrl}/products/${product.slug}`,
+        lastModified: product.updatedAt ? new Date(product.updatedAt) : new Date(),
+        changeFrequency: "weekly",
+        priority: 0.7,
+      });
+    }
+
+    const staticSlugs = new Set([
+      "privacy", "terms", "disclaimer", "refund", "cookie-policy",
+      "sitemap", "accessibility", "acceptable-use", "ai-usage",
+      "data-processing", "copyright", "legal-notices",
+    ]);
+
+    for (const lp of legalPages) {
+      if (!staticSlugs.has(lp.slug)) {
+        entries.push({
+          url: `${baseUrl}/${lp.slug}`,
+          lastModified: lp.updatedAt ? new Date(lp.updatedAt) : new Date(),
+          changeFrequency: "monthly",
+          priority: 0.5,
+        });
+      }
+    }
+  } catch (error) {
+    console.error("Sitemap generation error:", error);
+  }
+
+  return entries;
 }

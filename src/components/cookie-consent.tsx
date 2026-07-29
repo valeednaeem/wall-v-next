@@ -2,12 +2,30 @@
 
 import { useState, useEffect } from "react";
 import { X, Settings, Shield } from "lucide-react";
-import { cn } from "@/lib/utils";
+
+interface CookieCategory {
+  _id: string;
+  name: string;
+  slug: string;
+  description: string;
+  isRequired: boolean;
+  defaultEnabled: boolean;
+  cookies: CookieItem[];
+}
+
+interface CookieItem {
+  _id: string;
+  name: string;
+  description: string;
+  provider: string;
+  duration: string;
+  type: string;
+  isRequired: boolean;
+  purpose: string;
+}
 
 interface CookiePreferences {
-  necessary: boolean;
-  analytics: boolean;
-  marketing: boolean;
+  [categorySlug: string]: boolean;
 }
 
 function getConsentCookie(): CookiePreferences | null {
@@ -29,11 +47,9 @@ const EU_COUNTRIES = ["AT","BE","BG","HR","CY","CZ","DK","EE","FI","FR","DE","GR
 export function CookieConsent() {
   const [visible, setVisible] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [preferences, setPreferences] = useState<CookiePreferences>({
-    necessary: true,
-    analytics: false,
-    marketing: false,
-  });
+  const [categories, setCategories] = useState<CookieCategory[]>([]);
+  const [preferences, setPreferences] = useState<CookiePreferences>({});
+  const [loading, setLoading] = useState(true);
   const [geoRegion, setGeoRegion] = useState<string>("");
 
   useEffect(() => {
@@ -43,30 +59,48 @@ export function CookieConsent() {
       return;
     }
 
-    // Detect region from timezone/language for GDPR relevance
     let isEU = false;
     try {
       const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
       const lang = navigator.language;
       isEU = EU_COUNTRIES.some(c => lang.includes(c) || tz.includes(c));
-      if (isEU) {
-        setGeoRegion("EU");
-      }
+      if (isEU) setGeoRegion("EU");
     } catch {}
 
-    // Show banner for first-time visitors
-    setVisible(true);
+    fetchCategories();
   }, []);
 
+  async function fetchCategories() {
+    try {
+      const res = await fetch("/api/legal/public/cookies");
+      const data = await res.json();
+      if (data.success && data.data.length > 0) {
+        setCategories(data.data);
+        const defaultPrefs: CookiePreferences = {};
+        data.data.forEach((cat: CookieCategory) => {
+          defaultPrefs[cat.slug] = cat.isRequired || cat.defaultEnabled;
+        });
+        setPreferences(defaultPrefs);
+        setVisible(true);
+      }
+    } catch (error) {
+      console.error("Failed to load cookie categories:", error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   const handleAcceptAll = () => {
-    const prefs = { necessary: true, analytics: true, marketing: true };
+    const prefs: CookiePreferences = {};
+    categories.forEach((cat) => { prefs[cat.slug] = true; });
     setPreferences(prefs);
     setConsentCookie(prefs);
     setVisible(false);
   };
 
   const handleRejectAll = () => {
-    const prefs = { necessary: true, analytics: false, marketing: false };
+    const prefs: CookiePreferences = {};
+    categories.forEach((cat) => { prefs[cat.slug] = cat.isRequired; });
     setPreferences(prefs);
     setConsentCookie(prefs);
     setVisible(false);
@@ -78,11 +112,11 @@ export function CookieConsent() {
     setShowSettings(false);
   };
 
-  if (!visible) return null;
+  if (loading || !visible) return null;
 
   return (
     <div className="fixed inset-x-0 bottom-0 z-[100] p-4 sm:p-6">
-      <div className="mx-auto max-w-3xl rounded-2xl bg-white border shadow-2xl p-5 sm:p-6">
+      <div className="mx-auto max-w-3xl rounded-2xl bg-white border shadow-2xl p-5 sm:p-6 max-h-[80vh] overflow-y-auto">
         {!showSettings ? (
           <>
             <div className="flex items-start gap-3 mb-4">
@@ -132,40 +166,47 @@ export function CookieConsent() {
           <>
             <h3 className="font-semibold text-sm mb-4">Cookie Settings</h3>
 
-            <div className="space-y-3">
-              <label className="flex items-start gap-3 p-3 rounded-lg bg-muted/50 cursor-not-allowed">
-                <input type="checkbox" checked disabled className="mt-0.5 rounded border-gray-300" />
-                <div>
-                  <p className="text-xs font-medium">Strictly Necessary</p>
-                  <p className="text-[11px] text-muted-foreground">Required for the site to function. Cannot be disabled.</p>
+            <div className="space-y-4">
+              {categories.map((cat) => (
+                <div key={cat._id} className="rounded-lg bg-muted/50 p-3">
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={preferences[cat.slug] || false}
+                      onChange={(e) => {
+                        if (!cat.isRequired) {
+                          setPreferences((p) => ({ ...p, [cat.slug]: e.target.checked }));
+                        }
+                      }}
+                      disabled={cat.isRequired}
+                      className="mt-0.5 rounded border-gray-300"
+                    />
+                    <div className="flex-1">
+                      <p className="text-xs font-medium">{cat.name}</p>
+                      <p className="text-[11px] text-muted-foreground">{cat.description}</p>
+                      {cat.cookies && cat.cookies.length > 0 && (
+                        <details className="mt-2">
+                          <summary className="text-[11px] text-primary cursor-pointer hover:underline">
+                            View {cat.cookies.length} cookie{cat.cookies.length !== 1 ? "s" : ""}
+                          </summary>
+                          <div className="mt-2 space-y-1.5">
+                            {cat.cookies.map((cookie) => (
+                              <div key={cookie._id} className="text-[10px] border rounded p-2 bg-white">
+                                <div className="flex justify-between">
+                                  <span className="font-medium">{cookie.name}</span>
+                                  <span className="text-muted-foreground">{cookie.duration}</span>
+                                </div>
+                                <p className="text-muted-foreground mt-0.5">{cookie.purpose}</p>
+                                <p className="text-muted-foreground">Provider: {cookie.provider}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </details>
+                      )}
+                    </div>
+                  </label>
                 </div>
-              </label>
-
-              <label className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors">
-                <input
-                  type="checkbox"
-                  checked={preferences.analytics}
-                  onChange={(e) => setPreferences(p => ({ ...p, analytics: e.target.checked }))}
-                  className="mt-0.5 rounded border-gray-300"
-                />
-                <div>
-                  <p className="text-xs font-medium">Analytics</p>
-                  <p className="text-[11px] text-muted-foreground">Help us understand how visitors interact with our website.</p>
-                </div>
-              </label>
-
-              <label className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors">
-                <input
-                  type="checkbox"
-                  checked={preferences.marketing}
-                  onChange={(e) => setPreferences(p => ({ ...p, marketing: e.target.checked }))}
-                  className="mt-0.5 rounded border-gray-300"
-                />
-                <div>
-                  <p className="text-xs font-medium">Marketing</p>
-                  <p className="text-[11px] text-muted-foreground">Used to deliver personalized ads and track campaign performance.</p>
-                </div>
-              </label>
+              ))}
             </div>
 
             <div className="flex gap-3 mt-5">

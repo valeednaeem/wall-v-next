@@ -51,6 +51,7 @@ const sidebarItems: SidebarItem[] = [
     { label: "Profile", href: "/dashboard/settings/profile" },
     { label: "Security", href: "/dashboard/settings/auth" },
     { label: "Payment", href: "/dashboard/settings/payment" },
+    { label: "Legal & Compliance", href: "/dashboard/settings/legal" },
   ]},
 ];
 
