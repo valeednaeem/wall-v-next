@@ -53,6 +53,9 @@ export default function CheckoutPage() {
   const [processing, setProcessing] = useState(false);
   const [selectedMilestoneIdx, setSelectedMilestoneIdx] = useState<number | null>(null);
   const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    phone: "",
     cardName: "",
     cardNumber: "",
     expiry: "",
@@ -83,27 +86,31 @@ export default function CheckoutPage() {
       : project.quote?.min || 1000;
 
     try {
-      const res = await fetch("/api/payments/create", {
+      const res = await fetch("/api/payments/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          type: "project",
           projectId: project.id,
           milestoneIndex: selectedMilestoneIdx,
-          amount: paymentAmount,
           currency: project.quote?.currency || "USD",
-          method: selectedMethod,
-          billingDetails: formData,
+          guestEmail: formData.email || project.client?.email,
+          billingAddress: {
+            name: formData.name,
+            email: formData.email,
+            phone: formData.phone,
+            street: formData.address,
+            city: formData.city,
+            country: formData.country,
+            zip: formData.zip,
+          },
         }),
       });
 
       const data = await res.json();
 
       if (data.success) {
-        if (data.data.redirectUrl) {
-          window.location.href = data.data.redirectUrl;
-        } else {
-          router.push(`/checkout/${project.id}/success`);
-        }
+        window.location.href = data.data.checkoutUrl;
       } else {
         setError(data.error || "Payment failed");
       }

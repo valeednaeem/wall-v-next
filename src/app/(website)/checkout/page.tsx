@@ -2,9 +2,8 @@
 
 import { useState } from "react";
 import { useCart } from "@/lib/cart-context";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { CreditCard, Lock, CheckCircle } from "lucide-react";
+import { Lock, CreditCard, ExternalLink } from "lucide-react";
 
 interface BillingInfo {
   name: string;
@@ -18,44 +17,20 @@ interface BillingInfo {
 }
 
 export default function CheckoutPage() {
-  const router = useRouter();
   const { items, subtotal, tax, total, clearCart, itemCount } = useCart();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<"stripe" | "paypal" | "manual">("stripe");
   const [billing, setBilling] = useState<BillingInfo>({
     name: "", email: "", phone: "",
     street: "", city: "", state: "", country: "", zip: "",
   });
-  const [sameAsShipping, setSameAsShipping] = useState(true);
-  const [success, setSuccess] = useState<{ orderId: string; orderNumber: string } | null>(null);
 
-  if (items.length === 0 && !success) {
+  if (items.length === 0) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <p className="text-muted-foreground mb-4">Your cart is empty.</p>
           <Link href="/products" className="text-primary hover:underline">Browse Products</Link>
-        </div>
-      </div>
-    );
-  }
-
-  if (success) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="mx-auto max-w-md text-center">
-          <CheckCircle className="mx-auto h-16 w-16 text-green-500 mb-4" />
-          <h1 className="text-2xl font-bold mb-2">Order Confirmed!</h1>
-          <p className="text-muted-foreground mb-2">Order #{success.orderNumber}</p>
-          <p className="text-sm text-muted-foreground mb-6">
-            {paymentMethod === "manual"
-              ? "Your order has been placed. Our team will contact you to arrange payment."
-              : "A confirmation email has been sent."}
-          </p>
-          <Link href={`/orders/${success.orderNumber}`} className="inline-flex rounded-lg bg-primary px-6 py-3 text-sm font-medium text-primary-foreground hover:bg-primary/90">
-            View Order
-          </Link>
         </div>
       </div>
     );
@@ -67,26 +42,27 @@ export default function CheckoutPage() {
     setError("");
 
     try {
-      const res = await fetch("/api/orders", {
+      const res = await fetch("/api/payments/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          type: "product",
           items: items.map((i) => ({ slug: i.slug, quantity: i.quantity, variant: i.variant })),
           guestEmail: billing.email,
           billingAddress: billing,
-          shippingAddress: sameAsShipping ? billing : billing,
-          paymentMethod,
         }),
       });
 
       const data = await res.json();
       if (!data.success) {
-        setError(data.error || "Failed to place order");
+        setError(data.error || "Failed to create checkout session");
         return;
       }
 
-      setSuccess({ orderId: data.data.orderId, orderNumber: data.data.orderNumber });
       clearCart();
+
+      // Redirect to 2Checkout hosted checkout
+      window.location.href = data.data.checkoutUrl;
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {
@@ -106,9 +82,11 @@ export default function CheckoutPage() {
         <form onSubmit={handleSubmit}>
           <div className="grid gap-8 lg:grid-cols-3">
             <div className="lg:col-span-2 space-y-6">
-              {/* Billing */}
               <section className="rounded-lg border bg-card p-6">
                 <h2 className="text-lg font-semibold mb-4">Billing Information</h2>
+                <p className="text-sm text-muted-foreground mb-4">
+                  You&apos;ll complete payment on 2Checkout&apos;s secure checkout page.
+                </p>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
                     <label className="text-sm font-medium">Full Name *</label>
@@ -151,47 +129,6 @@ export default function CheckoutPage() {
                       className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" />
                   </div>
                 </div>
-                <label className="mt-4 flex items-center gap-2 text-sm">
-                  <input type="checkbox" checked={sameAsShipping} onChange={(e) => setSameAsShipping(e.target.checked)} className="rounded" />
-                  Billing address is same as shipping
-                </label>
-              </section>
-
-              {/* Payment */}
-              <section className="rounded-lg border bg-card p-6">
-                <h2 className="text-lg font-semibold mb-4">Payment Method</h2>
-                <div className="space-y-3">
-                  {[
-                    { id: "stripe" as const, label: "Credit / Debit Card", icon: CreditCard },
-                    { id: "paypal" as const, label: "PayPal", icon: CreditCard },
-                    { id: "manual" as const, label: "Manual Payment (Invoice)", icon: CreditCard },
-                  ].map(({ id, label, icon: Icon }) => (
-                    <label key={id} className={`flex items-center gap-3 rounded-lg border p-4 cursor-pointer ${paymentMethod === id ? "border-primary bg-primary/5" : ""}`}>
-                      <input type="radio" name="payment" value={id} checked={paymentMethod === id} onChange={() => setPaymentMethod(id)} className="accent-primary" />
-                      <Icon className="h-5 w-5 text-muted-foreground" />
-                      <span className="text-sm font-medium">{label}</span>
-                    </label>
-                  ))}
-                </div>
-
-                {paymentMethod === "stripe" && (
-                  <div className="mt-4 space-y-3">
-                    <div>
-                      <label className="text-sm font-medium">Card Number</label>
-                      <input type="text" placeholder="4242 4242 4242 4242" className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" />
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="text-sm font-medium">Expiry</label>
-                        <input type="text" placeholder="MM/YY" className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" />
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium">CVC</label>
-                        <input type="text" placeholder="123" className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" />
-                      </div>
-                    </div>
-                  </div>
-                )}
               </section>
             </div>
 
@@ -202,7 +139,7 @@ export default function CheckoutPage() {
                 <div className="space-y-3 mb-4">
                   {items.map((item) => (
                     <div key={`${item.productId}-${item.variant || ""}`} className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">{item.name} x{item.quantity}</span>
+                      <span className="text-muted-foreground truncate max-w-[180px]">{item.name} x{item.quantity}</span>
                       <span>${((item.salePrice || item.price) * item.quantity).toFixed(2)}</span>
                     </div>
                   ))}
@@ -219,9 +156,14 @@ export default function CheckoutPage() {
                   className="mt-6 w-full rounded-lg bg-primary py-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   <Lock className="h-4 w-4" />
-                  {loading ? "Placing Order..." : `Pay $${total.toFixed(2)}`}
+                  {loading ? "Redirecting to 2Checkout..." : `Pay $${total.toFixed(2)}`}
                 </button>
-                <p className="mt-3 text-center text-xs text-muted-foreground">Secure checkout. Your data is encrypted.</p>
+
+                <div className="mt-4 flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                  <CreditCard className="h-3 w-3" />
+                  Secured by 2Checkout
+                  <ExternalLink className="h-3 w-3" />
+                </div>
               </div>
             </div>
           </div>
