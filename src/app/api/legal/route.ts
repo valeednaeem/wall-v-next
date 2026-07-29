@@ -54,7 +54,7 @@ export async function POST(request: Request) {
       slug,
       version,
       status: body.status || "draft",
-      author: user._id,
+      author: user.userId,
     });
 
     await LegalVersion.create({
@@ -64,7 +64,7 @@ export async function POST(request: Request) {
       title: page.title,
       changeNote: "Initial version",
       snapshot: { seo: page.seo, type: page.type, slug: page.slug },
-      createdBy: user._id,
+      createdBy: user.userId,
     });
 
     return NextResponse.json({ success: true, data: page }, { status: 201 });

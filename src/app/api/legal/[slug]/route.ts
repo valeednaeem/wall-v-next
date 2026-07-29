@@ -83,7 +83,7 @@ export async function PUT(
         title: updated.title,
         changeNote: body.changeNote || `Updated to version ${updated.version}`,
         snapshot: { seo: updated.seo, type: updated.type, slug: updated.slug },
-        createdBy: user._id,
+        createdBy: user.userId,
       });
     }
 

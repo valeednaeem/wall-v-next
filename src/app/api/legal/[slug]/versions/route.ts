@@ -73,7 +73,7 @@ export async function POST(
         title: oldVersion.title,
         changeNote: body.changeNote || `Restored from version ${oldVersion.version}`,
         snapshot: { seo: page.seo, type: page.type, slug: page.slug },
-        createdBy: user._id,
+        createdBy: user.userId,
       });
 
       return NextResponse.json({ success: true, data: restored });
@@ -86,7 +86,7 @@ export async function POST(
       title: body.title || page.title,
       changeNote: body.changeNote,
       snapshot: { seo: page.seo, type: page.type, slug: page.slug },
-      createdBy: user._id,
+      createdBy: user.userId,
     });
 
     await LegalPage.findOneAndUpdate({ slug }, { version: newVersion });
