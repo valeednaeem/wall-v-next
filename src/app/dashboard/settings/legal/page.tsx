@@ -132,12 +132,15 @@ export default function LegalManagementPage() {
       const data = await res.json();
       const content = data.success ? data.data.content : "";
       const blob = new Blob([content], { type: "text/html" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${page.slug}.html`;
-    a.click();
-    URL.revokeObjectURL(url);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${page.slug}.html`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Failed to export:", error);
+    }
   }
 
   const filteredPages = pages.filter((p) => {
