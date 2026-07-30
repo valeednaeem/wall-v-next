@@ -4,9 +4,15 @@ import Project from "@/models/project";
 import Invoice from "@/models/invoice";
 import { sendEmail, milestonePaidEmail } from "@/services/email";
 import { notifyAdmins } from "@/lib/notify";
+import { getAuthUser } from "@/lib/auth";
 
 export async function POST(request: Request) {
   try {
+    const user = await getAuthUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const body = await request.json();
     const { projectId, milestoneIndex, amount, currency, method, billingDetails } = body;
 

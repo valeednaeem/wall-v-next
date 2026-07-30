@@ -1,4 +1,7 @@
+import dns from "dns";
 import mongoose from "mongoose";
+
+dns.setServers(["8.8.8.8"]);
 
 interface MongooseCache {
   conn: typeof mongoose | null;
@@ -29,6 +32,7 @@ export async function connectToDatabase(): Promise<typeof mongoose> {
   if (!cached.promise) {
     const opts = {
       bufferCommands: false,
+      dbName: "wallvnext",
     };
 
     cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => mongoose);

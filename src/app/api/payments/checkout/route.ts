@@ -177,8 +177,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid checkout type" }, { status: 400 });
     }
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    console.error("[2Checkout Checkout] Error:", message);
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error("[2Checkout Checkout] Error:", error);
+    return NextResponse.json({ error: "Payment processing failed" }, { status: 500 });
   }
 }

@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { ShoppingCart, Check } from "lucide-react";
 import { useCart } from "@/lib/cart-context";
+import DOMPurify from "isomorphic-dompurify";
 
 interface Product {
   _id: string;
@@ -247,7 +248,7 @@ export default function ProductDetailPage() {
       {product.content && (
         <div className="max-w-4xl mx-auto mt-16">
           <h2 className="text-2xl font-bold mb-6">Description</h2>
-          <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: product.content }} />
+          <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(product.content) }} />
         </div>
       )}
     </div>

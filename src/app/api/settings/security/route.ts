@@ -3,6 +3,7 @@ import { connectToDatabase } from "@/lib/mongodb";
 import User from "@/models/user";
 import bcrypt from "bcryptjs";
 import { getAuthUserFromCookie } from "@/lib/auth-cookie";
+import { verifyCsrfToken, CSRF_HEADER_NAME } from "@/lib/csrf";
 
 export async function GET() {
   try {
@@ -13,15 +14,14 @@ export async function GET() {
 
     await connectToDatabase();
     const user = await User.findById(authUser.userId)
-      .select("twoFactorEnabled linkedAccounts loginHistory")
+      .select("loginHistory activeSessions")
       .lean();
 
     return NextResponse.json({
       success: true,
       data: {
-        twoFactorEnabled: (user as Record<string, unknown>)?.twoFactorEnabled || false,
-        linkedAccounts: (user as Record<string, unknown>)?.linkedAccounts || [],
         loginHistory: (user as Record<string, unknown>)?.loginHistory || [],
+        sessions: (user as Record<string, unknown>)?.activeSessions || [],
       },
     });
   } catch (error) {
@@ -35,6 +35,11 @@ export async function PUT(request: Request) {
     const authUser = await getAuthUserFromCookie();
     if (!authUser) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const csrfToken = request.headers.get(CSRF_HEADER_NAME);
+    if (!csrfToken || !verifyCsrfToken(csrfToken)) {
+      return NextResponse.json({ error: "Invalid CSRF token" }, { status: 403 });
     }
 
     const body = await request.json();
@@ -59,8 +64,7 @@ export async function PUT(request: Request) {
       }
 
       case "2fa": {
-        await User.findByIdAndUpdate(authUser.userId, { $set: { twoFactorEnabled: body.enabled } });
-        return NextResponse.json({ success: true, message: `2FA ${body.enabled ? "enabled" : "disabled"}` });
+        return NextResponse.json({ error: "2FA is not yet implemented" }, { status: 501 });
       }
 
       case "oauth": {
@@ -78,7 +82,12 @@ export async function PUT(request: Request) {
       }
 
       case "revoke-session": {
-        // In production: invalidate session in DB
+        if (!body.sessionId) {
+          return NextResponse.json({ error: "Session ID required" }, { status: 400 });
+        }
+        await User.findByIdAndUpdate(authUser.userId, {
+          $pull: { activeSessions: { id: body.sessionId } },
+        });
         return NextResponse.json({ success: true, message: "Session revoked" });
       }
 

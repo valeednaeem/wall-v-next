@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import DOMPurify from "isomorphic-dompurify";
 
 interface BlogPost {
   _id: string;
@@ -106,7 +107,7 @@ export default function BlogPostPage() {
           </div>
         )}
 
-        <div className="prose prose-lg max-w-none" dangerouslySetInnerHTML={{ __html: post.content }} />
+        <div className="prose prose-lg max-w-none" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.content) }} />
 
         {post.tags && post.tags.length > 0 && (
           <div className="mt-8 pt-8 border-t">

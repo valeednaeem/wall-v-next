@@ -35,8 +35,10 @@
     "clsx": "^2.1.1",
     "cookie": "^2.0.1",
     "date-fns": "^4.4.0",
+    "dompurify": "^3.4.12",
     "dotenv": "^17.4.2",
     "framer-motion": "^12.42.2",
+    "isomorphic-dompurify": "^3.19.0",
     "jsonwebtoken": "^9.0.3",
     "lucide-react": "^1.24.0",
     "mongoose": "^9.7.4",
@@ -57,6 +59,7 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.4",
     "@types/bcryptjs": "^2.4.6",
+    "@types/dompurify": "^3.0.5",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^22.15.3",
     "@types/react": "^19.1.2",

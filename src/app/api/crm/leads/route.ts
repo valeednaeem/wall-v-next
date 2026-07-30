@@ -1,9 +1,19 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import Lead from "@/models/lead";
+import { getAuthUser } from "@/lib/auth";
+import { pickFields } from "@/lib/pick-fields";
+import { escapeRegex } from "@/lib/escape-regex";
+
+const LEAD_FIELDS = ["name", "email", "company", "phone", "source", "status", "notes", "value"];
 
 export async function GET(request: Request) {
   try {
+    const user = await getAuthUser();
+    if (!user || !["super-admin", "admin", "manager", "staff"].includes(user.role)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     await connectToDatabase();
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
@@ -12,9 +22,10 @@ export async function GET(request: Request) {
     const query: Record<string, unknown> = {};
     if (status) query.status = status;
     if (search) {
+      const safeSearch = escapeRegex(search);
       query.$or = [
-        { name: { $regex: search, $options: "i" } },
-        { email: { $regex: search, $options: "i" } },
+        { name: { $regex: safeSearch, $options: "i" } },
+        { email: { $regex: safeSearch, $options: "i" } },
       ];
     }
 
@@ -28,9 +39,15 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const user = await getAuthUser();
+    if (!user || !["super-admin", "admin", "manager", "staff"].includes(user.role)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     await connectToDatabase();
     const body = await request.json();
-    const lead = await Lead.create(body);
+    const leadData = pickFields(body, LEAD_FIELDS);
+    const lead = await Lead.create(leadData);
     return NextResponse.json({ success: true, data: lead }, { status: 201 });
   } catch (error) {
     console.error("Leads POST error:", error);

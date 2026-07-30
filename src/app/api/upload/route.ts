@@ -1,14 +1,36 @@
 import { NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
+import { getAuthUser } from "@/lib/auth";
+
+const ALLOWED_TYPES = [
+  "image/jpeg", "image/png", "image/gif", "image/webp", "image/svg+xml",
+  "application/pdf",
+  "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "text/plain", "text/csv",
+];
+const MAX_SIZE = 10 * 1024 * 1024; // 10MB
 
 export async function POST(request: Request) {
   try {
+    const user = await getAuthUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const formData = await request.formData();
     const file = formData.get("file") as File;
-    const folder = (formData.get("folder") as string) || "uploads";
 
     if (!file) {
       return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
+    }
+
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      return NextResponse.json({ error: "File type not allowed" }, { status: 400 });
+    }
+
+    if (file.size > MAX_SIZE) {
+      return NextResponse.json({ error: "File too large (max 10MB)" }, { status: 400 });
     }
 
     const bytes = await file.arrayBuffer();
@@ -17,8 +39,6 @@ export async function POST(request: Request) {
     const ext = file.name.split(".").pop();
     const filename = `${uuidv4()}.${ext}`;
 
-    // On Vercel, the filesystem is read-only, so we return the file as a base64 data URL.
-    // For production with large files, use Vercel Blob, S3, or Cloudflare R2.
     const base64 = buffer.toString("base64");
     const dataUrl = `data:${file.type};base64,${base64}`;
 

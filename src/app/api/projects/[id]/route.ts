@@ -2,12 +2,21 @@ import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import Project from "@/models/project";
 import { getAuthUser } from "@/lib/auth";
+import { pickFields } from "@/lib/pick-fields";
+import { verifyCsrfToken, CSRF_HEADER_NAME } from "@/lib/csrf";
+
+const PROJECT_UPDATE_FIELDS = ["name", "title", "description", "status", "requirements", "budget", "currency", "milestones", "demoHTML", "demoId"];
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const user = await getAuthUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     await connectToDatabase();
     const { id } = await params;
     const project = await Project.findById(id).lean();
@@ -31,11 +40,17 @@ export async function PUT(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const csrfToken = request.headers.get(CSRF_HEADER_NAME);
+    if (!csrfToken || !verifyCsrfToken(csrfToken)) {
+      return NextResponse.json({ error: "Invalid CSRF token" }, { status: 403 });
+    }
+
     await connectToDatabase();
     const { id } = await params;
     const body = await request.json();
+    const projectData = pickFields(body, PROJECT_UPDATE_FIELDS);
 
-    const project = await Project.findByIdAndUpdate(id, body, { new: true }).lean();
+    const project = await Project.findByIdAndUpdate(id, projectData, { new: true }).lean();
     if (!project) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }

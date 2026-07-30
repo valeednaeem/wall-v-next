@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import RefundRule from "@/models/refund-rule";
-import { getAuthUser } from "@/lib/auth";
+import { auth } from "@/lib/auth";
 import slugify from "slugify";
+import { pickFields } from "@/lib/pick-fields";
+
+const REFUND_RULE_FIELDS = ["name", "description", "serviceType", "conditions", "refundWindowDays", "refundPercentage", "refundMethod", "processingDays", "excludedItems", "notes", "isEligible", "requiresApproval", "isActive", "sortOrder"];
 
 export async function GET(request: Request) {
   try {
@@ -25,8 +28,8 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const user = await getAuthUser();
-    if (!user) {
+    const session = await auth();
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -34,7 +37,8 @@ export async function POST(request: Request) {
     const body = await request.json();
     const slug = slugify(body.name, { lower: true, strict: true, trim: true });
 
-    const rule = await RefundRule.create({ ...body, slug });
+    const ruleData = pickFields(body, REFUND_RULE_FIELDS);
+    const rule = await RefundRule.create({ ...ruleData, slug });
     return NextResponse.json({ success: true, data: rule }, { status: 201 });
   } catch (error) {
     console.error("Refund rules POST error:", error);

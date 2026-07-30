@@ -1,6 +1,7 @@
 import { Metadata } from "next";
 import { connectToDatabase } from "@/lib/mongodb";
 import LegalPage from "@/models/legal-page";
+import { sanitize } from "@/lib/sanitize";
 
 interface LegalPageProps {
   slug: string;
@@ -66,7 +67,7 @@ export default async function LegalPageView({ slug, fallbackTitle, fallbackConte
               {page?.version && ` (v${page.version})`}
             </p>
           )}
-          <div dangerouslySetInnerHTML={{ __html: content }} />
+          <div dangerouslySetInnerHTML={{ __html: sanitize(content) }} />
         </div>
       </div>
     </div>

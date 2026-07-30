@@ -4,16 +4,13 @@ import User from "@/models/user";
 import Product from "@/models/product";
 import BlogPost from "@/models/blog-post";
 import Inquiry from "@/models/inquiry";
+import { getAuthUser } from "@/lib/auth";
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
-    const cookieHeader = request.headers.get("cookie") || "";
-    const hasSession = cookieHeader.includes("next-auth.session-token")
-      || cookieHeader.includes("__Secure-next-auth-session-token")
-      || cookieHeader.includes("token=");
-
-    if (!hasSession) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const user = await getAuthUser();
+    if (!user || !["super-admin", "admin", "manager"].includes(user.role)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     await connectToDatabase();

@@ -344,9 +344,8 @@ export async function POST() {
     let user;
     try {
       user = await getAuthUser();
-    } catch (authErr) {
-      const msg = authErr instanceof Error ? authErr.message : String(authErr);
-      return NextResponse.json({ error: "Auth failed", details: msg }, { status: 401 });
+    } catch {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     if (!user || !["super-admin", "admin"].includes(user.role)) {
       return NextResponse.json({ error: "Unauthorized", details: user ? `role: ${user.role}` : "no user" }, { status: 401 });
@@ -380,7 +379,6 @@ export async function POST() {
     });
   } catch (error) {
     console.error("Seed error:", error);
-    const msg = error instanceof Error ? error.message : String(error);
-    return NextResponse.json({ error: "Seed failed", details: msg }, { status: 500 });
+    return NextResponse.json({ error: "Seed failed" }, { status: 500 });
   }
 }

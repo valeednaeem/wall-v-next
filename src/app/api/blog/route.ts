@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import BlogPost from "@/models/blog-post";
 import BlogCategory from "@/models/blog-category";
+import { escapeRegex } from "@/lib/escape-regex";
 
 export async function GET(request: Request) {
   try {
@@ -24,9 +25,10 @@ export async function GET(request: Request) {
     if (tag) query.tags = tag;
     if (featured === "true") query.isFeatured = true;
     if (search) {
+      const safeSearch = escapeRegex(search);
       query.$or = [
-        { title: { $regex: search, $options: "i" } },
-        { excerpt: { $regex: search, $options: "i" } },
+        { title: { $regex: safeSearch, $options: "i" } },
+        { excerpt: { $regex: safeSearch, $options: "i" } },
       ];
     }
 

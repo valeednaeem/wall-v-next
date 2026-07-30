@@ -3,6 +3,11 @@ import { connectToDatabase } from "@/lib/mongodb";
 import BlogPost from "@/models/blog-post";
 import BlogCategory from "@/models/blog-category";
 import { generateSlug } from "@/lib/generate-slug";
+import { getAuthUser } from "@/lib/auth";
+import { pickFields } from "@/lib/pick-fields";
+import { escapeRegex } from "@/lib/escape-regex";
+
+const BLOG_POST_FIELDS = ["title", "content", "excerpt", "featuredImage", "category", "tags", "status", "isFeatured", "seo"];
 
 export async function GET(request: Request) {
   try {
@@ -25,9 +30,10 @@ export async function GET(request: Request) {
     if (tag) query.tags = tag;
     if (featured === "true") query.isFeatured = true;
     if (search) {
+      const safeSearch = escapeRegex(search);
       query.$or = [
-        { title: { $regex: search, $options: "i" } },
-        { excerpt: { $regex: search, $options: "i" } },
+        { title: { $regex: safeSearch, $options: "i" } },
+        { excerpt: { $regex: safeSearch, $options: "i" } },
       ];
     }
 
@@ -54,6 +60,11 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const user = await getAuthUser();
+    if (!user || !["super-admin", "admin", "manager"].includes(user.role)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     await connectToDatabase();
     const body = await request.json();
 
@@ -63,8 +74,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Post with this title already exists" }, { status: 409 });
     }
 
-    const readTime = Math.ceil(body.content.split(/\s+/).length / 200);
-    const post = await BlogPost.create({ ...body, slug, readTime });
+    const postData = pickFields(body, BLOG_POST_FIELDS);
+    const readTime = Math.ceil((body.content || "").split(/\s+/).length / 200);
+    const post = await BlogPost.create({ ...postData, slug, readTime });
 
     return NextResponse.json({ success: true, data: post }, { status: 201 });
   } catch (error) {

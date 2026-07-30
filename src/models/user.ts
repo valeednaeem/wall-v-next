@@ -13,6 +13,20 @@ export interface IUser extends Document {
   isActive: boolean;
   lastLogin?: Date;
   loginCount: number;
+  loginHistory: {
+    ip?: string;
+    userAgent?: string;
+    location?: string;
+    timestamp: Date;
+    success: boolean;
+  }[];
+  activeSessions: {
+    id: string;
+    ip?: string;
+    userAgent?: string;
+    lastActive: Date;
+    createdAt: Date;
+  }[];
   provider: string;
   providerAccountId?: string;
   address?: {
@@ -47,6 +61,20 @@ const UserSchema = new Schema<IUser>(
     isActive: { type: Boolean, default: true },
     lastLogin: Date,
     loginCount: { type: Number, default: 0 },
+    loginHistory: [{
+      ip: String,
+      userAgent: String,
+      location: String,
+      timestamp: { type: Date, default: Date.now },
+      success: { type: Boolean, default: true },
+    }],
+    activeSessions: [{
+      id: String,
+      ip: String,
+      userAgent: String,
+      lastActive: { type: Date, default: Date.now },
+      createdAt: { type: Date, default: Date.now },
+    }],
     provider: { type: String, default: "credentials" },
     providerAccountId: String,
     address: {

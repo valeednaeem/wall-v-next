@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import User from "@/models/user";
 import { getAuthUserFromCookie } from "@/lib/auth-cookie";
+import { verifyCsrfToken, CSRF_HEADER_NAME } from "@/lib/csrf";
 
 export async function GET() {
   try {
@@ -31,6 +32,11 @@ export async function PUT(request: Request) {
     const authUser = await getAuthUserFromCookie();
     if (!authUser) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const csrfToken = request.headers.get(CSRF_HEADER_NAME);
+    if (!csrfToken || !verifyCsrfToken(csrfToken)) {
+      return NextResponse.json({ error: "Invalid CSRF token" }, { status: 403 });
     }
 
     const body = await request.json();

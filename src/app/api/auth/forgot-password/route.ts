@@ -4,9 +4,19 @@ import { connectToDatabase } from "@/lib/mongodb";
 import User from "@/models/user";
 import PasswordResetToken from "@/models/password-reset-token";
 import { sendEmail, generatePasswordResetEmail } from "@/lib/mail";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 
 export async function POST(request: Request) {
   try {
+    const ip = getClientIp(request);
+    const { allowed, resetAt } = checkRateLimit(`forgot-password:${ip}`, 3, 60000);
+    if (!allowed) {
+      return NextResponse.json(
+        { error: "Too many requests. Please try again later." },
+        { status: 429, headers: { "Retry-After": String(Math.ceil((resetAt - Date.now()) / 1000)) } }
+      );
+    }
+
     await connectToDatabase();
     const { email } = await request.json();
 

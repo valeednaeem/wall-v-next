@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import Order from "@/models/order";
 import Product from "@/models/product";
+import { getAuthUser } from "@/lib/auth";
+import { escapeRegex } from "@/lib/escape-regex";
 
 function generateOrderNumber(): string {
   const date = new Date();
@@ -13,6 +15,11 @@ function generateOrderNumber(): string {
 
 export async function GET(request: Request) {
   try {
+    const user = await getAuthUser();
+    if (!user || !["super-admin", "admin", "manager", "staff"].includes(user.role)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "20");
@@ -28,10 +35,11 @@ export async function GET(request: Request) {
     if (paymentStatus) filter.paymentStatus = paymentStatus;
     if (userId) filter.user = userId;
     if (search) {
+      const safeSearch = escapeRegex(search);
       filter.$or = [
-        { orderNumber: { $regex: search, $options: "i" } },
-        { guestEmail: { $regex: search, $options: "i" } },
-        { "items.name": { $regex: search, $options: "i" } },
+        { orderNumber: { $regex: safeSearch, $options: "i" } },
+        { guestEmail: { $regex: safeSearch, $options: "i" } },
+        { "items.name": { $regex: safeSearch, $options: "i" } },
       ];
     }
 
@@ -48,8 +56,8 @@ export async function GET(request: Request) {
       pagination: { page, limit, total, pages: Math.ceil(total / limit) },
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error("Orders GET error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
 
@@ -132,7 +140,7 @@ export async function POST(request: Request) {
       },
     }, { status: 201 });
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error("Orders POST error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

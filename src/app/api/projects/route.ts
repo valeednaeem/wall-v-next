@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import Project from "@/models/project";
 import { getAuthUser } from "@/lib/auth";
+import { escapeRegex } from "@/lib/escape-regex";
 
 function slugify(text: string): string {
   return text
@@ -27,10 +28,11 @@ export async function GET(request: Request) {
     const query: Record<string, unknown> = {};
     if (status && status !== "all") query.status = status;
     if (search) {
+      const safeSearch = escapeRegex(search);
       query.$or = [
-        { name: { $regex: search, $options: "i" } },
-        { title: { $regex: search, $options: "i" } },
-        { description: { $regex: search, $options: "i" } },
+        { name: { $regex: safeSearch, $options: "i" } },
+        { title: { $regex: safeSearch, $options: "i" } },
+        { description: { $regex: safeSearch, $options: "i" } },
       ];
     }
 

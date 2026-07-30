@@ -1,23 +1,27 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import RefundRule from "@/models/refund-rule";
-import { getAuthUser } from "@/lib/auth";
+import { auth } from "@/lib/auth";
+import { pickFields } from "@/lib/pick-fields";
+
+const REFUND_RULE_FIELDS = ["name", "description", "serviceType", "conditions", "refundWindowDays", "refundPercentage", "refundMethod", "processingDays", "excludedItems", "notes", "isEligible", "requiresApproval", "isActive"];
 
 export async function PUT(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getAuthUser();
-    if (!user) {
+    const session = await auth();
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     await connectToDatabase();
     const { id } = await params;
     const body = await request.json();
+    const ruleData = pickFields(body, REFUND_RULE_FIELDS);
 
-    const updated = await RefundRule.findByIdAndUpdate(id, body, { new: true });
+    const updated = await RefundRule.findByIdAndUpdate(id, ruleData, { new: true });
     if (!updated) {
       return NextResponse.json({ error: "Rule not found" }, { status: 404 });
     }
@@ -34,8 +38,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getAuthUser();
-    if (!user) {
+    const session = await auth();
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

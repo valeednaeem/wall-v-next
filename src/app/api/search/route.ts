@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import Product from "@/models/product";
 import BlogPost from "@/models/blog-post";
+import { escapeRegex } from "@/lib/escape-regex";
 
 export async function GET(request: Request) {
   try {
@@ -13,7 +14,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ success: true, data: { products: [], posts: [] } });
     }
 
-    const searchRegex = { $regex: q, $options: "i" };
+    const searchRegex = { $regex: escapeRegex(q), $options: "i" };
 
     const [products, posts] = await Promise.all([
       Product.find({

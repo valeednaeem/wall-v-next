@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { generateAIContent } from "@/services/ai";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 
 const LANGUAGE_NAMES: Record<string, string> = {
   en: "English",
@@ -19,6 +20,15 @@ const LANGUAGE_NAMES: Record<string, string> = {
 
 export async function POST(request: Request) {
   try {
+    const ip = getClientIp(request);
+    const { allowed, resetAt } = checkRateLimit(`ai-chat:${ip}`, 20, 60000);
+    if (!allowed) {
+      return NextResponse.json(
+        { error: "Too many requests. Please try again later." },
+        { status: 429, headers: { "Retry-After": String(Math.ceil((resetAt - Date.now()) / 1000)) } }
+      );
+    }
+
     const body = await request.json();
     const { messages, language = "en", agentType = "general" } = body;
 

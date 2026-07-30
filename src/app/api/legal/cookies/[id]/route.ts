@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import CookieDefinition from "@/models/cookie-definition";
-import { getAuthUser } from "@/lib/auth";
+import { auth } from "@/lib/auth";
+import { pickFields } from "@/lib/pick-fields";
+
+const COOKIE_DEF_FIELDS = ["name", "description", "category", "duration", "type", "isRequired", "isActive", "purpose", "provider"];
 
 export async function GET(
   request: Request,
@@ -26,16 +29,17 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getAuthUser();
-    if (!user) {
+    const session = await auth();
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     await connectToDatabase();
     const { id } = await params;
     const body = await request.json();
+    const cookieData = pickFields(body, COOKIE_DEF_FIELDS);
 
-    const updated = await CookieDefinition.findByIdAndUpdate(id, body, { new: true });
+    const updated = await CookieDefinition.findByIdAndUpdate(id, cookieData, { new: true });
     if (!updated) {
       return NextResponse.json({ error: "Cookie not found" }, { status: 404 });
     }
@@ -52,8 +56,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getAuthUser();
-    if (!user) {
+    const session = await auth();
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

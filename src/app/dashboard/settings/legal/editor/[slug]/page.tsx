@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { ArrowLeft, Save, Eye, Clock, CheckCircle, Send, Globe, ChevronDown } from "lucide-react";
 import HtmlEditor from "@/components/editor/html-editor";
+import DOMPurify from "isomorphic-dompurify";
 
 const typeLabels: Record<string, string> = {
   privacy: "Privacy Policy",
@@ -130,15 +131,22 @@ export default function LegalEditorPage() {
   }, [form.content, form.title]);
 
   async function handleAutoSave() {
-    if (!form.title || !form.content) return;
+    if (!form.title || !form.content || isNew) return;
     setAutoSaving(true);
     try {
-      await fetch(`/api/legal/${slug}`, {
+      const res = await fetch(`/api/legal/${slug}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...form, changeNote: "Auto-save" }),
       });
-      setLastSaved(new Date());
+      const data = await res.json();
+      if (data.success) {
+        setLastSaved(new Date());
+        const newSlug = data.data.slug;
+        if (newSlug && newSlug !== slug) {
+          router.replace(`/dashboard/settings/legal/editor/${newSlug}`);
+        }
+      }
     } catch (error) {
       console.error("Auto-save failed:", error);
     } finally {
@@ -169,8 +177,11 @@ export default function LegalEditorPage() {
         setLastSaved(new Date());
         setShowVersionNote(false);
         setVersionNote("");
-        if (isNew && data.data.slug) {
-          router.replace(`/dashboard/settings/legal/editor/${data.data.slug}`);
+        const newSlug = data.data.slug;
+        if (isNew && newSlug) {
+          router.replace(`/dashboard/settings/legal/editor/${newSlug}`);
+        } else if (newSlug && newSlug !== slug) {
+          router.replace(`/dashboard/settings/legal/editor/${newSlug}`);
         }
         loadVersions();
       }
@@ -184,17 +195,33 @@ export default function LegalEditorPage() {
   async function handlePublish() {
     setPublishing(true);
     try {
-      const res = await fetch(`/api/legal/${slug}`, {
-        method: "PUT",
+      const body = {
+        ...form,
+        status: "published" as const,
+        changeNote: versionNote || "Published",
+      };
+
+      const method = isNew ? "POST" : "PUT";
+      const url = isNew ? "/api/legal" : `/api/legal/${slug}`;
+
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, status: "published", changeNote: versionNote || "Published" }),
+        body: JSON.stringify(body),
       });
+
       const data = await res.json();
       if (data.success) {
         setForm((prev) => ({ ...prev, status: "published" }));
         setLastSaved(new Date());
         setShowVersionNote(false);
         setVersionNote("");
+        const newSlug = data.data.slug;
+        if (isNew && newSlug) {
+          router.replace(`/dashboard/settings/legal/editor/${newSlug}`);
+        } else if (newSlug && newSlug !== slug) {
+          router.replace(`/dashboard/settings/legal/editor/${newSlug}`);
+        }
         loadVersions();
       }
     } catch (error) {
@@ -502,7 +529,7 @@ export default function LegalEditorPage() {
             {form.content && (
               <div
                 className="prose prose-sm max-w-none text-sm border rounded p-3 max-h-[300px] overflow-y-auto"
-                dangerouslySetInnerHTML={{ __html: form.content }}
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(form.content) }}
               />
             )}
           </div>

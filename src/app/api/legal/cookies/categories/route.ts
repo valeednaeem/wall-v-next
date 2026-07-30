@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import CookieCategory from "@/models/cookie-category";
-import { getAuthUser } from "@/lib/auth";
+import { auth } from "@/lib/auth";
 import slugify from "slugify";
 
 export async function GET() {
@@ -19,8 +19,8 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const user = await getAuthUser();
-    if (!user) {
+    const session = await auth();
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

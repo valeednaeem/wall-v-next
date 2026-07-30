@@ -1,6 +1,6 @@
 import jwt from "jsonwebtoken";
 
-const JWT_EXPIRES_IN = "7d";
+const JWT_EXPIRES_IN = "1d";
 
 function getSecret(): string {
   const secret = process.env.JWT_SECRET;

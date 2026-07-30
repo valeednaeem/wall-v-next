@@ -4,6 +4,7 @@ import Product from "@/models/product";
 import ProductCategory from "@/models/product-category";
 import { generateSlug } from "@/lib/generate-slug";
 import { getAuthUser } from "@/lib/auth";
+import { escapeRegex } from "@/lib/escape-regex";
 
 export async function GET(request: Request) {
   try {
@@ -28,9 +29,10 @@ export async function GET(request: Request) {
     if (type) query.type = type;
     if (featured === "true") query.isFeatured = true;
     if (search) {
+      const safeSearch = escapeRegex(search);
       query.$or = [
-        { name: { $regex: search, $options: "i" } },
-        { description: { $regex: search, $options: "i" } },
+        { name: { $regex: safeSearch, $options: "i" } },
+        { description: { $regex: safeSearch, $options: "i" } },
       ];
     }
 

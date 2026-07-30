@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import CookieDefinition from "@/models/cookie-definition";
-import { getAuthUser } from "@/lib/auth";
+import { auth } from "@/lib/auth";
 import slugify from "slugify";
+import { pickFields } from "@/lib/pick-fields";
+
+const COOKIE_DEF_FIELDS = ["name", "description", "category", "duration", "type", "isRequired", "isActive", "sortOrder", "purpose", "provider"];
 
 export async function GET(request: Request) {
   try {
@@ -29,8 +32,8 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const user = await getAuthUser();
-    if (!user) {
+    const session = await auth();
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -38,7 +41,8 @@ export async function POST(request: Request) {
     const body = await request.json();
 
     const slug = slugify(body.name, { lower: true, strict: true, trim: true });
-    const cookie = await CookieDefinition.create({ ...body, slug });
+    const cookieData = pickFields(body, COOKIE_DEF_FIELDS);
+    const cookie = await CookieDefinition.create({ ...cookieData, slug });
 
     return NextResponse.json({ success: true, data: cookie }, { status: 201 });
   } catch (error) {

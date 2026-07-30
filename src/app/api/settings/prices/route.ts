@@ -2,9 +2,17 @@ import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import ServicePrice from "@/models/service-price";
 import { getAuthUser } from "@/lib/auth";
+import { pickFields } from "@/lib/pick-fields";
+
+const PRICE_FIELDS = ["serviceKey", "name", "description", "category", "tiers", "features", "displayOrder", "isActive"];
 
 export async function GET() {
   try {
+    const user = await getAuthUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     await connectToDatabase();
     const prices = await ServicePrice.find({}).sort({ displayOrder: 1, category: 1 }).lean();
     return NextResponse.json({ prices });
@@ -29,7 +37,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Service key already exists" }, { status: 409 });
     }
 
-    const price = await ServicePrice.create(body);
+    const priceData = pickFields(body, PRICE_FIELDS);
+    const price = await ServicePrice.create(priceData);
     return NextResponse.json({ price }, { status: 201 });
   } catch (error) {
     console.error("Error creating price:", error);

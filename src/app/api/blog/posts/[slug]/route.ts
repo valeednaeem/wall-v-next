@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import BlogPost from "@/models/blog-post";
+import { getAuthUser } from "@/lib/auth";
+import { pickFields } from "@/lib/pick-fields";
+
+const BLOG_POST_FIELDS = ["title", "content", "excerpt", "featuredImage", "category", "tags", "status", "isFeatured", "seo"];
 
 export async function GET(
   request: Request,
@@ -35,11 +39,17 @@ export async function PUT(
   { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
+    const user = await getAuthUser();
+    if (!user || !["super-admin", "admin", "manager"].includes(user.role)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     await connectToDatabase();
     const { slug } = await params;
     const body = await request.json();
+    const postData = pickFields(body, BLOG_POST_FIELDS);
 
-    const post = await BlogPost.findOneAndUpdate({ slug }, body, { new: true });
+    const post = await BlogPost.findOneAndUpdate({ slug }, postData, { new: true });
     if (!post) {
       return NextResponse.json({ error: "Post not found" }, { status: 404 });
     }
@@ -56,6 +66,11 @@ export async function DELETE(
   { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
+    const user = await getAuthUser();
+    if (!user || !["super-admin", "admin", "manager"].includes(user.role)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     await connectToDatabase();
     const { slug } = await params;
 

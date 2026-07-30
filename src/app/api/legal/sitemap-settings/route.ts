@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import SitemapSettings from "@/models/sitemap-settings";
-import { getAuthUser } from "@/lib/auth";
+import { auth } from "@/lib/auth";
+import { pickFields } from "@/lib/pick-fields";
+
+const SITEMAP_FIELDS = ["includePages", "includePosts", "includeProducts", "includeServices", "includeCategories", "includeTags", "includeLegal", "includePortfolio", "defaultPriority", "defaultChangeFreq"];
 
 export async function GET() {
   try {
@@ -19,19 +22,20 @@ export async function GET() {
 
 export async function PUT(request: Request) {
   try {
-    const user = await getAuthUser();
-    if (!user) {
+    const session = await auth();
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     await connectToDatabase();
     const body = await request.json();
+    const settingsData = pickFields(body, SITEMAP_FIELDS);
 
     let settings = await SitemapSettings.findOne();
     if (!settings) {
-      settings = await SitemapSettings.create(body);
+      settings = await SitemapSettings.create(settingsData);
     } else {
-      settings = await SitemapSettings.findByIdAndUpdate(settings._id, body, { new: true });
+      settings = await SitemapSettings.findByIdAndUpdate(settings._id, settingsData, { new: true });
     }
 
     return NextResponse.json({ success: true, data: settings });

@@ -3,7 +3,11 @@ import { connectToDatabase } from "@/lib/mongodb";
 import LegalPage from "@/models/legal-page";
 import LegalVersion from "@/models/legal-version";
 import { generateSlug } from "@/lib/generate-slug";
-import { getAuthUser } from "@/lib/auth";
+import { auth } from "@/lib/auth";
+import { pickFields } from "@/lib/pick-fields";
+import { escapeRegex } from "@/lib/escape-regex";
+
+const LEGAL_PAGE_FIELDS = ["title", "content", "type", "seo", "isActive", "language"];
 
 export async function GET(request: Request) {
   try {
@@ -19,9 +23,10 @@ export async function GET(request: Request) {
     if (status) query.status = status;
     if (!all) query.isActive = true;
     if (search) {
+      const safeSearch = escapeRegex(search);
       query.$or = [
-        { title: { $regex: search, $options: "i" } },
-        { slug: { $regex: search, $options: "i" } },
+        { title: { $regex: safeSearch, $options: "i" } },
+        { slug: { $regex: safeSearch, $options: "i" } },
       ];
     }
 
@@ -38,8 +43,8 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const user = await getAuthUser();
-    if (!user) {
+    const session = await auth();
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -48,13 +53,14 @@ export async function POST(request: Request) {
 
     const slug = await generateUniqueSlugForLegal(body.title);
     const version = "1.0";
+    const pageData = pickFields(body, LEGAL_PAGE_FIELDS);
 
     const page = await LegalPage.create({
-      ...body,
+      ...pageData,
       slug,
       version,
       status: body.status || "draft",
-      author: user.userId,
+      author: session.user.id,
     });
 
     await LegalVersion.create({
@@ -64,7 +70,7 @@ export async function POST(request: Request) {
       title: page.title,
       changeNote: "Initial version",
       snapshot: { seo: page.seo, type: page.type, slug: page.slug },
-      createdBy: user.userId,
+      createdBy: session.user.id,
     });
 
     return NextResponse.json({ success: true, data: page }, { status: 201 });

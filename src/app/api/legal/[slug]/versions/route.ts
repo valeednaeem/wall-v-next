@@ -2,15 +2,15 @@ import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import LegalPage from "@/models/legal-page";
 import LegalVersion from "@/models/legal-version";
-import { getAuthUser } from "@/lib/auth";
+import { auth } from "@/lib/auth";
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
-    const user = await getAuthUser();
-    if (!user) {
+    const session = await auth();
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -38,8 +38,8 @@ export async function POST(
   { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
-    const user = await getAuthUser();
-    if (!user) {
+    const session = await auth();
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -73,7 +73,7 @@ export async function POST(
         title: oldVersion.title,
         changeNote: body.changeNote || `Restored from version ${oldVersion.version}`,
         snapshot: { seo: page.seo, type: page.type, slug: page.slug },
-        createdBy: user.userId,
+        createdBy: session.user.id,
       });
 
       return NextResponse.json({ success: true, data: restored });
@@ -86,7 +86,7 @@ export async function POST(
       title: body.title || page.title,
       changeNote: body.changeNote,
       snapshot: { seo: page.seo, type: page.type, slug: page.slug },
-      createdBy: user.userId,
+      createdBy: session.user.id,
     });
 
     await LegalPage.findOneAndUpdate({ slug }, { version: newVersion });

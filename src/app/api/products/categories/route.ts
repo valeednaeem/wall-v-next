@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import ProductCategory from "@/models/product-category";
 import { generateSlug } from "@/lib/generate-slug";
+import { getAuthUser } from "@/lib/auth";
+import { pickFields } from "@/lib/pick-fields";
+
+const CATEGORY_FIELDS = ["name", "description", "image", "parent", "sortOrder", "isActive"];
 
 export async function GET(request: Request) {
   try {
@@ -39,6 +43,11 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const user = await getAuthUser();
+    if (!user || !["super-admin", "admin", "manager"].includes(user.role)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     await connectToDatabase();
     const body = await request.json();
 
@@ -48,7 +57,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Category with this name already exists" }, { status: 409 });
     }
 
-    const category = await ProductCategory.create({ ...body, slug });
+    const categoryData = pickFields(body, CATEGORY_FIELDS);
+    const category = await ProductCategory.create({ ...categoryData, slug });
     return NextResponse.json({ success: true, data: category }, { status: 201 });
   } catch (error) {
     console.error("Categories POST error:", error);

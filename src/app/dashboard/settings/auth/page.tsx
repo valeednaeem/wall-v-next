@@ -41,21 +41,9 @@ export default function SecuritySettingsPage() {
   const [security, setSecurity] = useState<SecurityData>({
     password: { current: "", newPass: "", confirm: "" },
     twoFactorEnabled: false,
-    loginHistory: [
-      { ip: "192.168.1.1", device: "Windows PC", browser: "Chrome 120", location: "New York, US", timestamp: new Date().toISOString(), current: true },
-      { ip: "10.0.0.42", device: "iPhone 15", browser: "Safari", location: "New York, US", timestamp: new Date(Date.now() - 86400000).toISOString(), current: false },
-      { ip: "172.16.0.5", device: "MacBook Pro", browser: "Firefox 121", location: "London, UK", timestamp: new Date(Date.now() - 604800000).toISOString(), current: false },
-    ],
-    linkedAccounts: [
-      { provider: "google", connected: true, email: "user@gmail.com", lastSync: new Date().toISOString() },
-      { provider: "github", connected: true, email: "user@github.com", lastSync: new Date().toISOString() },
-      { provider: "facebook", connected: false, email: "", lastSync: "" },
-      { provider: "linkedin", connected: false, email: "", lastSync: "" },
-    ],
-    sessions: [
-      { id: "s1", device: "Windows PC", browser: "Chrome 120", ip: "192.168.1.1", lastActive: "Now", current: true },
-      { id: "s2", device: "iPhone 15", browser: "Safari", ip: "10.0.0.42", lastActive: "1 day ago", current: false },
-    ],
+    loginHistory: [],
+    linkedAccounts: [],
+    sessions: [],
   });
 
   useEffect(() => {

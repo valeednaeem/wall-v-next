@@ -2,7 +2,10 @@ import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import LegalPage from "@/models/legal-page";
 import LegalVersion from "@/models/legal-version";
-import { getAuthUser } from "@/lib/auth";
+import { auth } from "@/lib/auth";
+import { pickFields } from "@/lib/pick-fields";
+
+const LEGAL_PAGE_FIELDS = ["title", "content", "type", "seo", "isActive", "status", "changeNote", "language"];
 
 export async function GET(
   request: Request,
@@ -34,56 +37,57 @@ export async function PUT(
   { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
-    const user = await getAuthUser();
-    if (!user) {
+    const session = await auth();
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     await connectToDatabase();
     const { slug } = await params;
     const body = await request.json();
+    const pageData = pickFields(body, LEGAL_PAGE_FIELDS);
 
     const existing = await LegalPage.findOne({ slug });
     if (!existing) {
       return NextResponse.json({ error: "Page not found" }, { status: 404 });
     }
 
-    const contentChanged = body.content && body.content !== existing.content;
-    const titleChanged = body.title && body.title !== existing.title;
+    const contentChanged = pageData.content && pageData.content !== existing.content;
+    const titleChanged = pageData.title && pageData.title !== existing.title;
 
     if (contentChanged || titleChanged) {
       const parts = existing.version.split(".").map(Number);
       const minor = (parts[1] || 0) + 1;
-      body.version = `${parts[0]}.${minor}`;
+      pageData.version = `${parts[0]}.${minor}`;
     }
 
-    if (body.status === "published" && existing.status !== "published") {
-      body.lastPublishedAt = new Date();
-      if (!body.version || body.version === existing.version) {
+    if (pageData.status === "published" && existing.status !== "published") {
+      pageData.lastPublishedAt = new Date();
+      if (!pageData.version || pageData.version === existing.version) {
         const parts = existing.version.split(".").map(Number);
-        body.version = `${parts[0] + 1}.0`;
+        pageData.version = `${parts[0] + 1}.0`;
       }
     }
 
-    if (body.title && body.title !== existing.title) {
-      body.slug = await generateUniqueSlugForLegal(body.title);
+    if (pageData.title && pageData.title !== existing.title) {
+      pageData.slug = await generateUniqueSlugForLegal(pageData.title);
     }
 
     const updated = await LegalPage.findOneAndUpdate(
       { slug },
-      { ...body, updatedAt: new Date() },
+      { ...pageData, updatedAt: new Date() },
       { new: true }
     );
 
-    if (contentChanged || titleChanged || body.status === "published") {
+    if (contentChanged || titleChanged || pageData.status === "published") {
       await LegalVersion.create({
         legalPage: updated._id,
         version: updated.version,
         content: updated.content,
         title: updated.title,
-        changeNote: body.changeNote || `Updated to version ${updated.version}`,
+        changeNote: pageData.changeNote || `Updated to version ${updated.version}`,
         snapshot: { seo: updated.seo, type: updated.type, slug: updated.slug },
-        createdBy: user.userId,
+        createdBy: session.user.id,
       });
     }
 
@@ -99,8 +103,8 @@ export async function DELETE(
   { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
-    const user = await getAuthUser();
-    if (!user) {
+    const session = await auth();
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
