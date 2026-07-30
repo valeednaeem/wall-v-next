@@ -58,7 +58,6 @@ export async function POST(request: Request) {
     user.lastLogin = new Date();
     user.loginCount += 1;
 
-    const ip = getClientIp(request);
     const userAgent = request.headers.get("user-agent") || "";
     const sessionId = uuidv4();
 
