@@ -13,9 +13,9 @@ export function DograhWidgetLoader() {
 
     const d = document;
     const s = "script";
-    const id = "dograh-widget";
+    const id = "dograh-widget-script";
 
-    if (d.getElementById(id)) {
+    if (d.getElementById(id) || window.DograhWidget) {
       console.log("[Dograh] Widget script already loaded");
       return;
     }

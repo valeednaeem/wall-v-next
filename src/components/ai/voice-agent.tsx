@@ -39,7 +39,7 @@ interface VoiceAgentConfig {
 
 function loadDograhScript(url: string): Promise<void> {
   return new Promise((resolve, reject) => {
-    if (document.getElementById("dograh-widget-script")) {
+    if (document.getElementById("dograh-widget-script") || window.DograhWidget) {
       resolve();
       return;
     }
@@ -60,6 +60,15 @@ export function useDograh(config: VoiceAgentConfig) {
   const [scriptError, setScriptError] = useState<string | null>(null);
   const [duration, setDuration] = useState<number>(0);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const onStatusChangeRef = useRef(onStatusChange);
+  onStatusChangeRef.current = onStatusChange;
+  const onCallConnectedRef = useRef(onCallConnected);
+  onCallConnectedRef.current = onCallConnected;
+  const onCallDisconnectedRef = useRef(onCallDisconnected);
+  onCallDisconnectedRef.current = onCallDisconnected;
+  const onErrorRef = useRef(onError);
+  onErrorRef.current = onError;
 
   // Load the Dograh widget script
   useEffect(() => {
@@ -84,7 +93,6 @@ export function useDograh(config: VoiceAgentConfig) {
   }, [widgetScriptUrl]);
 
   // Subscribe to Dograh widget events
-  // Event names per official docs: onStatusChange, onCallStart, onCallEnd, onError
   useEffect(() => {
     if (!scriptLoaded || !window.DograhWidget) {
       console.log("[Dograh] Not subscribing yet — scriptLoaded:", scriptLoaded, "DograhWidget:", !!window.DograhWidget);
@@ -93,30 +101,36 @@ export function useDograh(config: VoiceAgentConfig) {
 
     console.log("[Dograh] Subscribing to widget events");
 
-    window.DograhWidget.onStatusChange((s, text, subtext) => {
+    const statusHandler = (s: CallStatus, text?: string, subtext?: string) => {
       console.log("[Dograh] Status changed:", s, text, subtext);
       setStatus(s);
-      onStatusChange?.(s, text, subtext);
-    });
+      onStatusChangeRef.current?.(s, text, subtext);
+    };
 
-    if (onCallConnected) {
-      window.DograhWidget.onCallStart((data) => {
-        setDuration(0);
-        onCallConnected(data);
-      });
-    }
+    const callStartHandler = (data: { agentId: string; workflowRunId: string }) => {
+      setDuration(0);
+      onCallConnectedRef.current?.(data);
+    };
 
-    if (onCallDisconnected) {
-      window.DograhWidget.onCallEnd((data) => {
-        setDuration(data.durationSeconds);
-        onCallDisconnected(data);
-      });
-    }
+    const callEndHandler = (data: { agentId: string; workflowRunId: string; durationSeconds: number }) => {
+      setDuration(data.durationSeconds);
+      onCallDisconnectedRef.current?.(data);
+    };
 
-    if (onError) {
-      window.DograhWidget.onError(onError);
-    }
-  }, [scriptLoaded, onStatusChange, onCallConnected, onCallDisconnected, onError]);
+    const errorHandler = (err: Error) => {
+      onErrorRef.current?.(err);
+    };
+
+    window.DograhWidget.onStatusChange(statusHandler);
+    window.DograhWidget.onCallStart(callStartHandler);
+    window.DograhWidget.onCallEnd(callEndHandler);
+    window.DograhWidget.onError(errorHandler);
+
+    return () => {
+      // Dograh widget doesn't support unsubscribe, but we can null out refs
+      // The handlers will become no-ops on next render
+    };
+  }, [scriptLoaded]);
 
   // Live duration timer — counts up every second during active calls
   useEffect(() => {
