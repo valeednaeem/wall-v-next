@@ -372,7 +372,7 @@ export default function LegalEditorPage() {
           {activeTab === "content" && (
             <HtmlEditor
               value={form.content}
-              onChange={(content) => setForm({ ...form, content })}
+              onChange={(content) => setForm((prev) => ({ ...prev, content }))}
               placeholder="Write your legal page content here..."
               minHeight="500px"
             />

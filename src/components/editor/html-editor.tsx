@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useEditor, EditorContent, type Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Image from "@tiptap/extension-image";
@@ -195,6 +195,9 @@ export function HtmlEditor({
   minHeight = "300px",
   className = "",
 }: HtmlEditorProps) {
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({ heading: { levels: [1, 2, 3] } }),
@@ -215,7 +218,7 @@ export function HtmlEditor({
       TaskItem.configure({ nested: true }),
     ],
     content: value || "",
-    onUpdate: ({ editor: e }) => onChange(e.getHTML()),
+    onUpdate: ({ editor: e }) => onChangeRef.current(e.getHTML()),
     editorProps: {
       attributes: {
         class: "focus:outline-none min-h-[200px] px-4 py-3",
@@ -228,7 +231,7 @@ export function HtmlEditor({
     if (editor && value !== editor.getHTML()) {
       editor.commands.setContent(value || "", { emitUpdate: false });
     }
-  }, [value]);
+  }, [value, editor]);
 
   if (!editor) return null;
 
