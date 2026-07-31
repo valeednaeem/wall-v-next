@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { ArrowLeft, Save, Eye, Clock, CheckCircle, Send, Globe, ChevronDown } from "lucide-react";
+import { ArrowLeft, Save, Clock, CheckCircle, Send, Globe } from "lucide-react";
 import HtmlEditor from "@/components/editor/html-editor";
 import DOMPurify from "isomorphic-dompurify";
 
@@ -42,8 +42,6 @@ export default function LegalEditorPage() {
   const [publishing, setPublishing] = useState(false);
   const [activeTab, setActiveTab] = useState<"content" | "seo" | "versions">("content");
   const [versions, setVersions] = useState<Version[]>([]);
-  const [showVersionNote, setShowVersionNote] = useState(false);
-  const [versionNote, setVersionNote] = useState("");
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [autoSaving, setAutoSaving] = useState(false);
 
@@ -160,7 +158,6 @@ export default function LegalEditorPage() {
       const body = {
         ...form,
         status: asDraft ? "draft" : form.status,
-        changeNote: versionNote || undefined,
       };
 
       const method = isNew ? "POST" : "PUT";
@@ -175,8 +172,6 @@ export default function LegalEditorPage() {
       const data = await res.json();
       if (data.success) {
         setLastSaved(new Date());
-        setShowVersionNote(false);
-        setVersionNote("");
         const newSlug = data.data.slug;
         if (isNew && newSlug) {
           router.replace(`/dashboard/settings/legal/editor/${newSlug}`);
@@ -198,7 +193,6 @@ export default function LegalEditorPage() {
       const body = {
         ...form,
         status: "published" as const,
-        changeNote: versionNote || "Published",
       };
 
       const method = isNew ? "POST" : "PUT";
@@ -214,8 +208,6 @@ export default function LegalEditorPage() {
       if (data.success) {
         setForm((prev) => ({ ...prev, status: "published" }));
         setLastSaved(new Date());
-        setShowVersionNote(false);
-        setVersionNote("");
         const newSlug = data.data.slug;
         if (isNew && newSlug) {
           router.replace(`/dashboard/settings/legal/editor/${newSlug}`);
@@ -309,35 +301,14 @@ export default function LegalEditorPage() {
             <Save className="h-4 w-4" /> {saving ? "Saving..." : "Save Draft"}
           </button>
           <button
-            onClick={() => { setShowVersionNote(true); }}
-            disabled={!form.title || !form.content}
+            onClick={handlePublish}
+            disabled={publishing || !form.title || !form.content}
             className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-50"
           >
-            <Send className="h-4 w-4" /> Publish
+            <Send className="h-4 w-4" /> {publishing ? "Publishing..." : "Publish"}
           </button>
         </div>
       </div>
-
-      {showVersionNote && (
-        <div className="border rounded-lg p-4 bg-muted/30 space-y-3">
-          <h4 className="font-medium">Publishing Note</h4>
-          <input
-            type="text"
-            placeholder="What changed? (optional)"
-            value={versionNote}
-            onChange={(e) => setVersionNote(e.target.value)}
-            className="w-full px-3 py-2 border rounded-lg text-sm"
-          />
-          <div className="flex gap-2">
-            <button onClick={handlePublish} disabled={publishing} className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm hover:bg-primary/90 disabled:opacity-50">
-              {publishing ? "Publishing..." : "Confirm Publish"}
-            </button>
-            <button onClick={() => setShowVersionNote(false)} className="px-4 py-2 border rounded-lg text-sm hover:bg-accent">
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <div className="lg:col-span-3 space-y-4">
@@ -540,8 +511,8 @@ export default function LegalEditorPage() {
               <button onClick={() => handleSave(true)} disabled={saving} className="w-full px-3 py-2 border rounded-lg text-sm hover:bg-accent disabled:opacity-50">
                 {saving ? "Saving..." : "Save as Draft"}
               </button>
-              <button onClick={() => { setShowVersionNote(true); }} disabled={!form.title || !form.content} className="w-full px-3 py-2 bg-primary text-primary-foreground rounded-lg text-sm hover:bg-primary/90 disabled:opacity-50">
-                Publish Page
+              <button onClick={handlePublish} disabled={publishing || !form.title || !form.content} className="w-full px-3 py-2 bg-primary text-primary-foreground rounded-lg text-sm hover:bg-primary/90 disabled:opacity-50">
+                {publishing ? "Publishing..." : "Publish Page"}
               </button>
             </div>
           </div>

@@ -1,6 +1,8 @@
 import { Metadata } from "next";
 import LegalPageView, { generateLegalMetadata } from "@/components/legal/legal-page-view";
 
+export const dynamic = "force-dynamic";
+
 export async function generateMetadata(): Promise<Metadata> {
   return generateLegalMetadata("terms", "Terms & Conditions");
 }
