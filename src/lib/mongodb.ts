@@ -1,7 +1,11 @@
 import dns from "dns";
 import mongoose from "mongoose";
 
-dns.setServers(["8.8.8.8"]);
+try {
+  dns.setServers(["8.8.8.8"]);
+} catch {
+  // Ignore — some runtimes don't support setServers
+}
 
 interface MongooseCache {
   conn: typeof mongoose | null;

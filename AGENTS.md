@@ -11,6 +11,10 @@ npm run lint      # ESLint (next lint)
 
 No test framework configured. No formatter or pre-commit hooks.
 
+## Deployment
+
+**Always deploy after making changes.** The project is connected to Vercel via GitHub — push to `master` triggers auto-deploy. After committing changes, always run `git push` to deploy. Do not leave local-only changes without pushing.
+
 ## Path Aliases
 
 `@/*` → `./src/*` (configured in `tsconfig.json`)
