@@ -17,6 +17,8 @@ declare global {
       start: () => void;
       end: () => void;
       getState: () => { isInitialized: boolean; config: { contextVariables: Record<string, string> } };
+      setContext: (vars: Record<string, string>) => void;
+      getContext: () => Record<string, string>;
       onStatusChange: (cb: (status: CallStatus, text?: string, subtext?: string) => void) => void;
       onCallStart: (cb: () => void) => void;
       onCallConnected: (cb: (data: { agentId: string; workflowRunId: string }) => void) => void;

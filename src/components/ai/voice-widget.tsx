@@ -101,14 +101,13 @@ export function FloatingVoiceWidget({ position = "bottom-left" }: FloatingVoiceW
 
   const handleSubmitDetails = useCallback(() => {
     if (window.DograhWidget) {
-      const state = window.DograhWidget.getState();
-      state.config.contextVariables = {
+      window.DograhWidget.setContext({
         client_name: clientDetails.name,
         client_email: clientDetails.email,
         client_phone: clientDetails.phone,
         selected_option: selectedSuggestion,
-      };
-      console.log("[Voice Widget] Set context variables:", state.config.contextVariables);
+      });
+      console.log("[Voice Widget] Context set via setContext()");
     }
     setShowForm(false);
     startCall();
