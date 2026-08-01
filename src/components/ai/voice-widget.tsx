@@ -2,16 +2,25 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useDograh } from "./voice-agent";
-import { Mic, PhoneOff, Loader2, X, Volume2 } from "lucide-react";
+import { Mic, PhoneOff, Loader2, X, Volume2, User, Mail, Phone } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface FloatingVoiceWidgetProps {
   position?: "bottom-left" | "bottom-right";
 }
 
+interface ClientDetails {
+  name: string;
+  email: string;
+  phone: string;
+}
+
 export function FloatingVoiceWidget({ position = "bottom-left" }: FloatingVoiceWidgetProps) {
   const [showWelcome, setShowWelcome] = useState(false);
+  const [showForm, setShowForm] = useState(false);
   const [dismissed, setDismissed] = useState(false);
+  const [clientDetails, setClientDetails] = useState<ClientDetails>({ name: "", email: "", phone: "" });
+  const [callData, setCallData] = useState<{ agentId: string; workflowRunId: string } | null>(null);
 
   const handleCallEnd = useCallback((data: { agentId: string; workflowRunId: string; durationSeconds: number }) => {
     console.log("[Voice Widget] Call ended, saving:", data);
@@ -23,9 +32,14 @@ export function FloatingVoiceWidget({ position = "bottom-left" }: FloatingVoiceW
         workflowRunId: data.workflowRunId,
         durationSeconds: data.durationSeconds,
         status: "completed",
+        clientName: clientDetails.name,
+        clientEmail: clientDetails.email,
+        clientPhone: clientDetails.phone,
       }),
     }).catch((err) => console.error("[Voice Widget] Failed to save call:", err));
-  }, []);
+    setCallData(null);
+    setClientDetails({ name: "", email: "", phone: "" });
+  }, [clientDetails]);
 
   const {
     status,
@@ -38,6 +52,7 @@ export function FloatingVoiceWidget({ position = "bottom-left" }: FloatingVoiceW
     duration,
   } = useDograh({
     mode: "headless",
+    onCallConnected: (data) => setCallData(data),
     onCallDisconnected: handleCallEnd,
   });
 
@@ -49,16 +64,25 @@ export function FloatingVoiceWidget({ position = "bottom-left" }: FloatingVoiceW
   }, [dismissed]);
 
   useEffect(() => {
-    if (isLive) setShowWelcome(false);
+    if (isLive) {
+      setShowWelcome(false);
+      setShowForm(false);
+    }
   }, [isLive]);
 
   const handleDismiss = useCallback(() => {
     setShowWelcome(false);
+    setShowForm(false);
     setDismissed(true);
   }, []);
 
-  const handleStart = useCallback(() => {
+  const handleShowForm = useCallback(() => {
     setShowWelcome(false);
+    setShowForm(true);
+  }, []);
+
+  const handleSubmitDetails = useCallback(() => {
+    setShowForm(false);
     startCall();
   }, [startCall]);
 
@@ -111,7 +135,7 @@ export function FloatingVoiceWidget({ position = "bottom-left" }: FloatingVoiceW
               ].map((suggestion) => (
                 <button
                   key={suggestion}
-                  onClick={handleStart}
+                  onClick={handleShowForm}
                   className="w-full text-left text-xs px-3 py-2 rounded-lg bg-muted/50 hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
                 >
                   &quot;{suggestion}&quot;
@@ -120,11 +144,84 @@ export function FloatingVoiceWidget({ position = "bottom-left" }: FloatingVoiceW
             </div>
 
             <button
-              onClick={handleStart}
+              onClick={handleShowForm}
               className="w-full rounded-xl bg-primary text-primary-foreground py-2.5 text-sm font-semibold hover:bg-primary/90 transition-all flex items-center justify-center gap-2"
             >
               <Mic className="h-4 w-4" />
-              {scriptLoaded ? "Start Voice Chat" : "Connecting..."}
+              {scriptLoaded ? "Start Voice Chat" : "Loading..."}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Client Details Form */}
+      {showForm && !isLive && (
+        <div
+          className={cn(
+            "fixed bottom-24 z-50 w-[340px] max-w-[calc(100vw-3rem)] animate-slide-up",
+            positionClasses
+          )}
+        >
+          <div className="rounded-2xl bg-white shadow-2xl border p-5 relative">
+            <button
+              onClick={handleDismiss}
+              className="absolute top-3 right-3 p-1 rounded-full hover:bg-muted transition-colors"
+            >
+              <X className="h-3.5 w-3.5 text-muted-foreground" />
+            </button>
+
+            <div className="flex items-start gap-3 mb-4">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                <User className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <h4 className="font-semibold text-sm">Before we connect...</h4>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Share your details so our team can follow up with you.
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-3 mb-4">
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="Your name"
+                  value={clientDetails.name}
+                  onChange={(e) => setClientDetails((prev) => ({ ...prev, name: e.target.value }))}
+                  className="w-full pl-9 pr-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                />
+              </div>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <input
+                  type="email"
+                  placeholder="Email address"
+                  value={clientDetails.email}
+                  onChange={(e) => setClientDetails((prev) => ({ ...prev, email: e.target.value }))}
+                  className="w-full pl-9 pr-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                />
+              </div>
+              <div className="relative">
+                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <input
+                  type="tel"
+                  placeholder="Phone number"
+                  value={clientDetails.phone}
+                  onChange={(e) => setClientDetails((prev) => ({ ...prev, phone: e.target.value }))}
+                  className="w-full pl-9 pr-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                />
+              </div>
+            </div>
+
+            <button
+              onClick={handleSubmitDetails}
+              disabled={!scriptLoaded}
+              className="w-full rounded-xl bg-primary text-primary-foreground py-2.5 text-sm font-semibold hover:bg-primary/90 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              <Mic className="h-4 w-4" />
+              Start Call
             </button>
           </div>
         </div>
@@ -134,7 +231,8 @@ export function FloatingVoiceWidget({ position = "bottom-left" }: FloatingVoiceW
       <button
         onClick={() => {
           if (isLive) endCall();
-          else if (showWelcome) handleStart();
+          else if (showWelcome) handleShowForm();
+          else if (showForm) handleSubmitDetails();
           else setShowWelcome(true);
         }}
         className={cn(
