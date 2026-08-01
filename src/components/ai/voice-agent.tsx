@@ -18,8 +18,10 @@ declare global {
       end: () => void;
       getState: () => { isInitialized: boolean };
       onStatusChange: (cb: (status: CallStatus, text?: string, subtext?: string) => void) => void;
-      onCallStart: (cb: (data: { agentId: string; workflowRunId: string }) => void) => void;
-      onCallEnd: (cb: (data: { agentId: string; workflowRunId: string; durationSeconds: number }) => void) => void;
+      onCallStart: (cb: () => void) => void;
+      onCallConnected: (cb: (data: { agentId: string; workflowRunId: string }) => void) => void;
+      onCallDisconnected: (cb: (data: { agentId: string; workflowRunId: string; durationSeconds: number }) => void) => void;
+      onCallEnd: (cb: () => void) => void;
       onError: (cb: (err: Error) => void) => void;
     };
   }
@@ -37,17 +39,38 @@ interface VoiceAgentConfig {
   onError?: (err: Error) => void;
 }
 
+function waitForDograhWidget(maxWaitMs = 8000): Promise<void> {
+  return new Promise((resolve) => {
+    if (window.DograhWidget) {
+      resolve();
+      return;
+    }
+    const start = Date.now();
+    const interval = setInterval(() => {
+      if (window.DograhWidget || Date.now() - start > maxWaitMs) {
+        clearInterval(interval);
+        resolve();
+      }
+    }, 50);
+  });
+}
+
 function loadDograhScript(url: string): Promise<void> {
   return new Promise((resolve, reject) => {
-    if (document.getElementById("dograh-widget-script") || window.DograhWidget) {
+    if (window.DograhWidget) {
       resolve();
+      return;
+    }
+    const existing = document.getElementById("dograh-widget-script");
+    if (existing) {
+      waitForDograhWidget().then(resolve);
       return;
     }
     const script = document.createElement("script");
     script.id = "dograh-widget-script";
     script.src = url;
     script.async = true;
-    script.onload = () => resolve();
+    script.onload = () => waitForDograhWidget().then(resolve);
     script.onerror = () => reject(new Error("Failed to load Dograh widget script"));
     document.head.appendChild(script);
   });
@@ -107,23 +130,31 @@ export function useDograh(config: VoiceAgentConfig) {
       onStatusChangeRef.current?.(s, text, subtext);
     };
 
-    const callStartHandler = (data: { agentId: string; workflowRunId: string }) => {
+    const callStartHandler = () => {
       setDuration(0);
+    };
+
+    const callConnectedHandler = (data: { agentId: string; workflowRunId: string }) => {
+      console.log("[Dograh] Call connected:", data);
       onCallConnectedRef.current?.(data);
     };
 
-    const callEndHandler = (data: { agentId: string; workflowRunId: string; durationSeconds: number }) => {
+    const callDisconnectedHandler = (data: { agentId: string; workflowRunId: string; durationSeconds: number }) => {
+      console.log("[Dograh] Call disconnected:", data);
       setDuration(data.durationSeconds);
       onCallDisconnectedRef.current?.(data);
     };
 
     const errorHandler = (err: Error) => {
+      console.error("[Dograh] Error:", err);
       onErrorRef.current?.(err);
     };
 
     window.DograhWidget.onStatusChange(statusHandler);
     window.DograhWidget.onCallStart(callStartHandler);
-    window.DograhWidget.onCallEnd(callEndHandler);
+    window.DograhWidget.onCallConnected(callConnectedHandler);
+    window.DograhWidget.onCallDisconnected(callDisconnectedHandler);
+    window.DograhWidget.onCallEnd(() => {});
     window.DograhWidget.onError(errorHandler);
 
     return () => {

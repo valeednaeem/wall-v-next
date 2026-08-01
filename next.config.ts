@@ -18,7 +18,7 @@ const securityHeaders = [
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "img-src 'self' data: blob: https: http:",
       "font-src 'self' https://fonts.gstatic.com",
-      "connect-src 'self' https://api.openai.com https://api.anthropic.com https://dograh.vercel.app https://app.dograh.com https://api.dograh.com http://localhost:3010 http://localhost:8000",
+      "connect-src 'self' https://api.openai.com https://api.anthropic.com https://dograh.vercel.app https://app.dograh.com https://api.dograh.com wss://api.dograh.com http://localhost:3010 http://localhost:8000",
       "frame-src 'self' https://js.stripe.com https://checkout.stripe.com https://www.youtube.com",
     ].join("; "),
   },
