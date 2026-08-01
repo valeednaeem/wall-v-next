@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useDograh } from "./voice-agent";
 import { Mic, PhoneOff, Loader2, X, Volume2, User, Mail, Phone } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -15,12 +15,23 @@ interface ClientDetails {
   phone: string;
 }
 
+const SUGGESTIONS = [
+  "I want to build a website for my business",
+  "I need help with a project idea",
+  "What services do you offer?",
+  "I need hosting for my website",
+];
+
 export function FloatingVoiceWidget({ position = "bottom-left" }: FloatingVoiceWidgetProps) {
   const [showWelcome, setShowWelcome] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   const [clientDetails, setClientDetails] = useState<ClientDetails>({ name: "", email: "", phone: "" });
+  const [selectedSuggestion, setSelectedSuggestion] = useState<string>("");
   const [callData, setCallData] = useState<{ agentId: string; workflowRunId: string } | null>(null);
+
+  const clientDetailsRef = useRef(clientDetails);
+  clientDetailsRef.current = clientDetails;
 
   const handleCallEnd = useCallback((data: { agentId: string; workflowRunId: string; durationSeconds: number }) => {
     console.log("[Voice Widget] Call ended, saving:", data);
@@ -32,14 +43,15 @@ export function FloatingVoiceWidget({ position = "bottom-left" }: FloatingVoiceW
         workflowRunId: data.workflowRunId,
         durationSeconds: data.durationSeconds,
         status: "completed",
-        clientName: clientDetails.name,
-        clientEmail: clientDetails.email,
-        clientPhone: clientDetails.phone,
+        clientName: clientDetailsRef.current.name,
+        clientEmail: clientDetailsRef.current.email,
+        clientPhone: clientDetailsRef.current.phone,
       }),
     }).catch((err) => console.error("[Voice Widget] Failed to save call:", err));
     setCallData(null);
     setClientDetails({ name: "", email: "", phone: "" });
-  }, [clientDetails]);
+    setSelectedSuggestion("");
+  }, []);
 
   const {
     status,
@@ -76,15 +88,31 @@ export function FloatingVoiceWidget({ position = "bottom-left" }: FloatingVoiceW
     setDismissed(true);
   }, []);
 
+  const handleSuggestionClick = useCallback((suggestion: string) => {
+    setSelectedSuggestion(suggestion);
+    setShowWelcome(false);
+    setShowForm(true);
+  }, []);
+
   const handleShowForm = useCallback(() => {
     setShowWelcome(false);
     setShowForm(true);
   }, []);
 
   const handleSubmitDetails = useCallback(() => {
+    if (window.DograhWidget) {
+      const state = window.DograhWidget.getState();
+      state.config.contextVariables = {
+        client_name: clientDetails.name,
+        client_email: clientDetails.email,
+        client_phone: clientDetails.phone,
+        selected_option: selectedSuggestion,
+      };
+      console.log("[Voice Widget] Set context variables:", state.config.contextVariables);
+    }
     setShowForm(false);
     startCall();
-  }, [startCall]);
+  }, [startCall, clientDetails, selectedSuggestion]);
 
   const positionClasses = position === "bottom-left" ? "left-6" : "right-6";
 
@@ -127,15 +155,10 @@ export function FloatingVoiceWidget({ position = "bottom-left" }: FloatingVoiceW
             </div>
 
             <div className="space-y-2 mb-4">
-              {[
-                "I want to build a website for my business",
-                "I need help with a project idea",
-                "What services do you offer?",
-                "I need hosting for my website",
-              ].map((suggestion) => (
+              {SUGGESTIONS.map((suggestion) => (
                 <button
                   key={suggestion}
-                  onClick={handleShowForm}
+                  onClick={() => handleSuggestionClick(suggestion)}
                   className="w-full text-left text-xs px-3 py-2 rounded-lg bg-muted/50 hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
                 >
                   &quot;{suggestion}&quot;
@@ -181,6 +204,13 @@ export function FloatingVoiceWidget({ position = "bottom-left" }: FloatingVoiceW
                 </p>
               </div>
             </div>
+
+            {selectedSuggestion && (
+              <div className="mb-3 px-3 py-2 rounded-lg bg-primary/5 border border-primary/10">
+                <p className="text-xs text-muted-foreground">Your inquiry:</p>
+                <p className="text-xs font-medium text-foreground mt-0.5">&quot;{selectedSuggestion}&quot;</p>
+              </div>
+            )}
 
             <div className="space-y-3 mb-4">
               <div className="relative">
