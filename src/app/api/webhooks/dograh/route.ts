@@ -6,6 +6,8 @@ import Inquiry from "@/models/inquiry";
 import Client from "@/models/client";
 import Project from "@/models/project";
 import ServicePrice from "@/models/service-price";
+import { generateDemoHTML } from "@/lib/demo-generator";
+import { sendEmail, projectCreatedEmail } from "@/services/email";
 
 function slugify(text: string): string {
   return text
@@ -292,6 +294,8 @@ export async function POST(request: Request) {
       sessionId,
       messages,
       callerInfo,
+      context_variables,
+      initial_context,
     } = body;
 
     await connectToDatabase();
@@ -337,16 +341,18 @@ export async function POST(request: Request) {
       { upsert: true, new: true }
     );
 
-    // Merge callerInfo with transcript extraction
+    // Merge callerInfo with transcript extraction and context variables
     const extracted = extractCallerInfoFromTranscript(transcript || "", messages);
+    const ctx = context_variables || initial_context || {};
     const mergedCaller = {
-      name: callerInfo?.name || extracted.name || "",
-      email: callerInfo?.email || extracted.email || "",
-      phone: callerInfo?.phone || extracted.phone || "",
-      company: callerInfo?.company || extracted.company || "",
+      name: callerInfo?.name || ctx.client_name || ctx.customer_name || extracted.name || "",
+      email: callerInfo?.email || ctx.client_email || ctx.customer_email || extracted.email || "",
+      phone: callerInfo?.phone || ctx.client_phone || ctx.customer_phone || extracted.phone || "",
+      company: callerInfo?.company || ctx.company || ctx.client_company || extracted.company || "",
       budget: extracted.budget || "",
       timeline: extracted.timeline || "",
       projectType: extracted.projectType || "",
+      selectedOption: ctx.selected_option || "",
     };
 
     // Auto-create lead, inquiry, client, and project if we have any caller info
@@ -465,8 +471,25 @@ export async function POST(request: Request) {
         milestoneAmounts = milestones.map(() => Math.round(avg / milestones.length));
       }
 
-      // 6. Create Project
+      // 6. Create Project with Demo HTML
       const slug = slugify(projectName);
+      const demoId = `demo-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+      // Generate demo HTML from the collected data
+      const demoRequirements = {
+        projectType: primaryService?.serviceKey || mergedCaller.projectType || "website",
+        name: clientName,
+        email: clientEmail,
+        features: matchedServices.map((s) => s.name),
+        budget: mergedCaller.budget || (estimatedQuote ? `$${estimatedQuote.min.toLocaleString()} - $${estimatedQuote.max.toLocaleString()}` : ""),
+        timeline: mergedCaller.timeline || "",
+        description: summary || "",
+        selectedOption: mergedCaller.selectedOption || "",
+        company: clientCompany,
+        phone: clientPhone,
+      };
+      const demoHTML = generateDemoHTML(demoRequirements, demoId);
+
       const project = await Project.create({
         name: projectName,
         slug,
@@ -478,7 +501,7 @@ export async function POST(request: Request) {
           phone: clientPhone,
           company: clientCompany,
         },
-        status: "planning",
+        status: "demo",
         priority: "medium",
         budget: estimatedQuote?.min || 0,
         currency: "USD",
@@ -493,6 +516,8 @@ export async function POST(request: Request) {
           budget: mergedCaller.budget || (estimatedQuote ? `$${estimatedQuote.min.toLocaleString()} - $${estimatedQuote.max.toLocaleString()}` : ""),
           timeline: mergedCaller.timeline || primaryService ? `${primaryService?.tiers?.[0]?.name || "Standard"}` : "",
         },
+        demoHTML,
+        demoId,
         quote: estimatedQuote
           ? {
               min: estimatedQuote.min,
@@ -542,7 +567,17 @@ export async function POST(request: Request) {
         project: project._id,
         quote: estimatedQuote,
         services: matchedServices.map((s) => s.name),
+        demoId,
       });
+
+      // Send preview email to client
+      if (clientEmail && clientEmail.includes("@")) {
+        const previewUrl = `${process.env.NEXT_PUBLIC_APP_URL || "https://wall-v.com"}/preview/${project._id}`;
+        const emailContent = projectCreatedEmail(projectName, clientName, previewUrl);
+        sendEmail({ ...emailContent, to: clientEmail }).catch((err) =>
+          console.error("[Dograh Webhook] Failed to send preview email:", err)
+        );
+      }
 
       return NextResponse.json({
         success: true,
@@ -551,6 +586,9 @@ export async function POST(request: Request) {
         inquiryId: inquiry._id,
         clientId: client?._id,
         projectId: project._id,
+        demoId,
+        previewUrl: `/preview/${project._id}`,
+        checkoutUrl: `/checkout/${project._id}`,
         quote: estimatedQuote,
       });
     }

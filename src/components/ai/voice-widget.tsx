@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import Link from "next/link";
 import { useDograh } from "./voice-agent";
-import { Mic, PhoneOff, Loader2, X, Volume2, User, Mail, Phone } from "lucide-react";
+import { Mic, PhoneOff, Loader2, X, Volume2, User, Mail, Phone, ExternalLink, CreditCard, CheckCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface FloatingVoiceWidgetProps {
@@ -29,6 +30,7 @@ export function FloatingVoiceWidget({ position = "bottom-left" }: FloatingVoiceW
   const [clientDetails, setClientDetails] = useState<ClientDetails>({ name: "", email: "", phone: "" });
   const [selectedSuggestion, setSelectedSuggestion] = useState<string>("");
   const [callData, setCallData] = useState<{ agentId: string; workflowRunId: string } | null>(null);
+  const [demoResult, setDemoResult] = useState<{ previewUrl: string; checkoutUrl: string; projectId: string } | null>(null);
 
   const clientDetailsRef = useRef(clientDetails);
   clientDetailsRef.current = clientDetails;
@@ -47,10 +49,19 @@ export function FloatingVoiceWidget({ position = "bottom-left" }: FloatingVoiceW
         clientEmail: clientDetailsRef.current.email,
         clientPhone: clientDetailsRef.current.phone,
       }),
-    }).catch((err) => console.error("[Voice Widget] Failed to save call:", err));
+    })
+      .then((r) => r.json())
+      .then((result) => {
+        if (result.previewUrl) {
+          setDemoResult({
+            previewUrl: result.previewUrl,
+            checkoutUrl: result.checkoutUrl,
+            projectId: result.projectId,
+          });
+        }
+      })
+      .catch((err) => console.error("[Voice Widget] Failed to save call:", err));
     setCallData(null);
-    setClientDetails({ name: "", email: "", phone: "" });
-    setSelectedSuggestion("");
   }, []);
 
   const {
@@ -79,6 +90,7 @@ export function FloatingVoiceWidget({ position = "bottom-left" }: FloatingVoiceW
     if (isLive) {
       setShowWelcome(false);
       setShowForm(false);
+      setDemoResult(null);
     }
   }, [isLive]);
 
@@ -125,8 +137,61 @@ export function FloatingVoiceWidget({ position = "bottom-left" }: FloatingVoiceW
     <>
       <div ref={containerRef} className="hidden" />
 
+      {/* Demo Result Popup */}
+      {demoResult && !isLive && (
+        <div
+          className={cn(
+            "fixed bottom-24 z-50 w-[360px] max-w-[calc(100vw-3rem)] animate-slide-up",
+            positionClasses
+          )}
+        >
+          <div className="rounded-2xl bg-white shadow-2xl border p-5 relative">
+            <button
+              onClick={() => setDemoResult(null)}
+              className="absolute top-3 right-3 p-1 rounded-full hover:bg-muted transition-colors"
+            >
+              <X className="h-3.5 w-3.5 text-muted-foreground" />
+            </button>
+
+            <div className="flex items-start gap-3 mb-4">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-green-500/10">
+                <CheckCircle className="h-5 w-5 text-green-500" />
+              </div>
+              <div>
+                <h4 className="font-semibold text-sm">Your Demo is Ready!</h4>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  We&apos;ve generated a custom preview based on our conversation. Take a look!
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-2 mb-4">
+              <Link
+                href={demoResult.previewUrl}
+                target="_blank"
+                className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-primary/90 transition-colors"
+              >
+                <ExternalLink className="h-4 w-4" />
+                View Your Demo
+              </Link>
+              <Link
+                href={demoResult.checkoutUrl}
+                className="w-full flex items-center justify-center gap-2 bg-green-500 text-white px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-green-600 transition-colors"
+              >
+                <CreditCard className="h-4 w-4" />
+                Proceed to Checkout
+              </Link>
+            </div>
+
+            <p className="text-xs text-muted-foreground text-center">
+              A preview link has also been sent to your email.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Welcome Popup */}
-      {showWelcome && !isLive && (
+      {showWelcome && !isLive && !demoResult && (
         <div
           className={cn(
             "fixed bottom-24 z-50 w-[320px] max-w-[calc(100vw-3rem)] animate-slide-up",
@@ -260,6 +325,7 @@ export function FloatingVoiceWidget({ position = "bottom-left" }: FloatingVoiceW
       <button
         onClick={() => {
           if (isLive) endCall();
+          else if (demoResult) setDemoResult(null);
           else if (showWelcome) handleShowForm();
           else if (showForm) handleSubmitDetails();
           else setShowWelcome(true);

@@ -1,14 +1,13 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import Conversation from "@/models/conversation";
-import Lead from "@/models/lead";
-import Inquiry from "@/models/inquiry";
+import Project from "@/models/project";
 
 // Called from the browser when a Dograh voice call ends
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { agentId, workflowRunId, durationSeconds, status } = body;
+    const { agentId, workflowRunId, durationSeconds, status, clientName, clientEmail, clientPhone } = body;
 
     console.log("[Voice Agent] Call ended:", { agentId, workflowRunId, durationSeconds, status });
 
@@ -45,9 +44,44 @@ export async function POST(request: Request) {
       await conversation.save();
     }
 
+    // Try to find the project (may have been created by the Dograh webhook)
+    let previewUrl = null;
+    let checkoutUrl = null;
+    let projectId = null;
+
+    if (conversation.projectId) {
+      const project = await Project.findById(conversation.projectId)
+        .select("_id demoId demoId status")
+        .lean();
+      if (project) {
+        projectId = project._id.toString();
+        previewUrl = `/preview/${project._id}`;
+        checkoutUrl = `/checkout/${project._id}`;
+      }
+    }
+
+    // If no project linked to conversation, try to find by client email
+    if (!projectId && clientEmail) {
+      const project = await Project.findOne({
+        "client.email": clientEmail,
+        status: "demo",
+      })
+        .sort({ createdAt: -1 })
+        .select("_id demoId status")
+        .lean();
+      if (project) {
+        projectId = project._id.toString();
+        previewUrl = `/preview/${project._id}`;
+        checkoutUrl = `/checkout/${project._id}`;
+      }
+    }
+
     return NextResponse.json({
       success: true,
       conversationId: conversation._id,
+      previewUrl,
+      checkoutUrl,
+      projectId,
     });
   } catch (error) {
     console.error("[Voice Agent] Call-ended error:", error);
