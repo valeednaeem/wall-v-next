@@ -23,6 +23,7 @@ export interface IProject extends Document {
     name: string;
     description?: string;
     dueDate?: Date;
+    amount?: number;
     status: "pending" | "in-progress" | "completed";
     completedAt?: Date;
   }[];
@@ -91,6 +92,7 @@ const ProjectSchema = new Schema<IProject>(
         name: String,
         description: String,
         dueDate: Date,
+        amount: { type: Number, min: 0 },
         status: { type: String, enum: ["pending", "in-progress", "completed"], default: "pending" },
         completedAt: Date,
       },
