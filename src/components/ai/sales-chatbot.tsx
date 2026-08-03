@@ -514,7 +514,8 @@ export function SalesChatbot() {
 
       // Update stage based on what we now know
       const feats = (brief.features || []) as string[];
-      const hasMissing = !brief.projectType || !brief.objective || feats.length === 0 || !brief.estimatedBudget || !brief.desiredTimeline;
+      const bizCtx = brief.businessContext as Record<string, unknown> | undefined;
+      const hasMissing = !brief.projectType || !brief.objective || feats.length === 0 || !brief.estimatedBudget || !brief.desiredTimeline || !brief.targetAudience || !bizCtx?.industry;
       if (!hasMissing) {
         conversationState.stage = "generate-brief";
       } else if (brief.projectType && brief.objective) {

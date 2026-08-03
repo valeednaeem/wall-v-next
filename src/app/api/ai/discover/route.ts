@@ -40,6 +40,21 @@ export async function POST(request: Request) {
 
     if (conversation?.discoveryState) {
       state = conversation.discoveryState as unknown as ConversationState;
+      // Merge client-side brief updates (from handleSuggestionClick) into server state
+      if (incomingConversationState?.brief) {
+        const clientBrief = incomingConversationState.brief;
+        const serverBrief = state.brief;
+        // Only merge fields that the client has set but server hasn't
+        if (clientBrief.projectType && !serverBrief.projectType) serverBrief.projectType = clientBrief.projectType;
+        if (clientBrief.objective && !serverBrief.objective) serverBrief.objective = clientBrief.objective;
+        if (clientBrief.features?.length > 0 && serverBrief.features.length === 0) serverBrief.features = clientBrief.features;
+        if (clientBrief.estimatedBudget && !serverBrief.estimatedBudget) serverBrief.estimatedBudget = clientBrief.estimatedBudget;
+        if (clientBrief.desiredTimeline && !serverBrief.desiredTimeline) serverBrief.desiredTimeline = clientBrief.desiredTimeline;
+        if (clientBrief.targetAudience && !serverBrief.targetAudience) serverBrief.targetAudience = clientBrief.targetAudience;
+        if (clientBrief.businessContext?.industry && !serverBrief.businessContext?.industry) serverBrief.businessContext = clientBrief.businessContext;
+        if (clientBrief.designPreferences && !serverBrief.designPreferences) serverBrief.designPreferences = clientBrief.designPreferences;
+        if (clientBrief.integrations?.length > 0 && serverBrief.integrations.length === 0) serverBrief.integrations = clientBrief.integrations;
+      }
     } else if (incomingConversationState) {
       state = incomingConversationState as ConversationState;
     } else {

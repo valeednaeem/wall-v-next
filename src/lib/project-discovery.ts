@@ -355,6 +355,8 @@ function getNextQuestion(brief: ProjectBrief, askedQuestions: string[]): string 
     "features",
     "budget",
     "timeline",
+    "businessContext",
+    "targetAudience",
     "contactInfo",
     "designPreferences",
     "integrations",
@@ -672,6 +674,7 @@ export function processUserMessage(state: ConversationState, userMessage: string
     else if (lower.includes("employee") || lower.includes("staff") || lower.includes("team")) newState.brief.targetAudience = "Internal team/Employees";
     else if (lower.includes("student") || lower.includes("teacher")) newState.brief.targetAudience = "Students and educators";
     else if (lower.includes("patient") || lower.includes("doctor")) newState.brief.targetAudience = "Patients and medical staff";
+    else if (lower.includes("general public") || lower.includes("everyone") || lower.includes("public")) newState.brief.targetAudience = "General public";
   }
 
   // Detect design preferences
