@@ -729,132 +729,210 @@ export function processUserMessage(state: ConversationState, userMessage: string
 // ─── Dynamic Suggestions ───────────────────────────────────────────────────
 
 function generateDynamicSuggestions(state: ConversationState): string[] {
-  const { brief, lastQuestionCategory, stage } = state;
-  const suggestions: string[] = [];
+  const { brief, lastQuestionCategory, stage, turnCount } = state;
 
   // Stage: generate-brief → confirmation actions
   if (stage === "generate-brief") {
     return ["Looks good, save it", "I need to make changes", "Let me add more details"];
   }
 
+  // Use turnCount to shift suggestions within same category (prevents repetition)
+  const shift = turnCount % 2 === 0 ? 0 : 1;
+
   // Suggestions based on what was just asked
   switch (lastQuestionCategory) {
     case "projectType": {
-      // Just asked about project type → suggest types
-      if (!brief.projectType) {
-        return ["I need a website", "I need a web app", "I need a mobile app", "I need an online store", "I need AI/automation"];
-      }
-      break;
+      if (brief.projectType) break; // already set, don't suggest
+      const pools = [
+        ["I need a website", "I need a web app", "I need a mobile app", "I need an online store", "I need AI/automation"],
+        ["A business website", "A web application", "A mobile app", "An ecommerce store", "Something else"],
+      ];
+      return pools[shift];
     }
     case "objective": {
-      // Just asked about goal → suggest common goals
       const type = brief.projectType;
-      if (type === "website" || type === "redesign") {
-        return ["Establish online presence", "Generate leads", "Showcase portfolio", "Share information"];
-      }
-      if (type === "ecommerce") {
-        return ["Sell products online", "Reach more customers", "Replace physical store", "Start a side business"];
-      }
-      if (type === "web-application" || type === "saas") {
-        return ["Streamline operations", "Replace manual process", "Serve customers better", "Create a product"];
-      }
-      if (type === "mobile-app") {
-        return ["Engage customers on mobile", "Provide on-the-go access", "Increase loyalty", "Complement website"];
-      }
-      if (type === "ai-integration" || type === "automation") {
-        return ["Save time on repetitive tasks", "Improve customer support", "Make smarter decisions", "Reduce costs"];
-      }
-      return ["Grow my business", "Save time", "Improve customer experience", "Modernize existing tool"];
+      const objectivePools: Record<string, string[][]> = {
+        website: [
+          ["Establish online presence", "Generate leads", "Showcase portfolio", "Share information"],
+          ["Attract more customers", "Build credibility", "Drive foot traffic", "Support marketing"],
+        ],
+        ecommerce: [
+          ["Sell products online", "Reach more customers", "Replace physical store", "Start a side business"],
+          ["Launch a brand", "Expand market reach", "Automate sales", "Reduce overhead"],
+        ],
+        "web-application": [
+          ["Streamline operations", "Replace manual process", "Serve customers better", "Create a product"],
+          ["Automate workflows", "Centralize data", "Improve team efficiency", "Launch a SaaS"],
+        ],
+        saas: [
+          ["Create a product", "Serve customers better", "Replace manual process", "Scale my business"],
+          ["Launch quickly", "Validate an idea", "Automate delivery", "Reach global users"],
+        ],
+        "mobile-app": [
+          ["Engage customers on mobile", "Provide on-the-go access", "Increase loyalty", "Complement website"],
+          ["Enable offline access", "Leverage device features", "Improve retention", "Reach mobile-first users"],
+        ],
+        "ai-integration": [
+          ["Save time on repetitive tasks", "Improve customer support", "Make smarter decisions", "Reduce costs"],
+          ["Automate insights", "Personalize experiences", "Predict trends", "Enhance productivity"],
+        ],
+        automation: [
+          ["Save time on repetitive tasks", "Reduce human error", "Scale operations", "Cut costs"],
+          ["Automate reporting", "Streamline onboarding", "Speed up response times", "Eliminate busywork"],
+        ],
+      };
+      const pool = objectivePools[type || ""] || [
+        ["Grow my business", "Save time", "Improve customer experience", "Modernize existing tool"],
+        ["Increase revenue", "Reduce costs", "Gain competitive edge", "Future-proof my business"],
+      ];
+      return pool[shift];
     }
     case "features": {
-      // Just asked about features → suggest features based on project type
       const type = brief.projectType;
       const existing = new Set(brief.features.map((f) => f.toLowerCase()));
-      const pools: string[] = [];
-      if (type === "website" || type === "redesign") {
-        pools.push("Contact form", "Blog", "Gallery", "SEO", "Analytics", "Social media links", "Testimonials");
-      } else if (type === "ecommerce") {
-        pools.push("Product catalog", "Shopping cart", "Payment processing", "Order tracking", "Inventory management", "Reviews");
-      } else if (type === "web-application" || type === "saas") {
-        pools.push("User authentication", "Dashboard", "Admin panel", "API integration", "Real-time updates", "Search");
-      } else if (type === "mobile-app") {
-        pools.push("Push notifications", "Offline mode", "Camera/GPS", "In-app purchases", "Social login", "Deep linking");
-      } else if (type === "ai-integration" || type === "automation") {
-        pools.push("Chatbot", "Voice assistant", "Data analysis", "Recommendations", "Workflow automation", "Sentiment analysis");
-      } else {
-        pools.push("User login", "Payment processing", "Dashboard", "Notifications", "Search", "File uploads");
+      const featurePools: Record<string, string[][]> = {
+        website: [
+          ["Contact form", "Blog", "Gallery", "Testimonials", "Live chat"],
+          ["SEO", "Analytics", "Social media links", "Newsletter signup", "FAQ section"],
+        ],
+        ecommerce: [
+          ["Product catalog", "Shopping cart", "Payment processing", "Order tracking", "Wishlist"],
+          ["Reviews & ratings", "Inventory management", "Discount codes", "Shipping calculator", "Customer accounts"],
+        ],
+        "web-application": [
+          ["User authentication", "Dashboard", "Admin panel", "Search", "File uploads"],
+          ["API integration", "Real-time updates", "Role-based access", "Data export", "Notifications"],
+        ],
+        saas: [
+          ["User authentication", "Dashboard", "Billing & subscriptions", "API", "Admin panel"],
+          ["Analytics", "Integrations", "White-label", "Multi-tenant", "Audit logs"],
+        ],
+        "mobile-app": [
+          ["Push notifications", "Offline mode", "Camera/GPS", "Social login", "In-app purchases"],
+          ["Deep linking", "Biometrics", "QR scanner", "Chat", "File sharing"],
+        ],
+        "ai-integration": [
+          ["Chatbot", "Voice assistant", "Data analysis", "Recommendations", "Automation"],
+          ["Sentiment analysis", "Image recognition", "NLP", "Predictive analytics", "Smart search"],
+        ],
+      };
+      const pools = featurePools[type || ""] || [
+        ["User login", "Payment processing", "Dashboard", "Notifications", "Search"],
+        ["File uploads", "Messaging", "Reporting", "Integrations", "Mobile responsive"],
+      ];
+      // Filter out already-mentioned, shift to rotate
+      const filtered = pools[shift].filter((f) => !existing.has(f.toLowerCase()));
+      // If all filtered out, try the other pool
+      if (filtered.length === 0) {
+        const otherPool = pools[shift === 0 ? 1 : 0].filter((f) => !existing.has(f.toLowerCase()));
+        if (otherPool.length > 0) return otherPool.slice(0, 4);
+        return ["I'll type my own", "That's enough features", "What do you recommend?"];
       }
-      // Filter out already-mentioned features
-      const filtered = pools.filter((f) => !existing.has(f.toLowerCase()));
-      return filtered.slice(0, 5);
+      return filtered.slice(0, 4);
     }
     case "budget": {
-      // Just asked about budget → suggest ranges based on project type
       const type = brief.projectType;
-      if (type === "mobile-app") {
-        return ["Under $3,000", "$3,000 - $8,000", "$8,000 - $20,000", "Not sure yet"];
-      }
-      if (type === "web-application" || type === "saas" || type === "crm" || type === "erp") {
-        return ["Under $2,000", "$2,000 - $5,000", "$5,000 - $15,000", "Not sure yet"];
-      }
-      if (type === "ecommerce") {
-        return ["Under $2,000", "$2,000 - $5,000", "$5,000 - $10,000", "Not sure yet"];
-      }
-      return ["Under $1,000", "$1,000 - $3,000", "$3,000 - $8,000", "Not sure yet"];
+      const budgetPools: Record<string, string[][]> = {
+        "mobile-app": [
+          ["Under $3,000", "$3,000 - $8,000", "$8,000 - $20,000", "Not sure yet"],
+          ["Tight budget", "Flexible budget", "Let's see options first", "Depends on features"],
+        ],
+        "web-application": [
+          ["Under $2,000", "$2,000 - $5,000", "$5,000 - $15,000", "Not sure yet"],
+          ["Starting small", "Ready to invest", "Need a quote first", "Depends on scope"],
+        ],
+        saas: [
+          ["Under $3,000", "$3,000 - $8,000", "$8,000 - $20,000", "Not sure yet"],
+          ["Bootstrap budget", "Funded startup", "Enterprise level", "Need pricing tiers"],
+        ],
+        ecommerce: [
+          ["Under $2,000", "$2,000 - $5,000", "$5,000 - $10,000", "Not sure yet"],
+          ["Small store", "Large catalog", "Multi-vendor", "Depends on features"],
+        ],
+      };
+      const pool = budgetPools[type || ""] || [
+        ["Under $1,000", "$1,000 - $3,000", "$3,000 - $8,000", "Not sure yet"],
+        ["Tight budget", "Moderate budget", "Flexible budget", "Let's discuss"],
+      ];
+      return pool[shift];
     }
     case "timeline": {
-      // Just asked about timeline → suggest deadlines
-      return ["ASAP (rush)", "Within 2 weeks", "Within 1 month", "1-3 months", "Flexible / no rush"];
+      const pools = [
+        ["ASAP (rush)", "Within 2 weeks", "Within 1 month", "1-3 months"],
+        ["Need it fast", "A few weeks", "A month or two", "No rush at all"],
+      ];
+      return pools[shift];
     }
     case "contactInfo": {
-      // Just asked for contact → suggest sharing
-      return ["Sure, I'll share my details", "I'd prefer to stay anonymous for now", "Let's finish the discussion first"];
+      return ["Sure, I'll share", "Let's finish first", "Skip this for now"];
     }
     case "designPreferences": {
-      return ["Modern and clean", "Minimal and simple", "Bold and creative", "Professional and corporate", "No preference"];
+      const pools = [
+        ["Modern and clean", "Minimal and simple", "Bold and creative", "Professional"],
+        ["Dark theme", "Colorful", "Elegant", "No preference"],
+      ];
+      return pools[shift];
     }
     case "integrations": {
       const existing = new Set(brief.integrations.map((i) => i.toLowerCase()));
-      const pools = ["Payment gateway", "Google Analytics", "Email service", "Social media", "WhatsApp", "CRM", "Maps"];
-      return pools.filter((i) => !existing.has(i.toLowerCase())).slice(0, 5);
+      const pools = [
+        ["Payment gateway", "Google Analytics", "Email service", "Social media"],
+        ["WhatsApp", "CRM", "Maps", "Google Ads"],
+      ];
+      const filtered = pools[shift].filter((i) => !existing.has(i.toLowerCase()));
+      if (filtered.length === 0) {
+        const other = pools[shift === 0 ? 1 : 0].filter((i) => !existing.has(i.toLowerCase()));
+        return other.length > 0 ? other.slice(0, 4) : ["No integrations needed", "I'll add later"];
+      }
+      return filtered.slice(0, 4);
     }
     case "hostingDomain": {
-      return ["I have hosting & domain", "I need hosting only", "I need domain only", "I need both", "Not sure"];
+      return ["I have both", "Need hosting only", "Need domain only", "Need both", "Not sure"];
     }
     case "businessContext": {
-      return ["Technology / SaaS", "E-commerce / Retail", "Healthcare", "Education", "Finance", "Food & Restaurant", "Real Estate", "Other"];
+      const pools = [
+        ["Technology / SaaS", "E-commerce / Retail", "Healthcare", "Education"],
+        ["Finance", "Food & Restaurant", "Real Estate", "Other"],
+      ];
+      return pools[shift];
     }
     case "targetAudience": {
-      return ["Customers / Clients", "Internal team", "Students / Learners", "Patients / Users", "General public"];
+      const pools = [
+        ["Customers / Clients", "Internal team", "Students / Learners"],
+        ["Patients / Users", "General public", "Business partners"],
+      ];
+      return pools[shift];
     }
     case "mobileApp": {
       return ["Yes, I need both", "No, web is enough", "Maybe later", "Tell me the difference"];
     }
     case "aiFeatures": {
-      return ["Chatbot", "Voice assistant", "Smart recommendations", "Process automation", "No AI needed"];
+      const pools = [
+        ["Chatbot", "Voice assistant", "Smart recommendations", "Process automation"],
+        ["Data analysis", "Image recognition", "Smart search", "No AI needed"],
+      ];
+      return pools[shift];
     }
     default:
       break;
   }
 
   // Fallback: generate suggestions based on what's missing
-  if (suggestions.length === 0) {
-    const missing = getMissingInformation(brief);
-    if (missing.includes("projectType")) {
-      return ["I need a website", "I need a web app", "I need a mobile app", "I need an online store"];
-    }
-    if (missing.includes("features")) {
-      return ["Tell me about features", "I'm not sure yet", "Show me examples"];
-    }
-    if (missing.includes("budget")) {
-      return ["Let's discuss later", "I have a tight budget", "Quality matters more than price"];
-    }
-    if (missing.includes("timeline")) {
-      return ["ASAP", "Within a month", "No rush"];
-    }
+  const missing = getMissingInformation(brief);
+  if (missing.includes("projectType")) {
+    return ["I need a website", "I need a web app", "I need a mobile app", "I need an online store"];
+  }
+  if (missing.includes("features")) {
+    return ["Tell me what I need", "I'm not sure yet", "Show me examples"];
+  }
+  if (missing.includes("budget")) {
+    return ["Let's discuss later", "I have a tight budget", "Quality over price"];
+  }
+  if (missing.includes("timeline")) {
+    return ["ASAP", "Within a month", "No rush"];
   }
 
-  return suggestions.length > 0 ? suggestions : ["Tell me more", "What do you recommend?", "Let's get started"];
+  return ["Tell me more", "What do you recommend?", "Let's get started"];
 }
 
 export function generateNextResponse(state: ConversationState): DiscoveryResponse {
