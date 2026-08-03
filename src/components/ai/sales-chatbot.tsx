@@ -394,14 +394,139 @@ export function SalesChatbot() {
   const handleSuggestionClick = useCallback((suggestion: string) => {
     if (suggestion === "Generate a demo") {
       handleGenerateDemo();
-    } else if (suggestion === "Get a quote" || suggestion === "Get a quote for this") {
-      handleBilling();
-    } else if (suggestion === "Check my account") {
-      handleCheckAccount();
-    } else {
-      sendMessage(suggestion);
+      return;
     }
-  }, [handleGenerateDemo, handleBilling, handleCheckAccount, sendMessage]);
+    if (suggestion === "Get a quote" || suggestion === "Get a quote for this") {
+      handleBilling();
+      return;
+    }
+    if (suggestion === "Check my account") {
+      handleCheckAccount();
+      return;
+    }
+
+    // Explicitly set the field in conversation state based on what was asked
+    if (conversationState) {
+      const category = conversationState.lastQuestionCategory;
+      const brief = { ...conversationState.brief };
+      const lower = suggestion.toLowerCase();
+
+      // Determine category: if empty, infer from suggestion content
+      const effectiveCategory = category || (() => {
+        if (lower.includes("website") || lower.includes("web app") || lower.includes("mobile") || lower.includes("store") || lower.includes("hosting") || lower.includes("ai")) return "projectType";
+        if (lower.includes("establish") || lower.includes("generate") || lower.includes("showcase") || lower.includes("sell") || lower.includes("streamline") || lower.includes("save time") || lower.includes("modernize")) return "objective";
+        if (lower.includes("under $") || lower.includes("budget") || lower.includes("tight")) return "budget";
+        if (lower.includes("asap") || lower.includes("week") || lower.includes("month") || lower.includes("rush")) return "timeline";
+        return "";
+      })();
+
+      switch (effectiveCategory) {
+        case "projectType": {
+          const typeMap: Record<string, string> = {
+            "website": "website", "web app": "web-application", "web application": "web-application",
+            "mobile app": "mobile-app", "online store": "ecommerce", "ecommerce": "ecommerce",
+            "ai": "ai-integration", "automation": "automation", "hosting": "hosting",
+          };
+          for (const [keyword, type] of Object.entries(typeMap)) {
+            if (lower.includes(keyword)) { brief.projectType = type; break; }
+          }
+          if (!brief.projectType) brief.projectType = "other";
+          break;
+        }
+        case "objective":
+          brief.objective = suggestion;
+          break;
+        case "features": {
+          const feats = (brief.features || []) as string[];
+          const existing = new Set(feats.map((f: string) => f.toLowerCase()));
+          if (!existing.has(lower)) brief.features = [...feats, suggestion];
+          break;
+        }
+        case "budget":
+          brief.estimatedBudget = suggestion;
+          break;
+        case "timeline":
+          brief.desiredTimeline = suggestion;
+          break;
+        case "contactInfo": {
+          if (lower.includes("share") || lower.includes("sure")) {
+            // Don't set field — let user type their details
+          } else if (lower.includes("prefer") || lower.includes("anonymous") || lower.includes("finish")) {
+            // Skip contact info for now
+          }
+          break;
+        }
+        case "designPreferences":
+          brief.designPreferences = suggestion;
+          break;
+        case "integrations": {
+          const intMap: Record<string, string> = {
+            "payment": "Payment Gateway", "analytics": "Google Analytics",
+            "email": "Email Service", "social": "Social Media",
+            "whatsapp": "WhatsApp", "crm": "CRM Integration", "maps": "Maps",
+          };
+          const ints = (brief.integrations || []) as string[];
+          for (const [keyword, integration] of Object.entries(intMap)) {
+            if (lower.includes(keyword) && !ints.includes(integration)) {
+              ints.push(integration);
+            }
+          }
+          brief.integrations = ints;
+          break;
+        }
+        case "hostingDomain":
+          if (lower.includes("hosting") || lower.includes("host")) brief.hostingRequired = true;
+          if (lower.includes("domain")) brief.domainRequired = true;
+          break;
+        case "businessContext": {
+          const industryMap: Record<string, { industry: string; description: string }> = {
+            "technology": { industry: "Technology", description: "Technology company" },
+            "saas": { industry: "Technology", description: "SaaS product" },
+            "ecommerce": { industry: "E-commerce", description: "Online retail" },
+            "retail": { industry: "Retail", description: "Retail business" },
+            "healthcare": { industry: "Healthcare", description: "Healthcare organization" },
+            "education": { industry: "Education", description: "Educational institution" },
+            "finance": { industry: "Finance", description: "Financial services" },
+            "food": { industry: "Food & Restaurant", description: "Restaurant business" },
+            "restaurant": { industry: "Food & Restaurant", description: "Restaurant business" },
+            "real estate": { industry: "Real Estate", description: "Real estate business" },
+          };
+          for (const [keyword, ctx] of Object.entries(industryMap)) {
+            if (lower.includes(keyword)) { brief.businessContext = ctx; break; }
+          }
+          break;
+        }
+        case "targetAudience": {
+          if (lower.includes("customer") || lower.includes("client")) brief.targetAudience = "Customers/Clients";
+          else if (lower.includes("team") || lower.includes("internal")) brief.targetAudience = "Internal team/Employees";
+          else if (lower.includes("student")) brief.targetAudience = "Students and educators";
+          else if (lower.includes("patient")) brief.targetAudience = "Patients and medical staff";
+          else brief.targetAudience = suggestion;
+          break;
+        }
+        case "mobileApp":
+          if (lower.includes("yes") || lower.includes("both")) brief.mobileAppRequired = true;
+          break;
+        case "aiFeatures":
+          if (!lower.includes("no")) brief.aiFeaturesRequired = true;
+          break;
+      }
+
+      // Update stage based on what we now know
+      const feats = (brief.features || []) as string[];
+      const hasMissing = !brief.projectType || !brief.objective || feats.length === 0 || !brief.estimatedBudget || !brief.desiredTimeline;
+      if (!hasMissing) {
+        conversationState.stage = "generate-brief";
+      } else if (brief.projectType && brief.objective) {
+        conversationState.stage = "discover-requirements";
+      } else if (brief.projectType) {
+        conversationState.stage = "understand-goal";
+      }
+      conversationState.brief = brief;
+    }
+
+    sendMessage(suggestion);
+  }, [conversationState, handleGenerateDemo, handleBilling, handleCheckAccount, sendMessage]);
 
   return (
     <>
