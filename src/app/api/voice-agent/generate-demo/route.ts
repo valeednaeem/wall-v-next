@@ -25,9 +25,9 @@ export async function POST(request: Request) {
       selected_option,
     } = body;
 
-    if (!client_name || !client_email) {
+    if (!client_name) {
       return NextResponse.json(
-        { error: "client_name and client_email are required" },
+        { error: "client_name is required" },
         { status: 400 }
       );
     }
@@ -35,11 +35,20 @@ export async function POST(request: Request) {
     await connectToDatabase();
 
     // Ensure client exists
-    let client = await Client.findOne({ email: client_email.toLowerCase().trim() });
+    let client = null;
+    if (client_email) {
+      client = await Client.findOne({ email: client_email.toLowerCase().trim() });
+    }
+    if (!client && client_phone) {
+      client = await Client.findOne({ phone: client_phone });
+    }
     if (!client) {
+      const placeholderEmail = client_email
+        ? client_email.toLowerCase().trim()
+        : `pending+${client_name.toLowerCase().replace(/\s+/g, ".")}${Date.now()}@wall-v.com`;
       client = await Client.create({
         name: client_name,
-        email: client_email.toLowerCase().trim(),
+        email: placeholderEmail,
         phone: client_phone || undefined,
         company: client_company || undefined,
         type: client_company ? "business" : "individual",

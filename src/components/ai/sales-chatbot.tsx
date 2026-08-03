@@ -220,9 +220,9 @@ export function SalesChatbot() {
       const data = await res.json();
       if (data.success) {
         setDemoResult({
-          previewUrl: data.data.previewUrl,
-          demoId: data.data.demoId,
-          projectType: data.data.projectType,
+          previewUrl: data.data.preview_url,
+          demoId: data.data.demo_id,
+          projectType: data.data.project_type || "website",
         });
         setMessages((prev) => [...prev, {
           role: "assistant",
