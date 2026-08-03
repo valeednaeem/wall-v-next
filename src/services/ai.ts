@@ -24,7 +24,12 @@ class OpenAIProvider implements AIProvider {
     });
 
     const data = await response.json();
-    return data.choices[0].message.content;
+
+    if (!response.ok) {
+      throw new Error(`OpenAI API error: ${data.error?.message || response.status}`);
+    }
+
+    return data.choices?.[0]?.message?.content || "";
   }
 
   async generateContent(prompt: string): Promise<string> {
@@ -44,6 +49,11 @@ class AnthropicProvider implements AIProvider {
     const systemMsg = messages.find((m) => m.role === "system");
     const userMessages = messages.filter((m) => m.role !== "system");
 
+    // Anthropic requires at least one user message
+    if (userMessages.length === 0) {
+      userMessages.push({ role: "user", content: "Hello" });
+    }
+
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
@@ -52,9 +62,9 @@ class AnthropicProvider implements AIProvider {
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: "claude-3-opus-20240229",
+        model: "claude-sonnet-4-20250514",
         max_tokens: 4096,
-        system: systemMsg?.content,
+        system: systemMsg?.content || "",
         messages: userMessages.map((m) => ({
           role: m.role,
           content: m.content,
@@ -63,7 +73,12 @@ class AnthropicProvider implements AIProvider {
     });
 
     const data = await response.json();
-    return data.content[0].text;
+
+    if (!response.ok) {
+      throw new Error(`Anthropic API error: ${data.error?.message || response.status}`);
+    }
+
+    return data.content?.[0]?.text || "";
   }
 
   async generateContent(prompt: string): Promise<string> {

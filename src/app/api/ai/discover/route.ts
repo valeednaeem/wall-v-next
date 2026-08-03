@@ -39,18 +39,18 @@ export async function POST(request: Request) {
     let state: ConversationState;
 
     if (conversation?.discoveryState) {
-      // Restore state from DB
       state = conversation.discoveryState as unknown as ConversationState;
     } else if (incomingConversationState) {
-      // Use state sent from frontend (first request with fresh state)
       state = incomingConversationState as ConversationState;
     } else {
-      // Fresh conversation
       state = initializeConversationState(language);
     }
 
     // Process user message through state machine (extracts entities, advances stage)
     const newState = processUserMessage(state, message);
+
+    // Generate deterministic response FIRST — this is the source of truth
+    const deterministicResponse = generateNextResponse(newState);
 
     // Build dynamic service knowledge for system prompt
     let priceSummary: string;
@@ -65,6 +65,10 @@ export async function POST(request: Request) {
     if (priceSummary) {
       systemPrompt += `\n\nCURRENT PRICING (from database):\n${priceSummary}`;
     }
+
+    // IMPORTANT: The state machine's question is the source of truth.
+    // The AI can add natural language but MUST ask the same core question.
+    systemPrompt += `\n\nCRITICAL INSTRUCTION: You MUST ask the following question to the user. Do NOT ask about any other topic. Do NOT ask about project type if it's already determined. The ONLY question you should ask is:\n"${deterministicResponse.message}"\n\nYou may rephrase it naturally, but the core question must be exactly this. After asking, provide your suggestions as clickable options.`;
 
     // Build conversation messages for AI
     const messages: { role: "system" | "user" | "assistant"; content: string }[] = [
@@ -83,27 +87,19 @@ export async function POST(request: Request) {
     // Add current user message
     messages.push({ role: "user", content: message });
 
-    // Get AI response
+    // Get AI response — always fall back to deterministic if AI fails or returns garbage
     let aiResponse: string;
     try {
       const generated = await generateAIContent(messages);
-      if (generated && generated.length > 5) {
+      if (generated && generated.length > 10) {
         aiResponse = generated;
       } else {
-        // Fallback: use deterministic response from state machine
-        const deterministic = generateNextResponse(newState);
-        aiResponse = deterministic.message;
+        aiResponse = deterministicResponse.message;
       }
     } catch (aiError) {
       console.error("AI provider error:", aiError);
-      // Fallback: use deterministic response from state machine
-      const deterministic = generateNextResponse(newState);
-      aiResponse = deterministic.message;
+      aiResponse = deterministicResponse.message;
     }
-
-    // Get stage-appropriate suggestions
-    const deterministicResponse = generateNextResponse(newState);
-    const suggestions = deterministicResponse.suggestions;
 
     // Persist to MongoDB
     try {
@@ -117,7 +113,6 @@ export async function POST(request: Request) {
         { role: "assistant" as const, content: aiResponse, timestamp: new Date() },
       ];
 
-      // Sync projectBrief from discovery state
       const brief = newState.brief;
 
       await Conversation.findOneAndUpdate(
@@ -127,7 +122,7 @@ export async function POST(request: Request) {
           language,
           agentType: "discovery",
           channel: "chat",
-          messages: incomingMessages.slice(-42), // keep last 42 (21 pairs)
+          messages: incomingMessages.slice(-42),
           messageCount: incomingMessages.length,
           discoveryState: newState as unknown as Record<string, unknown>,
           projectBrief: {
@@ -151,7 +146,7 @@ export async function POST(request: Request) {
       success: true,
       data: {
         message: aiResponse,
-        suggestions,
+        suggestions: deterministicResponse.suggestions,
         language,
         sessionId: sid,
         conversationState: newState,
