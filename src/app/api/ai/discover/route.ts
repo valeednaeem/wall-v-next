@@ -67,6 +67,22 @@ export async function POST(request: Request) {
     // Generate deterministic response FIRST — this is the source of truth
     const deterministicResponse = generateNextResponse(newState);
 
+    console.log("[Discover]", {
+      sid,
+      stage: newState.stage,
+      askedQuestions: newState.askedQuestions,
+      lastQuestion: newState.lastQuestionCategory,
+      turnCount: newState.turnCount,
+      projectType: newState.brief.projectType,
+      objective: newState.brief.objective,
+      features: newState.brief.features,
+      budget: newState.brief.estimatedBudget,
+      targetAudience: newState.brief.targetAudience,
+      businessContext: newState.brief.businessContext,
+      nextAction: deterministicResponse.action,
+      nextQuestion: deterministicResponse.nextQuestion,
+    });
+
     // Build dynamic service knowledge for system prompt
     let priceSummary: string;
     try {

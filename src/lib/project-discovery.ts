@@ -1011,7 +1011,27 @@ export function generateNextResponse(state: ConversationState): DiscoveryRespons
     };
   }
 
-  // Fallback - ask about project type
+  // All questions exhausted — move to brief generation if we have core info
+  if (state.brief.projectType && state.brief.objective) {
+    state.stage = "generate-brief";
+    const services = recommendServices(state.brief);
+    state.brief.recommendedServices = services;
+    state.brief.recommendedNextSteps = [
+      "Review the project summary above",
+      "Let me know if anything needs to be changed",
+      "I'll save your project inquiry for our team to review",
+    ];
+
+    return {
+      message: `Here's what I understand about your project. Please review and let me know if anything needs to be corrected.\n\n${generateBriefSummary(state.brief, state.language)}\n\nDoes this look correct? I can save this as a project inquiry for our team.`,
+      stage: state.stage,
+      brief: state.brief,
+      action: "confirm",
+      suggestions: generateDynamicSuggestions(state),
+    };
+  }
+
+  // Fallback - ask about project type (only when we truly have no info)
   return {
     message: templates.projectType,
     stage: state.stage,
