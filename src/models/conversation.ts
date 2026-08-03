@@ -36,6 +36,7 @@ export interface IConversation extends Document {
     max: number;
     currency: string;
   };
+  discoveryState?: Record<string, unknown>;
   inquiryId?: mongoose.Types.ObjectId;
   leadId?: mongoose.Types.ObjectId;
   convertedAt?: Date;
@@ -89,6 +90,7 @@ const ConversationSchema = new Schema<IConversation>(
       max: Number,
       currency: { type: String, default: "USD" },
     },
+    discoveryState: { type: Schema.Types.Mixed },
     inquiryId: { type: Schema.Types.ObjectId, ref: "Inquiry" },
     leadId: { type: Schema.Types.ObjectId, ref: "Lead" },
     convertedAt: Date,

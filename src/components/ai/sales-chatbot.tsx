@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Bot, User, Sparkles, X, MessageSquare, Loader2, Globe, CheckCircle } from "lucide-react";
+import { Send, Bot, User, Sparkles, X, MessageSquare, Loader2, Globe, CheckCircle, Eye, CreditCard, UserCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Message {
@@ -9,6 +9,22 @@ interface Message {
   content: string;
   suggestions?: string[];
   action?: string;
+}
+
+interface DiscoveryState {
+  stage: string;
+  intent: string;
+  brief: Record<string, unknown>;
+  askedQuestions: string[];
+  lastQuestionCategory: string;
+  language: string;
+  turnCount: number;
+}
+
+interface DemoResult {
+  previewUrl: string;
+  demoId: string;
+  projectType: string;
 }
 
 const LANGUAGES = [
@@ -26,10 +42,6 @@ const LANGUAGES = [
   { code: "tr", label: "Türkçe" },
   { code: "ur", label: "اردو" },
 ];
-
-function getLanguageFromTimezone(): string {
-  return "en";
-}
 
 function renderMarkdown(text: string): React.ReactNode {
   const lines = text.split("\n");
@@ -58,6 +70,10 @@ export function SalesChatbot() {
   const [language, setLanguage] = useState("en");
   const [langDropdownOpen, setLangDropdownOpen] = useState(false);
   const [inquirySaved, setInquirySaved] = useState(false);
+  const [sessionId, setSessionId] = useState("");
+  const [conversationState, setConversationState] = useState<DiscoveryState | null>(null);
+  const [demoResult, setDemoResult] = useState<DemoResult | null>(null);
+  const [toolLoading, setToolLoading] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const langMenuRef = useRef<HTMLDivElement>(null);
@@ -65,9 +81,9 @@ export function SalesChatbot() {
 
   const currentLang = LANGUAGES.find((l) => l.code === language) || LANGUAGES[0];
 
+  // Generate session ID on mount
   useEffect(() => {
-    const detected = getLanguageFromTimezone();
-    setLanguage(detected);
+    setSessionId(`chat_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`);
   }, []);
 
   useEffect(() => {
@@ -84,7 +100,7 @@ export function SalesChatbot() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, []);
 
-  useEffect(() => { scrollToBottom(); }, [messages, scrollToBottom]);
+  useEffect(() => { scrollToBottom(); }, [messages, scrollToBottom, demoResult]);
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -136,18 +152,35 @@ export function SalesChatbot() {
           message: textToUse.trim(),
           conversationHistory,
           language,
+          sessionId,
+          incomingConversationState: conversationState,
         }),
       });
 
       const data = await res.json();
 
       if (data.success) {
+        // Merge tool suggestions when in recommendation stage
+        let suggestions = data.data.suggestions || [];
+        const stage = data.data.stage;
+        const action = data.data.action;
+
+        if (stage === "recommend-solution" || stage === "identify-scope" || stage === "budget-timeline") {
+          suggestions = [...suggestions, "Generate a demo", "Get a quote", "Check my account"];
+        }
+        if (action === "confirm") {
+          suggestions = [...suggestions, "Generate a demo", "Get a quote"];
+        }
+
         const aiMessage: Message = {
           role: "assistant",
           content: data.data.message,
-          suggestions: data.data.suggestions,
+          suggestions,
+          action: data.data.action,
         };
         setMessages([...updatedMessages, aiMessage]);
+        setConversationState(data.data.conversationState);
+        setSessionId(data.data.sessionId);
       } else {
         setMessages([...updatedMessages, {
           role: "assistant",
@@ -162,18 +195,153 @@ export function SalesChatbot() {
     } finally {
       setIsLoading(false);
     }
-  }, [input, isLoading, messages, language]);
+  }, [input, isLoading, messages, language, sessionId, conversationState]);
+
+  // Tool handlers
+  const handleGenerateDemo = useCallback(async () => {
+    if (!conversationState?.brief) return;
+    setToolLoading("demo");
+    try {
+      const brief = conversationState.brief;
+      const res = await fetch("/api/voice-agent/generate-demo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          project_type: (brief.projectType as string) || "website",
+          project_name: (brief.title as string) || "My Project",
+          features: (brief.features as string[]) || [],
+          client_name: (brief as unknown as Record<string, unknown>)._contactName as string || "Client",
+          client_email: (brief as unknown as Record<string, unknown>)._contactEmail as string || "",
+          client_phone: (brief as unknown as Record<string, unknown>)._contactPhone as string || "",
+          caller_name: (brief as unknown as Record<string, unknown>)._contactName as string || "Client",
+          caller_phone: (brief as unknown as Record<string, unknown>)._contactPhone as string || "",
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setDemoResult({
+          previewUrl: data.data.previewUrl,
+          demoId: data.data.demoId,
+          projectType: data.data.projectType,
+        });
+        setMessages((prev) => [...prev, {
+          role: "assistant",
+          content: `Here's your demo preview! You can view it below.`,
+          suggestions: ["Looks great!", "Get a quote for this", "I need changes"],
+        }]);
+      } else {
+        setMessages((prev) => [...prev, {
+          role: "assistant",
+          content: "I had trouble generating the demo. Let me try a different approach — could you describe what you'd like to see?",
+        }]);
+      }
+    } catch {
+      setMessages((prev) => [...prev, {
+        role: "assistant",
+        content: "Failed to generate demo. Please try again.",
+      }]);
+    } finally {
+      setToolLoading(null);
+    }
+  }, [conversationState]);
+
+  const handleBilling = useCallback(async () => {
+    if (!conversationState?.brief) return;
+    setToolLoading("billing")
+    try {
+      const brief = conversationState.brief;
+      const res = await fetch("/api/voice-agent/billing", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          project_type: (brief.projectType as string) || "website",
+          project_name: (brief.title as string) || "My Project",
+          features: (brief.features as string[]) || [],
+          client_name: (brief as unknown as Record<string, unknown>)._contactName as string || "Client",
+          client_email: (brief as unknown as Record<string, unknown>)._contactEmail as string || "",
+          client_phone: (brief as unknown as Record<string, unknown>)._contactPhone as string || "",
+          caller_name: (brief as unknown as Record<string, unknown>)._contactName as string || "Client",
+          caller_phone: (brief as unknown as Record<string, unknown>)._contactPhone as string || "",
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        const summary = data.data.agent_summary || `Total: $${data.data.totalAmount}`;
+        setMessages((prev) => [...prev, {
+          role: "assistant",
+          content: summary,
+          suggestions: ["Generate a demo", "Looks good, save it", "I need changes"],
+        }]);
+      } else {
+        setMessages((prev) => [...prev, {
+          role: "assistant",
+          content: "I had trouble calculating the quote. Let me get more details about your project first.",
+        }]);
+      }
+    } catch {
+      setMessages((prev) => [...prev, {
+        role: "assistant",
+        content: "Failed to calculate pricing. Please try again.",
+      }]);
+    } finally {
+      setToolLoading(null);
+    }
+  }, [conversationState]);
+
+  const handleCheckAccount = useCallback(async () => {
+    if (!conversationState?.brief) return;
+    const brief = conversationState.brief;
+    const email = (brief as unknown as Record<string, unknown>)._contactEmail as string;
+    const phone = (brief as unknown as Record<string, unknown>)._contactPhone as string;
+    if (!email && !phone) {
+      setMessages((prev) => [...prev, {
+        role: "assistant",
+        content: "I'd need your email or phone number to look up your account. Could you share one of those?",
+      }]);
+      return;
+    }
+    setToolLoading("check-account");
+    try {
+      const res = await fetch("/api/voice-agent/check-account", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: email || undefined,
+          phone: phone || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (data.success && data.data.found) {
+        const client = data.data.client;
+        setMessages((prev) => [...prev, {
+          role: "assistant",
+          content: `Found your account! You have ${client.totalProjects || 0} project(s) with us. How can I help you today?`,
+          suggestions: ["Generate a demo", "Get a quote", "Start a new project"],
+        }]);
+      } else {
+        setMessages((prev) => [...prev, {
+          role: "assistant",
+          content: "I don't see an existing account, but I've noted your details. Let's get started on your project!",
+          suggestions: ["Generate a demo", "Get a quote", "I need a website"],
+        }]);
+      }
+    } catch {
+      setMessages((prev) => [...prev, {
+        role: "assistant",
+        content: "Failed to check account. Please try again.",
+      }]);
+    } finally {
+      setToolLoading(null);
+    }
+  }, [conversationState]);
 
   const handleSaveInquiry = useCallback(async () => {
     if (inquirySaved) return;
     setIsLoading(true);
-
-    // Collect project info from conversation
     const projectInfo = messages
       .filter((m) => m.role === "user")
       .map((m) => m.content)
       .join("\n");
-
     try {
       const res = await fetch("/api/ai/inquiry", {
         method: "POST",
@@ -181,19 +349,17 @@ export function SalesChatbot() {
         body: JSON.stringify({
           brief: {
             title: "Chat Inquiry",
-            projectType: "other",
+            projectType: conversationState?.brief?.projectType || "other",
             objective: projectInfo.slice(0, 500),
-            features: [],
-            estimatedBudget: "",
-            desiredTimeline: "",
+            features: conversationState?.brief?.features || [],
+            estimatedBudget: conversationState?.brief?.estimatedBudget || "",
+            desiredTimeline: conversationState?.brief?.desiredTimeline || "",
           },
           source: "ai-chatbot",
           language,
         }),
       });
-
       const data = await res.json();
-
       if (data.success) {
         setInquirySaved(true);
         setMessages((prev) => [...prev, {
@@ -215,7 +381,7 @@ export function SalesChatbot() {
     } finally {
       setIsLoading(false);
     }
-  }, [messages, language, inquirySaved]);
+  }, [messages, language, inquirySaved, conversationState]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -223,6 +389,19 @@ export function SalesChatbot() {
       sendMessage();
     }
   };
+
+  // Handle tool suggestion clicks
+  const handleSuggestionClick = useCallback((suggestion: string) => {
+    if (suggestion === "Generate a demo") {
+      handleGenerateDemo();
+    } else if (suggestion === "Get a quote" || suggestion === "Get a quote for this") {
+      handleBilling();
+    } else if (suggestion === "Check my account") {
+      handleCheckAccount();
+    } else {
+      sendMessage(suggestion);
+    }
+  }, [handleGenerateDemo, handleBilling, handleCheckAccount, sendMessage]);
 
   return (
     <>
@@ -305,18 +484,53 @@ export function SalesChatbot() {
               </div>
             ))}
 
-            {/* Suggestion Buttons */}
-            {messages.length > 0 && !isLoading && messages[messages.length - 1].suggestions && (
-              <div className="flex flex-wrap gap-2 ml-10">
-                {messages[messages.length - 1].suggestions!.map((suggestion) => (
-                  <button
-                    key={suggestion}
-                    onClick={() => sendMessage(suggestion)}
-                    className="text-xs px-3 py-1.5 rounded-full border bg-white hover:bg-primary/5 hover:border-primary/30 transition-colors text-muted-foreground hover:text-foreground"
+            {/* Demo Preview */}
+            {demoResult && (
+              <div className="ml-10 border rounded-xl overflow-hidden bg-white shadow-sm">
+                <div className="px-3 py-2 bg-muted/50 flex items-center justify-between">
+                  <span className="text-xs font-medium text-muted-foreground">Demo Preview</span>
+                  <a
+                    href={demoResult.previewUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-primary hover:underline flex items-center gap-1"
                   >
-                    {suggestion}
-                  </button>
-                ))}
+                    <Eye className="h-3 w-3" />
+                    Open full page
+                  </a>
+                </div>
+                <iframe
+                  src={demoResult.previewUrl}
+                  className="w-full h-48 border-0"
+                  title="Demo Preview"
+                />
+              </div>
+            )}
+
+            {/* Suggestion Buttons */}
+            {messages.length > 0 && !isLoading && !toolLoading && messages[messages.length - 1].suggestions && (
+              <div className="flex flex-wrap gap-2 ml-10">
+                {messages[messages.length - 1].suggestions!.map((suggestion) => {
+                  const isTool = ["Generate a demo", "Get a quote", "Get a quote for this", "Check my account"].includes(suggestion);
+                  return (
+                    <button
+                      key={suggestion}
+                      onClick={() => handleSuggestionClick(suggestion)}
+                      className={cn(
+                        "text-xs px-3 py-1.5 rounded-full border bg-white transition-colors",
+                        isTool
+                          ? "border-primary/30 text-primary hover:bg-primary/5 font-medium"
+                          : "hover:bg-primary/5 hover:border-primary/30 text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      {suggestion === "Generate a demo" && <Eye className="h-3 w-3 inline mr-1" />}
+                      {suggestion === "Get a quote" && <CreditCard className="h-3 w-3 inline mr-1" />}
+                      {suggestion === "Get a quote for this" && <CreditCard className="h-3 w-3 inline mr-1" />}
+                      {suggestion === "Check my account" && <UserCheck className="h-3 w-3 inline mr-1" />}
+                      {suggestion}
+                    </button>
+                  );
+                })}
               </div>
             )}
 
@@ -341,7 +555,7 @@ export function SalesChatbot() {
               </div>
             )}
 
-            {isLoading && (
+            {(isLoading || toolLoading) && (
               <div className="flex gap-3 justify-start">
                 <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10">
                   <Bot className="h-3.5 w-3.5 text-primary" />
