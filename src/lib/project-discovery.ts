@@ -715,12 +715,36 @@ export function processUserMessage(state: ConversationState, userMessage: string
 
   // Update stage based on collected info
   const missing = getMissingInformation(newState.brief);
-  if (missing.length === 0) {
+
+  // Handle post-brief stages
+  if (newState.stage === "user-confirmation" || newState.stage === "create-inquiry") {
+    // Already past the brief — don't regress
+  } else if (missing.length === 0) {
     newState.stage = "generate-brief";
   } else if (newState.brief.projectType && newState.brief.objective) {
     newState.stage = "discover-requirements";
   } else if (newState.brief.projectType) {
     newState.stage = "understand-goal";
+  }
+
+  // Detect confirmation intent when at generate-brief stage
+  if (newState.stage === "generate-brief") {
+    const lower = userMessage.toLowerCase();
+    const confirms = lower.includes("looks good") || lower.includes("save it") || lower.includes("correct") || lower.includes("yes") || lower.includes("confirm") || lower.includes("that's right") || lower.includes("perfect") || lower.includes("great");
+    const modifies = lower.includes("change") || lower.includes("modify") || lower.includes("update") || lower.includes("wrong") || lower.includes("incorrect") || lower.includes("edit");
+    const addsMore = lower.includes("add more") || lower.includes("more details") || lower.includes("also need") || lower.includes("forgot") || lower.includes("don't forget");
+
+    if (confirms) {
+      newState.stage = "create-inquiry";
+    } else if (modifies) {
+      // Stay at generate-brief, reset asked questions so user can revise
+      newState.askedQuestions = [];
+      newState.stage = "discover-requirements";
+    } else if (addsMore) {
+      // Stay at generate-brief, allow adding more info
+      newState.askedQuestions = [];
+      newState.stage = "discover-requirements";
+    }
   }
 
   return newState;
@@ -733,7 +757,16 @@ function generateDynamicSuggestions(state: ConversationState): string[] {
 
   // Stage: generate-brief → confirmation actions
   if (stage === "generate-brief") {
-    return ["Looks good, save it", "I need to make changes", "Let me add more details"];
+    const pools = [
+      ["Looks good, save it", "I need to make changes", "Let me add more details"],
+      ["That's correct, proceed", "Something needs fixing", "I have more to add"],
+    ];
+    return pools[turnCount % 2];
+  }
+
+  // Stage: create-inquiry → post-confirmation
+  if (stage === "create-inquiry") {
+    return ["Send me the details", "Start a new project", "Visit your website"];
   }
 
   // Use turnCount to shift suggestions within same category (prevents repetition)
