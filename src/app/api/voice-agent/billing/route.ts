@@ -4,6 +4,7 @@ import Project from "@/models/project";
 import Client from "@/models/client";
 import Invoice from "@/models/invoice";
 import { sendEmail, milestonePaidEmail } from "@/services/email";
+import { corsHeaders, handleOPTIONS } from "@/lib/cors";
 
 function generateInvoiceNumber(): string {
   const now = new Date();
@@ -72,7 +73,12 @@ function buildMilestones(budget: number, projectType: string) {
 }
 
 // Dograh HTTP API Tool — calculates billing, creates invoice, returns summary for agent to read
+export async function OPTIONS() {
+  return handleOPTIONS();
+}
+
 export async function POST(request: Request) {
+  const headers = corsHeaders(request);
   try {
     const body = await request.json();
     console.log("[Billing] Received:", JSON.stringify(body).slice(0, 500));
@@ -290,7 +296,7 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error("[Billing] Error:", error);
-    return NextResponse.json({ error: "Failed to process billing" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to process billing" }, { status: 500, headers });
   }
 }
 

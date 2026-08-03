@@ -3,10 +3,17 @@ import { connectToDatabase } from "@/lib/mongodb";
 import Project from "@/models/project";
 import Client from "@/models/client";
 import { generateDemoHTML } from "@/lib/demo-generator";
+import { corsHeaders, handleOPTIONS } from "@/lib/cors";
 
 // Dograh HTTP API Tool endpoint — called by the voice agent before ending the call
 // Generates a demo/prototype and returns the preview URL
+
+export async function OPTIONS() {
+  return handleOPTIONS();
+}
+
 export async function POST(request: Request) {
+  const headers = corsHeaders(request);
   try {
     const body = await request.json();
     console.log("[Generate Demo] Received:", JSON.stringify(body).slice(0, 500));
@@ -28,7 +35,7 @@ export async function POST(request: Request) {
     if (!client_name) {
       return NextResponse.json(
         { error: "client_name is required" },
-        { status: 400 }
+        { status: 400, headers }
       );
     }
 
@@ -142,12 +149,12 @@ export async function POST(request: Request) {
       project_name: project.name,
       budget_range: `$${budgetNum.toLocaleString()} - $${Math.round(budgetNum * 1.5).toLocaleString()}`,
       message: `Demo created successfully for ${client_name}. Preview URL: ${previewUrl}`,
-    });
+    }, { headers });
   } catch (error) {
     console.error("[Generate Demo] Error:", error);
     return NextResponse.json(
       { error: "Failed to generate demo" },
-      { status: 500 }
+      { status: 500, headers }
     );
   }
 }

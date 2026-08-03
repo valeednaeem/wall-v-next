@@ -2,10 +2,16 @@ import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import Client from "@/models/client";
 import Project from "@/models/project";
+import { corsHeaders, handleOPTIONS } from "@/lib/cors";
 
 // Dograh Pre-Call Data Fetch endpoint
 // Dograh sends POST before the call starts, we return client data as initial_context
+export async function OPTIONS() {
+  return handleOPTIONS();
+}
+
 export async function POST(request: Request) {
+  const headers = corsHeaders(request);
   try {
     const body = await request.json();
     const { call_inbound } = body;
@@ -15,7 +21,7 @@ export async function POST(request: Request) {
     const fromNumber = call_inbound?.from_number?.trim();
 
     if (!fromNumber) {
-      return NextResponse.json({ call_inbound: { initial_context: {} } });
+      return NextResponse.json({ call_inbound: { initial_context: {} } }, { headers });
     }
 
     await connectToDatabase();
@@ -26,7 +32,7 @@ export async function POST(request: Request) {
       .lean();
 
     if (!client) {
-      return NextResponse.json({ call_inbound: { initial_context: {} } });
+      return NextResponse.json({ call_inbound: { initial_context: {} } }, { headers });
     }
 
     // Fetch recent projects for context
@@ -53,11 +59,11 @@ export async function POST(request: Request) {
           recent_projects: projects.map((p) => p.name).join(", ") || "none",
         },
       },
-    });
+    }, { headers });
   } catch (error) {
     console.error("[Pre-Call Fetch] Error:", error);
     // Never block the call — return empty context on error
-    return NextResponse.json({ call_inbound: { initial_context: {} } });
+    return NextResponse.json({ call_inbound: { initial_context: {} } }, { headers });
   }
 }
 

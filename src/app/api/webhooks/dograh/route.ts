@@ -8,6 +8,7 @@ import Project from "@/models/project";
 import ServicePrice from "@/models/service-price";
 import { generateDemoHTML } from "@/lib/demo-generator";
 import { sendEmail, projectCreatedEmail } from "@/services/email";
+import { corsHeaders, handleOPTIONS } from "@/lib/cors";
 
 function slugify(text: string): string {
   return text
@@ -279,7 +280,12 @@ function buildDefaultMilestones(
   return template.map((t) => ({ ...t, status: "pending" as const }));
 }
 
+export async function OPTIONS() {
+  return handleOPTIONS();
+}
+
 export async function POST(request: Request) {
+  const headers = corsHeaders(request);
   try {
     const body = await request.json();
     console.log("[Dograh Webhook] Received:", JSON.stringify(body).slice(0, 500));
@@ -590,12 +596,12 @@ export async function POST(request: Request) {
         previewUrl: `/preview/${project._id}`,
         checkoutUrl: `/checkout/${project._id}`,
         quote: estimatedQuote,
-      });
+      }, { headers });
     }
 
-    return NextResponse.json({ success: true, conversationId: conversation._id });
+    return NextResponse.json({ success: true, conversationId: conversation._id }, { headers });
   } catch (error) {
     console.error("[Dograh Webhook] Error:", error);
-    return NextResponse.json({ error: "Webhook processing failed" }, { status: 500 });
+    return NextResponse.json({ error: "Webhook processing failed" }, { status: 500, headers });
   }
 }

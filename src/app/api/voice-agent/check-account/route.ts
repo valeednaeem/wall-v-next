@@ -3,6 +3,11 @@ import { connectToDatabase } from "@/lib/mongodb";
 import Client from "@/models/client";
 import User from "@/models/user";
 import Project from "@/models/project";
+import { corsHeaders, handleOPTIONS } from "@/lib/cors";
+
+export async function OPTIONS() {
+  return handleOPTIONS();
+}
 
 async function findOrCreateClient(data: {
   name?: string;
