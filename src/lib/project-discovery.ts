@@ -726,6 +726,137 @@ export function processUserMessage(state: ConversationState, userMessage: string
   return newState;
 }
 
+// ─── Dynamic Suggestions ───────────────────────────────────────────────────
+
+function generateDynamicSuggestions(state: ConversationState): string[] {
+  const { brief, lastQuestionCategory, stage } = state;
+  const suggestions: string[] = [];
+
+  // Stage: generate-brief → confirmation actions
+  if (stage === "generate-brief") {
+    return ["Looks good, save it", "I need to make changes", "Let me add more details"];
+  }
+
+  // Suggestions based on what was just asked
+  switch (lastQuestionCategory) {
+    case "projectType": {
+      // Just asked about project type → suggest types
+      if (!brief.projectType) {
+        return ["I need a website", "I need a web app", "I need a mobile app", "I need an online store", "I need AI/automation"];
+      }
+      break;
+    }
+    case "objective": {
+      // Just asked about goal → suggest common goals
+      const type = brief.projectType;
+      if (type === "website" || type === "redesign") {
+        return ["Establish online presence", "Generate leads", "Showcase portfolio", "Share information"];
+      }
+      if (type === "ecommerce") {
+        return ["Sell products online", "Reach more customers", "Replace physical store", "Start a side business"];
+      }
+      if (type === "web-application" || type === "saas") {
+        return ["Streamline operations", "Replace manual process", "Serve customers better", "Create a product"];
+      }
+      if (type === "mobile-app") {
+        return ["Engage customers on mobile", "Provide on-the-go access", "Increase loyalty", "Complement website"];
+      }
+      if (type === "ai-integration" || type === "automation") {
+        return ["Save time on repetitive tasks", "Improve customer support", "Make smarter decisions", "Reduce costs"];
+      }
+      return ["Grow my business", "Save time", "Improve customer experience", "Modernize existing tool"];
+    }
+    case "features": {
+      // Just asked about features → suggest features based on project type
+      const type = brief.projectType;
+      const existing = new Set(brief.features.map((f) => f.toLowerCase()));
+      const pools: string[] = [];
+      if (type === "website" || type === "redesign") {
+        pools.push("Contact form", "Blog", "Gallery", "SEO", "Analytics", "Social media links", "Testimonials");
+      } else if (type === "ecommerce") {
+        pools.push("Product catalog", "Shopping cart", "Payment processing", "Order tracking", "Inventory management", "Reviews");
+      } else if (type === "web-application" || type === "saas") {
+        pools.push("User authentication", "Dashboard", "Admin panel", "API integration", "Real-time updates", "Search");
+      } else if (type === "mobile-app") {
+        pools.push("Push notifications", "Offline mode", "Camera/GPS", "In-app purchases", "Social login", "Deep linking");
+      } else if (type === "ai-integration" || type === "automation") {
+        pools.push("Chatbot", "Voice assistant", "Data analysis", "Recommendations", "Workflow automation", "Sentiment analysis");
+      } else {
+        pools.push("User login", "Payment processing", "Dashboard", "Notifications", "Search", "File uploads");
+      }
+      // Filter out already-mentioned features
+      const filtered = pools.filter((f) => !existing.has(f.toLowerCase()));
+      return filtered.slice(0, 5);
+    }
+    case "budget": {
+      // Just asked about budget → suggest ranges based on project type
+      const type = brief.projectType;
+      if (type === "mobile-app") {
+        return ["Under $3,000", "$3,000 - $8,000", "$8,000 - $20,000", "Not sure yet"];
+      }
+      if (type === "web-application" || type === "saas" || type === "crm" || type === "erp") {
+        return ["Under $2,000", "$2,000 - $5,000", "$5,000 - $15,000", "Not sure yet"];
+      }
+      if (type === "ecommerce") {
+        return ["Under $2,000", "$2,000 - $5,000", "$5,000 - $10,000", "Not sure yet"];
+      }
+      return ["Under $1,000", "$1,000 - $3,000", "$3,000 - $8,000", "Not sure yet"];
+    }
+    case "timeline": {
+      // Just asked about timeline → suggest deadlines
+      return ["ASAP (rush)", "Within 2 weeks", "Within 1 month", "1-3 months", "Flexible / no rush"];
+    }
+    case "contactInfo": {
+      // Just asked for contact → suggest sharing
+      return ["Sure, I'll share my details", "I'd prefer to stay anonymous for now", "Let's finish the discussion first"];
+    }
+    case "designPreferences": {
+      return ["Modern and clean", "Minimal and simple", "Bold and creative", "Professional and corporate", "No preference"];
+    }
+    case "integrations": {
+      const existing = new Set(brief.integrations.map((i) => i.toLowerCase()));
+      const pools = ["Payment gateway", "Google Analytics", "Email service", "Social media", "WhatsApp", "CRM", "Maps"];
+      return pools.filter((i) => !existing.has(i.toLowerCase())).slice(0, 5);
+    }
+    case "hostingDomain": {
+      return ["I have hosting & domain", "I need hosting only", "I need domain only", "I need both", "Not sure"];
+    }
+    case "businessContext": {
+      return ["Technology / SaaS", "E-commerce / Retail", "Healthcare", "Education", "Finance", "Food & Restaurant", "Real Estate", "Other"];
+    }
+    case "targetAudience": {
+      return ["Customers / Clients", "Internal team", "Students / Learners", "Patients / Users", "General public"];
+    }
+    case "mobileApp": {
+      return ["Yes, I need both", "No, web is enough", "Maybe later", "Tell me the difference"];
+    }
+    case "aiFeatures": {
+      return ["Chatbot", "Voice assistant", "Smart recommendations", "Process automation", "No AI needed"];
+    }
+    default:
+      break;
+  }
+
+  // Fallback: generate suggestions based on what's missing
+  if (suggestions.length === 0) {
+    const missing = getMissingInformation(brief);
+    if (missing.includes("projectType")) {
+      return ["I need a website", "I need a web app", "I need a mobile app", "I need an online store"];
+    }
+    if (missing.includes("features")) {
+      return ["Tell me about features", "I'm not sure yet", "Show me examples"];
+    }
+    if (missing.includes("budget")) {
+      return ["Let's discuss later", "I have a tight budget", "Quality matters more than price"];
+    }
+    if (missing.includes("timeline")) {
+      return ["ASAP", "Within a month", "No rush"];
+    }
+  }
+
+  return suggestions.length > 0 ? suggestions : ["Tell me more", "What do you recommend?", "Let's get started"];
+}
+
 export function generateNextResponse(state: ConversationState): DiscoveryResponse {
   const lang = state.language in QUESTION_TEMPLATES ? state.language : "en";
   const templates = QUESTION_TEMPLATES[lang] || QUESTION_TEMPLATES.en;
@@ -745,7 +876,7 @@ export function generateNextResponse(state: ConversationState): DiscoveryRespons
       stage: state.stage,
       brief: state.brief,
       action: "confirm",
-      suggestions: ["Looks good, save it", "I need to make changes", "Let me add more details"],
+      suggestions: generateDynamicSuggestions(state),
     };
   }
 
@@ -762,6 +893,7 @@ export function generateNextResponse(state: ConversationState): DiscoveryRespons
       stage: state.stage,
       nextQuestion: nextQuestionField,
       action: "continue",
+      suggestions: generateDynamicSuggestions(state),
     };
   }
 
@@ -771,7 +903,7 @@ export function generateNextResponse(state: ConversationState): DiscoveryRespons
     stage: state.stage,
     nextQuestion: "projectType",
     action: "continue",
-    suggestions: ["I need a website", "I need a web application", "I need a mobile app", "I need an online store", "I need hosting", "I need a domain"],
+    suggestions: generateDynamicSuggestions(state),
   };
 }
 
