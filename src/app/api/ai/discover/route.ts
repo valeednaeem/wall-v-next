@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { generateAIContent } from "@/services/ai";
+import { generateAIContent, generateTechnicalContent } from "@/services/ai";
 import { connectToDatabase } from "@/lib/mongodb";
 import Conversation from "@/models/conversation";
 import {
@@ -130,6 +130,22 @@ export async function POST(request: Request) {
     } catch (aiError) {
       console.error("AI provider error:", aiError);
       aiResponse = deterministicResponse.message;
+    }
+
+    // When brief is ready, use Anthropic for detailed technical summary
+    if (deterministicResponse.action === "confirm") {
+      try {
+        const technicalSummary = await generateTechnicalContent([
+          { role: "system", content: "You are a senior technical architect at Wall-V, a digital agency. Analyze the project brief and provide a professional, detailed technical summary." },
+          { role: "user", content: `Generate a detailed project brief summary for this project. Include project overview, recommended tech stack, key features, estimated timeline, and technical considerations.\n\nProject Brief:\n${JSON.stringify(newState.brief, null, 2)}` },
+        ]);
+        if (technicalSummary && technicalSummary.length > 50) {
+          aiResponse = technicalSummary;
+        }
+      } catch (techError) {
+        console.error("Anthropic technical summary error:", techError);
+        // Keep the OpenAI-generated response as fallback
+      }
     }
 
     // Persist to MongoDB

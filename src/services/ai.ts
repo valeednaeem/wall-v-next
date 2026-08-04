@@ -49,7 +49,6 @@ class AnthropicProvider implements AIProvider {
     const systemMsg = messages.find((m) => m.role === "system");
     const userMessages = messages.filter((m) => m.role !== "system");
 
-    // Anthropic requires at least one user message
     if (userMessages.length === 0) {
       userMessages.push({ role: "user", content: "Hello" });
     }
@@ -86,49 +85,63 @@ class AnthropicProvider implements AIProvider {
   }
 }
 
-export function getAIProvider(): AIProvider {
-  const provider = process.env.AI_PROVIDER || "openai";
-  const apiKey = process.env.AI_API_KEY || "";
+// ─── Conversation AI (OpenAI) ────────────────────────────────────────────────
+// Used for: chatbot conversation, discovery dialogue, natural language
 
+function getConversationAI(): AIProvider {
+  const apiKey = process.env.OPENAI_API_KEY || "";
   if (!apiKey) {
-    throw new Error(
-      "AI API key not configured. Set AI_PROVIDER and AI_API_KEY in .env.local."
-    );
+    throw new Error("OPENAI_API_KEY not configured in .env.local");
   }
-
-  switch (provider) {
-    case "anthropic":
-      return new AnthropicProvider(apiKey);
-    case "openai":
-    default:
-      return new OpenAIProvider(apiKey);
-  }
+  return new OpenAIProvider(apiKey);
 }
+
+// ─── Technical AI (Anthropic) ────────────────────────────────────────────────
+// Used for: blog content, product descriptions, SEO, brief summaries, technical analysis
+
+function getTechnicalAI(): AIProvider {
+  const apiKey = process.env.AI_API_KEY || "";
+  if (!apiKey) {
+    throw new Error("AI_API_KEY (Anthropic) not configured in .env.local");
+  }
+  return new AnthropicProvider(apiKey);
+}
+
+// ─── Public API: Conversation (OpenAI) ───────────────────────────────────────
 
 export async function generateAIContent(
   messages: AIChatMessage[],
   options?: { temperature?: number; maxTokens?: number }
 ): Promise<string> {
-  const ai = getAIProvider();
+  const ai = getConversationAI();
+  return ai.chat(messages);
+}
+
+// ─── Public API: Technical Tasks (Anthropic) ─────────────────────────────────
+
+export async function generateTechnicalContent(
+  messages: AIChatMessage[]
+): Promise<string> {
+  const ai = getTechnicalAI();
   return ai.chat(messages);
 }
 
 export async function generateBlogContent(topic: string): Promise<string> {
-  const ai = getAIProvider();
+  const ai = getTechnicalAI();
   return ai.generateContent(
     `Write a comprehensive, SEO-optimized blog post about: ${topic}. Include headings, subheadings, and make it engaging.`
   );
 }
 
 export async function generateProductDescription(name: string, features: string[]): Promise<string> {
-  const ai = getAIProvider();
+  const ai = getTechnicalAI();
   return ai.generateContent(
     `Write a compelling product description for "${name}" with these features: ${features.join(", ")}. Make it professional and persuasive.`
   );
 }
 
 export async function generateSEOContent(title: string): Promise<{ metaTitle: string; metaDescription: string; keywords: string[] }> {
-  const ai = getAIProvider();
+  const ai = getTechnicalAI();
   const response = await ai.generateContent(
     `Generate SEO metadata for "${title}". Return JSON with metaTitle (max 60 chars), metaDescription (max 160 chars), and keywords (array of 5-10 relevant keywords).`
   );
@@ -142,4 +155,23 @@ export async function generateSEOContent(title: string): Promise<{ metaTitle: st
       keywords: [title.toLowerCase(), "wall-v", "digital agency"],
     };
   }
+}
+
+export async function generateBriefSummary(brief: Record<string, unknown>): Promise<string> {
+  const ai = getTechnicalAI();
+  const prompt = `You are a technical project architect. Analyze this project brief and provide a professional summary with:
+
+1. Project Overview (2-3 sentences)
+2. Recommended Tech Stack
+3. Key Features Breakdown
+4. Estimated Timeline
+5. Technical Considerations
+6. Risk Assessment
+
+Project Brief:
+${JSON.stringify(brief, null, 2)}
+
+Be specific, professional, and actionable. Focus on technical feasibility.`;
+
+  return ai.generateContent(prompt);
 }
