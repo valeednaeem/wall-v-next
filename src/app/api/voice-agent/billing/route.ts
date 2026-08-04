@@ -96,21 +96,25 @@ export async function POST(request: Request) {
       notes,
     } = body;
 
-    if (!client_name || !client_email || !total_budget) {
+    if (!client_name || !total_budget) {
       return NextResponse.json(
-        { error: "client_name, client_email, and total_budget are required" },
+        { error: "client_name and total_budget are required" },
         { status: 400 }
       );
     }
 
+    const safeEmail = client_email
+      ? client_email.toLowerCase().trim()
+      : `pending+${client_name.toLowerCase().replace(/\s+/g, ".")}${Date.now()}@wall-v.com`;
+
     await connectToDatabase();
 
     // Find or create client
-    let client = await Client.findOne({ email: client_email.toLowerCase().trim() });
+    let client = await Client.findOne({ email: safeEmail });
     if (!client) {
       client = await Client.create({
         name: client_name,
-        email: client_email.toLowerCase().trim(),
+        email: safeEmail,
         phone: client_phone || undefined,
         type: "individual",
         status: "prospect",
@@ -143,7 +147,7 @@ export async function POST(request: Request) {
         description: notes || `Project for ${client_name}`,
         client: {
           name: client_name,
-          email: client_email.toLowerCase().trim(),
+          email: safeEmail,
           phone: client_phone || "",
         },
         status: "demo",

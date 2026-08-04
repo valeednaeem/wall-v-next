@@ -250,6 +250,8 @@ export function SalesChatbot() {
     setToolLoading("billing")
     try {
       const brief = conversationState.brief;
+      const budgetStr = (brief.estimatedBudget as string) || "";
+      const budgetNum = parseFloat(budgetStr.replace(/[^0-9.]/g, "")) || 1000;
       const res = await fetch("/api/voice-agent/billing", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -258,10 +260,11 @@ export function SalesChatbot() {
           project_name: (brief.title as string) || "My Project",
           features: (brief.features as string[]) || [],
           client_name: (brief as unknown as Record<string, unknown>)._contactName as string || "Client",
-          client_email: (brief as unknown as Record<string, unknown>)._contactEmail as string || "",
+          client_email: (brief as unknown as Record<string, unknown>)._contactEmail as string || "pending@wall-v.com",
           client_phone: (brief as unknown as Record<string, unknown>)._contactPhone as string || "",
           caller_name: (brief as unknown as Record<string, unknown>)._contactName as string || "Client",
           caller_phone: (brief as unknown as Record<string, unknown>)._contactPhone as string || "",
+          total_budget: budgetNum,
         }),
       });
       const data = await res.json();

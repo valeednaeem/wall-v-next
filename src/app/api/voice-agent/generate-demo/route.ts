@@ -73,7 +73,7 @@ export async function POST(request: Request) {
     const demoRequirements = {
       projectType: project_type || "website",
       name: client_name,
-      email: client_email,
+      email: client_email || "",
       features: features || [],
       budget: budget || "1000",
       timeline: timeline || "",
@@ -88,6 +88,10 @@ export async function POST(request: Request) {
     // Parse budget for quote
     const budgetNum = parseInt(String(budget).replace(/[^0-9]/g, "")) || 1000;
 
+    const safeEmail = client_email
+      ? client_email.toLowerCase().trim()
+      : `pending+${client_name.toLowerCase().replace(/\s+/g, ".")}${Date.now()}@wall-v.com`;
+
     const project = await Project.create({
       name: `${project_type || "Project"} — ${client_name}`,
       slug: `${(project_type || "project").toLowerCase().replace(/\s+/g, "-")}-${Date.now()}`,
@@ -95,7 +99,7 @@ export async function POST(request: Request) {
       description: description || `Voice agent generated demo for ${client_name}`,
       client: {
         name: client_name,
-        email: client_email.toLowerCase().trim(),
+        email: safeEmail,
         phone: client_phone || "",
         company: client_company || "",
       },
