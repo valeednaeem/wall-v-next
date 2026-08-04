@@ -1,10 +1,7 @@
 import { Metadata } from "next";
-import { Suspense } from "react";
-import dynamic from "next/dynamic";
 import { connectToDatabase } from "@/lib/mongodb";
 import LegalPage from "@/models/legal-page";
-
-const LegalPageContent = dynamic(() => import("./legal-page-content"), { ssr: false });
+import LegalPageContent from "./legal-page-content";
 
 interface LegalPageData {
   title: string;
@@ -98,9 +95,7 @@ export default function LegalPageView({ data }: LegalPageViewProps) {
               {data.version && ` (v${data.version})`}
             </p>
           )}
-          <Suspense>
-            <LegalPageContent html={data.content} />
-          </Suspense>
+          <LegalPageContent html={data.content} />
         </div>
       </div>
     </div>
