@@ -3,71 +3,99 @@ import { connectToDatabase } from "@/lib/mongodb";
 import LegalPage from "@/models/legal-page";
 import { sanitize } from "@/lib/sanitize";
 
-interface LegalPageProps {
-  slug: string;
-  fallbackTitle: string;
-  fallbackContent: string;
+interface LegalPageData {
+  title: string;
+  content: string;
+  lastUpdated: string | null;
+  version: string | null;
+  seo: Record<string, unknown> | null;
 }
 
-async function getLegalPage(slug: string) {
+interface LegalPageViewProps {
+  data: LegalPageData;
+}
+
+export async function getLegalPageData(slug: string, fallbackTitle: string, fallbackContent: string): Promise<LegalPageData> {
   try {
     await connectToDatabase();
     const page = await LegalPage.findOne({ slug, isActive: true, status: "published" }).lean();
-    return page;
+
+    if (!page) {
+      return {
+        title: fallbackTitle,
+        content: fallbackContent,
+        lastUpdated: null,
+        version: null,
+        seo: null,
+      };
+    }
+
+    return {
+      title: page.title || fallbackTitle,
+      content: page.content || fallbackContent,
+      lastUpdated: page.updatedAt
+        ? new Date(page.updatedAt).toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          })
+        : null,
+      version: page.version || null,
+      seo: page.seo || null,
+    };
   } catch {
-    return null;
+    return {
+      title: fallbackTitle,
+      content: fallbackContent,
+      lastUpdated: null,
+      version: null,
+      seo: null,
+    };
   }
 }
 
 export async function generateLegalMetadata(slug: string, fallbackTitle: string): Promise<Metadata> {
-  const page = await getLegalPage(slug);
-  const title = page?.seo?.metaTitle || page?.title || fallbackTitle;
-  const description = page?.seo?.metaDescription || "";
+  const data = await getLegalPageData(slug, fallbackTitle, "");
+  const seo = data.seo as Record<string, string> | null;
+  const title = seo?.metaTitle || data.title;
+  const description = seo?.metaDescription || "";
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://wall-v-next-six.vercel.app";
 
   return {
     title: `${title} | Wall-V`,
     description,
-    robots: page?.seo?.robots || "index, follow",
+    robots: seo?.robots || "index, follow",
     openGraph: {
-      title: page?.seo?.ogTitle || title,
-      description: page?.seo?.ogDescription || description,
-      url: page?.seo?.canonicalUrl || `${baseUrl}/${slug}`,
+      title: seo?.ogTitle || title,
+      description: seo?.ogDescription || description,
+      url: seo?.canonicalUrl || `${baseUrl}/${slug}`,
       type: "website",
-      ...(page?.seo?.ogImage && { images: [{ url: page.seo.ogImage }] }),
+      ...(seo?.ogImage && { images: [{ url: seo.ogImage }] }),
     },
     twitter: {
-      card: (page?.seo?.twitterCard as "summary_large_image" | "summary") || "summary_large_image",
-      title: page?.seo?.twitterTitle || title,
-      description: page?.seo?.twitterDescription || description,
+      card: (seo?.twitterCard as "summary_large_image" | "summary") || "summary_large_image",
+      title: seo?.twitterTitle || title,
+      description: seo?.twitterDescription || description,
     },
     alternates: {
-      canonical: page?.seo?.canonicalUrl || `${baseUrl}/${slug}`,
+      canonical: seo?.canonicalUrl || `${baseUrl}/${slug}`,
     },
   };
 }
 
-export default async function LegalPageView({ slug, fallbackTitle, fallbackContent }: LegalPageProps) {
-  const page = await getLegalPage(slug);
-
-  const title = page?.title || fallbackTitle;
-  const content = page?.content || fallbackContent;
-  const lastUpdated = page?.updatedAt ? new Date(page.updatedAt).toLocaleDateString("en-US", {
-    year: "numeric", month: "long", day: "numeric",
-  }) : null;
-
+export default function LegalPageView({ data }: LegalPageViewProps) {
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-4xl mx-auto px-4 py-16 sm:px-6 lg:px-8">
         <div className="prose prose-lg max-w-none">
-          <h1 className="text-3xl font-bold tracking-tight sm:text-4xl mb-8">{title}</h1>
-          {lastUpdated && (
+          <h1 className="text-3xl font-bold tracking-tight sm:text-4xl mb-8">{data.title}</h1>
+          {data.lastUpdated && (
             <p className="text-sm text-muted-foreground mb-8">
-              Last updated: {lastUpdated}
-              {page?.version && ` (v${page.version})`}
+              Last updated: {data.lastUpdated}
+              {data.version && ` (v${data.version})`}
             </p>
           )}
-          <div dangerouslySetInnerHTML={{ __html: sanitize(content) }} />
+          <div dangerouslySetInnerHTML={{ __html: sanitize(data.content) }} />
         </div>
       </div>
     </div>
