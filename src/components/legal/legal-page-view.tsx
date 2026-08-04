@@ -1,7 +1,7 @@
 import { Metadata } from "next";
 import { connectToDatabase } from "@/lib/mongodb";
 import LegalPage from "@/models/legal-page";
-import { sanitize } from "@/lib/sanitize";
+import LegalPageContent from "./legal-page-content";
 
 interface LegalPageData {
   title: string;
@@ -95,7 +95,7 @@ export default function LegalPageView({ data }: LegalPageViewProps) {
               {data.version && ` (v${data.version})`}
             </p>
           )}
-          <div dangerouslySetInnerHTML={{ __html: sanitize(data.content) }} />
+          <LegalPageContent html={data.content} />
         </div>
       </div>
     </div>
