@@ -9,7 +9,8 @@ export async function GET() {
     const grouped: Record<string, Record<string, unknown>> = {};
     settings.forEach((s: { category: string; key: string; value: unknown }) => {
       if (!grouped[s.category]) grouped[s.category] = {};
-      grouped[s.category][s.key] = s.value;
+      const shortKey = s.key.replace(`${s.category}.`, "");
+      grouped[s.category][shortKey] = s.value;
     });
 
     return NextResponse.json({

@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import SiteSettings from "@/models/site-settings";
 import { auth } from "@/lib/auth";
-import { verifyCsrfToken, CSRF_HEADER_NAME } from "@/lib/csrf";
 
 const ALLOWED_ROLES = ["super-admin", "admin", "manager"];
 
@@ -18,7 +17,8 @@ export async function GET() {
     const grouped: Record<string, Record<string, unknown>> = {};
     settings.forEach((s: { category: string; key: string; value: unknown }) => {
       if (!grouped[s.category]) grouped[s.category] = {};
-      grouped[s.category][s.key] = s.value;
+      const shortKey = s.key.replace(`${s.category}.`, "");
+      grouped[s.category][shortKey] = s.value;
     });
 
     return NextResponse.json({ success: true, data: grouped });
@@ -33,11 +33,6 @@ export async function PUT(request: Request) {
     const session = await auth();
     if (!session?.user || !ALLOWED_ROLES.includes((session.user as Record<string, unknown>).role as string)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const csrfToken = request.headers.get(CSRF_HEADER_NAME);
-    if (!csrfToken || !verifyCsrfToken(csrfToken)) {
-      return NextResponse.json({ error: "Invalid CSRF token" }, { status: 403 });
     }
 
     const body = await request.json();

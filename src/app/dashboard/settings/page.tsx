@@ -326,9 +326,6 @@ BEHAVIOR:
               <Image className="h-4 w-4" />
               {value ? "Change Image" : "Choose Image"}
             </button>
-            {value && value.startsWith("data:") && (
-              <p className="text-xs text-muted-foreground mt-2">Base64 encoded — consider uploading to a CDN for production.</p>
-            )}
           </div>
         </div>
       </div>
