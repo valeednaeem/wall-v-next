@@ -15,6 +15,15 @@ interface LegalPageViewProps {
   data: LegalPageData;
 }
 
+function isPlaceholderContent(content: string): boolean {
+  if (!content) return true;
+  const trimmed = content.trim();
+  if (trimmed.length < 100) return true;
+  if (trimmed.includes("Content managed from dashboard")) return true;
+  if (trimmed.includes("Edit this page at /dashboard")) return true;
+  return false;
+}
+
 export async function getLegalPageData(slug: string, fallbackTitle: string, fallbackContent: string): Promise<LegalPageData> {
   try {
     await connectToDatabase();
@@ -30,9 +39,11 @@ export async function getLegalPageData(slug: string, fallbackTitle: string, fall
       };
     }
 
+    const hasRealContent = !isPlaceholderContent(page.content);
+
     return {
       title: page.title || fallbackTitle,
-      content: page.content || fallbackContent,
+      content: hasRealContent ? page.content : fallbackContent,
       lastUpdated: page.updatedAt
         ? new Date(page.updatedAt).toLocaleDateString("en-US", {
             year: "numeric",
@@ -40,7 +51,7 @@ export async function getLegalPageData(slug: string, fallbackTitle: string, fall
             day: "numeric",
           })
         : null,
-      version: page.version || null,
+      version: hasRealContent ? (page.version || null) : null,
       seo: page.seo || null,
     };
   } catch {
