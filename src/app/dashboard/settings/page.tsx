@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Save, Globe, Search, Share2, Key, Eye, EyeOff, Loader2 } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Save, Globe, Search, Share2, Key, Eye, EyeOff, Loader2, Upload, X, Image } from "lucide-react";
 import HtmlEditor from "@/components/editor/html-editor";
 
 interface SiteSettings {
@@ -253,6 +253,88 @@ BEHAVIOR:
     { id: "voice" as const, label: "Voice Agent", icon: Globe },
   ];
 
+  const ImageUpload = ({ label, value, onChange, accept = "image/*", description }: { label: string; value: string; onChange: (v: string) => void; accept?: string; description?: string }) => {
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [uploading, setUploading] = useState(false);
+
+    const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      setUploading(true);
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+        const res = await fetch("/api/upload", { method: "POST", body: formData });
+        const data = await res.json();
+        if (data.success && data.data.url) {
+          onChange(data.data.url);
+        }
+      } catch (err) {
+        console.error("Upload failed:", err);
+      }
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    };
+
+    return (
+      <div>
+        <label className="text-sm font-medium">{label}</label>
+        {description && <p className="text-xs text-muted-foreground mt-0.5">{description}</p>}
+        <div className="mt-2 flex items-start gap-4">
+          {value ? (
+            <div className="relative group">
+              <img src={value} alt={label} className="h-20 w-20 rounded-lg border object-contain bg-white" />
+              <button
+                type="button"
+                onClick={() => onChange("")}
+                className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              className="flex h-20 w-20 flex-col items-center justify-center rounded-lg border-2 border-dashed hover:border-primary/50 transition-colors disabled:opacity-50"
+            >
+              {uploading ? (
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              ) : (
+                <>
+                  <Upload className="h-5 w-5 text-muted-foreground" />
+                  <span className="text-[10px] text-muted-foreground mt-1">Upload</span>
+                </>
+              )}
+            </button>
+          )}
+          <div className="flex-1">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept={accept}
+              onChange={handleUpload}
+              className="hidden"
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium hover:bg-accent transition-colors disabled:opacity-50"
+            >
+              <Image className="h-4 w-4" />
+              {value ? "Change Image" : "Choose Image"}
+            </button>
+            {value && value.startsWith("data:") && (
+              <p className="text-xs text-muted-foreground mt-2">Base64 encoded — consider uploading to a CDN for production.</p>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const SecretInput = ({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string }) => {
     const fieldKey = label.replace(/\s/g, "");
     return (
@@ -336,6 +418,29 @@ BEHAVIOR:
                   <option value="USD">USD ($)</option><option value="EUR">EUR (€)</option><option value="GBP">GBP (£)</option><option value="PKR">PKR (₨)</option>
                 </select>
               </div>
+            </div>
+          </div>
+
+          <div className="rounded-lg border p-6 space-y-4">
+            <h3 className="font-semibold">Branding</h3>
+            <p className="text-sm text-muted-foreground">
+              Manage your site favicon (shown in browser tabs) and logo (shown in header and footer).
+            </p>
+            <div className="grid md:grid-cols-2 gap-6">
+              <ImageUpload
+                label="Favicon"
+                value={site.favicon}
+                onChange={(v) => setSite({ ...site, favicon: v })}
+                accept="image/png,image/svg+xml,image/x-icon"
+                description="Recommended: 32x32 or 64x64 PNG/SVG. This appears in browser tabs."
+              />
+              <ImageUpload
+                label="Site Logo"
+                value={site.logo}
+                onChange={(v) => setSite({ ...site, logo: v })}
+                accept="image/png,image/svg+xml,image/webp,image/jpeg"
+                description="Shown in the header and footer. SVG or PNG recommended."
+              />
             </div>
           </div>
         </div>

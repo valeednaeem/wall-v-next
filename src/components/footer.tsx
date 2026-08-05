@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useSiteSettings } from "@/lib/use-site-settings";
 
 const footerSections = [
   {
@@ -53,15 +56,21 @@ const socialLinks = [
 ];
 
 export function Footer() {
+  const { siteName, logo } = useSiteSettings();
+
   return (
     <footer className="border-t bg-muted/30 mt-16">
       <div className="container mx-auto px-4 py-12">
         <div className="flex flex-col justify-between gap-8 lg:flex-row lg:items-start">
           <div className="flex flex-col gap-4 lg:items-start">
             <Link href="/" className="flex items-center gap-2">
-              <span className="text-xl font-bold">
-                <span className="text-primary">Wall</span>-V
-              </span>
+              {logo ? (
+                <img src={logo} alt={siteName} className="h-8 w-auto" />
+              ) : (
+                <span className="text-xl font-bold">
+                  <span className="text-primary">Wall</span>-V
+                </span>
+              )}
             </Link>
             <p className="max-w-sm text-sm text-muted-foreground">
               AI-powered software agency providing custom software development, AI automation,

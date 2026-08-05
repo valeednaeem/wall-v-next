@@ -7,6 +7,7 @@ import { Menu, X, ChevronDown, LogOut, LayoutDashboard, ShoppingCart } from "luc
 import { cn } from "@/lib/utils";
 import { useSession, signOut } from "next-auth/react";
 import { useCart } from "@/lib/cart-context";
+import { useSiteSettings } from "@/lib/use-site-settings";
 
 const services = [
   { title: "AI Automation", description: "Intelligent agents & workflows", href: "/services" },
@@ -33,6 +34,7 @@ export function Navbar() {
   const { data: session } = useSession();
   const pathname = usePathname();
   const { itemCount } = useCart();
+  const { siteName, logo } = useSiteSettings();
 
   const user = session?.user;
 
@@ -40,9 +42,13 @@ export function Navbar() {
     <header className="sticky top-0 z-50 border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         <Link href="/" className="flex items-center gap-2">
-          <span className="text-xl font-bold">
-            <span className="text-primary">Wall</span>-V
-          </span>
+          {logo ? (
+            <img src={logo} alt={siteName} className="h-8 w-auto" />
+          ) : (
+            <span className="text-xl font-bold">
+              <span className="text-primary">Wall</span>-V
+            </span>
+          )}
         </Link>
 
         {/* Desktop Nav */}
