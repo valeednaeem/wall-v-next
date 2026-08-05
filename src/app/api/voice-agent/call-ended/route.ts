@@ -51,7 +51,7 @@ export async function POST(request: Request) {
 
     if (conversation.projectId) {
       const project = await Project.findById(conversation.projectId)
-        .select("_id demoId demoId status")
+        .select("_id demoId status")
         .lean();
       if (project) {
         projectId = project._id.toString();
@@ -61,7 +61,7 @@ export async function POST(request: Request) {
     }
 
     // If no project linked to conversation, try to find by client email
-    if (!projectId && clientEmail) {
+    if (!conversation.projectId && clientEmail) {
       const project = await Project.findOne({
         "client.email": clientEmail,
         status: "demo",
@@ -73,6 +73,9 @@ export async function POST(request: Request) {
         projectId = project._id.toString();
         previewUrl = `/preview/${project._id}`;
         checkoutUrl = `/checkout/${project._id}`;
+        // Link the project to the conversation for future lookups
+        conversation.projectId = project._id;
+        await conversation.save();
       }
     }
 

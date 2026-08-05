@@ -251,7 +251,12 @@ export function SalesChatbot() {
     try {
       const brief = conversationState.brief;
       const budgetStr = (brief.estimatedBudget as string) || "";
-      const budgetNum = parseFloat(budgetStr.replace(/[^0-9.]/g, "")) || 1000;
+      const budgetNum = (() => {
+        const raw = budgetStr.replace(/[^0-9.-]/g, "");
+        const parts = raw.split("-").map(Number).filter((n) => !isNaN(n) && n > 0);
+        if (parts.length >= 2) return Math.round((parts[0] + parts[1]) / 2);
+        return parts[0] || 1000;
+      })();
       const res = await fetch("/api/voice-agent/billing", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

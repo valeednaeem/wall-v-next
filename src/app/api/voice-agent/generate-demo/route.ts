@@ -25,6 +25,7 @@ export async function POST(request: Request) {
       client_phone,
       client_company,
       project_type,
+      project_name,
       features,
       budget,
       timeline,
@@ -93,7 +94,7 @@ export async function POST(request: Request) {
       : `pending+${client_name.toLowerCase().replace(/\s+/g, ".")}${Date.now()}@wall-v.com`;
 
     const project = await Project.create({
-      name: `${project_type || "Project"} — ${client_name}`,
+      name: project_name || `${project_type || "Project"} — ${client_name}`,
       slug: `${(project_type || "project").toLowerCase().replace(/\s+/g, "-")}-${Date.now()}`,
       title: `${project_type || "Project"} — ${client_name}`,
       description: description || `Voice agent generated demo for ${client_name}`,

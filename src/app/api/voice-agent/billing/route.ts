@@ -89,6 +89,7 @@ export async function POST(request: Request) {
       client_phone,
       project_id,
       project_type,
+      project_name,
       features,
       total_budget,
       tax_rate,
@@ -141,7 +142,7 @@ export async function POST(request: Request) {
     if (!project) {
       const demoId = `demo-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
       project = await Project.create({
-        name: `${(project_type || "Project").replace(/-/g, " ")} — ${client_name}`,
+        name: project_name || `${(project_type || "Project").replace(/-/g, " ")} — ${client_name}`,
         slug: `${(project_type || "project").toLowerCase().replace(/\s+/g, "-")}-${Date.now()}`,
         title: `${(project_type || "Project").replace(/-/g, " ")} — ${client_name}`,
         description: notes || `Project for ${client_name}`,
@@ -205,7 +206,7 @@ export async function POST(request: Request) {
       notes: notes || `Project: ${project.name}`,
       billingAddress: {
         name: client_name,
-        email: client_email,
+        email: safeEmail,
         address: "",
         city: "",
         country: "",
@@ -242,9 +243,9 @@ export async function POST(request: Request) {
     });
 
     // Send invoice email
-    if (client_email.includes("@")) {
+    if (safeEmail && safeEmail.includes("@")) {
       sendEmail({
-        to: client_email,
+        to: safeEmail,
         subject: `Invoice ${invoice.invoiceNumber} — ${project.name}`,
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
