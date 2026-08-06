@@ -37,9 +37,6 @@ export function HostingPlans() {
   };
 
   const formatPrice = (price: number, currency: string) => {
-    if (currency === "PKR") {
-      return `Rs ${price.toLocaleString()}`;
-    }
     return `$${price.toFixed(2)}`;
   };
 
