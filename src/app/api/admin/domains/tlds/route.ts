@@ -1,5 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthUser } from "@/lib/auth";
+import { getAvailableTLDs as rpGetTLDs } from "@/lib/resellerspanel";
+import { getPKDomainPricing } from "@/lib/websouls";
+
+const MARGIN_GENERIC = 15;
+const MARGIN_CCTLD = 0;
+const MARGIN_PK = 15;
+
+function isCCTLD(tld: string): boolean {
+  const ccTLDs = ["uk", "co.uk", "eu", "us", "ca", "au", "de", "fr", "jp", "in", "br", "mx", "nl", "se", "ch", "at", "be", "dk", "fi", "ie", "no", "nz", "pl", "pt", "ru", "za", "kr", "cn", "sg", "hk", "tw", "th", "ph", "my", "id", "vn"];
+  return ccTLDs.includes(tld);
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -10,45 +21,63 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const provider = searchParams.get("provider");
-    const isActive = searchParams.get("isActive");
 
-    const query: Record<string, unknown> = {};
-    if (provider) query.provider = provider;
-    if (isActive !== null) query.isActive = isActive === "true";
+    const tlds: Array<{
+      _id: string;
+      tld: string;
+      provider: string;
+      registrationPrice: number;
+      renewalPrice: number;
+      currency: string;
+      margin: number;
+      finalPrice: number;
+      isActive: boolean;
+    }> = [];
 
-    const tlds = [
-      // Generic TLDs via ResellersPanel
-      { tld: "com", provider: "resellerspanel", registrationPrice: 13.50, renewalPrice: 13.50, currency: "USD", margin: 15, isActive: true },
-      { tld: "net", provider: "resellerspanel", registrationPrice: 14.00, renewalPrice: 14.00, currency: "USD", margin: 15, isActive: true },
-      { tld: "org", provider: "resellerspanel", registrationPrice: 14.50, renewalPrice: 14.50, currency: "USD", margin: 15, isActive: true },
-      { tld: "info", provider: "resellerspanel", registrationPrice: 25.50, renewalPrice: 25.50, currency: "USD", margin: 15, isActive: true },
-      { tld: "xyz", provider: "resellerspanel", registrationPrice: 16.00, renewalPrice: 16.00, currency: "USD", margin: 15, isActive: true },
-      { tld: "online", provider: "resellerspanel", registrationPrice: 33.00, renewalPrice: 33.00, currency: "USD", margin: 15, isActive: true },
-      { tld: "site", provider: "resellerspanel", registrationPrice: 33.00, renewalPrice: 33.00, currency: "USD", margin: 15, isActive: true },
-      { tld: "tech", provider: "resellerspanel", registrationPrice: 56.50, renewalPrice: 56.50, currency: "USD", margin: 15, isActive: true },
-      { tld: "store", provider: "resellerspanel", registrationPrice: 49.00, renewalPrice: 49.00, currency: "USD", margin: 15, isActive: true },
-      // Country-code TLDs via ResellersPanel (0% margin)
-      { tld: "uk", provider: "resellerspanel", registrationPrice: 7.95, renewalPrice: 7.95, currency: "USD", margin: 0, isActive: true },
-      { tld: "co.uk", provider: "resellerspanel", registrationPrice: 7.95, renewalPrice: 7.95, currency: "USD", margin: 0, isActive: true },
-      { tld: "eu", provider: "resellerspanel", registrationPrice: 7.50, renewalPrice: 7.50, currency: "USD", margin: 0, isActive: true },
-      { tld: "us", provider: "resellerspanel", registrationPrice: 9.00, renewalPrice: 9.00, currency: "USD", margin: 0, isActive: true },
-      { tld: "ca", provider: "resellerspanel", registrationPrice: 18.50, renewalPrice: 18.50, currency: "USD", margin: 0, isActive: true },
-      // PK domains via WebSouls (15% margin)
-      { tld: "pk", provider: "websouls", registrationPrice: 4299, renewalPrice: 4299, currency: "PKR", margin: 15, isActive: true },
-      { tld: "com.pk", provider: "websouls", registrationPrice: 4299, renewalPrice: 4299, currency: "PKR", margin: 15, isActive: true },
-      { tld: "edu.pk", provider: "websouls", registrationPrice: 4299, renewalPrice: 4299, currency: "PKR", margin: 15, isActive: true },
-    ];
+    if (!provider || provider === "resellerspanel") {
+      const rpTLDs = await rpGetTLDs();
+      rpTLDs.forEach((tld, index) => {
+        const margin = isCCTLD(tld.tld) ? MARGIN_CCTLD : MARGIN_GENERIC;
+        tlds.push({
+          _id: `rp-${index}`,
+          tld: tld.tld,
+          provider: "resellerspanel",
+          registrationPrice: tld.registration,
+          renewalPrice: tld.renewal,
+          currency: "USD",
+          margin,
+          finalPrice: Math.round(tld.registration * (1 + margin / 100) * 100) / 100,
+          isActive: true,
+        });
+      });
+    }
 
-    const filteredTlds = tlds.map((tld, index) => ({
-      _id: `tld-${index}`,
-      ...tld,
-      finalPrice: Math.round(tld.registrationPrice * (1 + tld.margin / 100) * 100) / 100,
-    }));
+    if (!provider || provider === "websouls") {
+      const pkPricing = await getPKDomainPricing();
+      const pkTLDs = [
+        { tld: "pk", ...pkPricing.pk },
+        { tld: "com.pk", ...pkPricing.comPk },
+        { tld: "edu.pk", ...pkPricing.eduPk },
+      ];
+      pkTLDs.forEach((tld, index) => {
+        tlds.push({
+          _id: `ws-${index}`,
+          tld: tld.tld,
+          provider: "websouls",
+          registrationPrice: tld.registration,
+          renewalPrice: tld.renewal,
+          currency: "PKR",
+          margin: MARGIN_PK,
+          finalPrice: Math.round(tld.registration * (1 + MARGIN_PK / 100) * 100) / 100,
+          isActive: true,
+        });
+      });
+    }
 
     return NextResponse.json({
       success: true,
-      tlds: filteredTlds,
-      total: filteredTlds.length,
+      tlds,
+      total: tlds.length,
     });
   } catch (error) {
     console.error("Get domain TLDs error:", error);

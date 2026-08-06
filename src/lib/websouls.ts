@@ -43,6 +43,7 @@ interface HostingPlan {
   price: number;
   billingCycle: string;
   description: string;
+  features: string[];
 }
 
 async function apiCall(
@@ -244,6 +245,7 @@ export async function getHostingPlans(): Promise<HostingPlan[]> {
     price: parseFloat(plan.price as string) || 0,
     billingCycle: plan.billingcycle as string,
     description: plan.description as string,
+    features: [] as string[],
   }));
 }
 
