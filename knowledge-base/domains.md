@@ -31,26 +31,68 @@
 ## PKNIC Integration
 
 ### Pakistan Domain (.pk) Registration
-- **Price**: 1,500 PKR per year
-- **Registry**: PKNIC (Pakistan Network Information Center)
-- **Processing time**: 24-48 hours
+- **Registry**: PKNIC (Pakistan Network Information Center) — https://pknic.net.pk
+- **Processing time**: Domain propagates within hours (zone files updated frequently)
 - **Eligibility**: Open to individuals and businesses worldwide
+- **Direct registration**: Via PKNIC Shared Registry System
 
-### PKNIC Features
+### PKNIC Pricing (Official — Effective August 2026)
+
+| Registrant Location | Price | Billing Cycle | Max Term |
+|---------------------|-------|---------------|----------|
+| Pakistan-based | Rs. 2,100/year | Biennial (2-year) | 10 years |
+| International | $15.99/year | Biennial (2-year) | 10 years |
+
+**Note**: Prices increased by Rs. 300/domain/year on August 1, 2026 (from Rs. 1,800 to Rs. 2,100). International pricing unchanged.
+
+### PKNIC Payment Policy
+- **Pre-payment required**: Funds must be available in account before domain registration
+- Payment methods: Bank draft, cheque, prepaid cards, credit card
+- Domain credit can be used for registrations and renewal invoices
+
+### PKNIC Domain Variants Under .pk
+- **.pk** — General purpose
+- **.com.pk** — Commercial entities
+- **.org.pk** — Organizations
+- **.net.pk** — Network services
+- **.web.pk** — Web-related
+- **.fam.pk** — Family/personal
+- **.edu.pk** — Educational institutions
+- **.gov.pk** — Government entities (restricted)
+
+### PKNIC Domain Name Rules
+- Cannot choose names already in use by other organizations
+- Cannot choose names prohibited or reserved for technical, ethical, or national considerations
+- **Registrant responsibility**: Must ensure registration does not infringe another party's rights
+- Once registered, domain name cannot be modified (must re-register)
+- Registrant must keep contact information up to date
+
+### PKNIC Services Provided
+- Operation and maintenance of .PK root servers (DNS)
+- Administration of .PK domain registry (add, modify, delete domains)
+- Management of SRS (Shared Registry System) for registry partners
+- Public records management and dissemination
+
+### PKNIC Services NOT Provided
+- No IP allocations (contact ISP, IANA, ARIN, APNIC)
+- No technical tutorials or consultations
+- No web hosting, email, or DNS services
+- No subdomains of form www.XYZ.com.pk (create via ISP)
+
+### PKNIC Contact
+- **Email**: staff@pknic.net.pk
+- **Phone**: +92-(332)-477-1656, +92-(332)-477-2669
+- **Hours**: Monday–Friday, 9:30am–5:00pm (break 1:30pm–2:30pm)
+- **Office**: PKNIC Collection, 435 Tariq Block, Garden Town, Lahore, Pakistan
+- **Note**: PKNIC has no other offices or outlets. Resellers/agents are independent companies.
+
+### PKNIC Features at Wall-V
 - Direct PKNIC API integration
 - Real-time domain availability check
 - Instant registration for .pk domains
 - PKNIC account management
 - DNS hosting included
-- Support for subdomains under .pk
-
-### Domain Variants Under .pk
-- .pk - General purpose
-- .com.pk - Commercial entities
-- .org.pk - Organizations
-- .net.pk - Network services
-- .edu.pk - Educational institutions
-- .gov.pk - Government entities
+- Support for all .pk subdomains
 
 ## Domain Renewal
 
