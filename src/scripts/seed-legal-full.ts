@@ -13,42 +13,88 @@ const pages = [
     slug: "terms",
     title: "Terms & Conditions",
     type: "terms",
-    version: "2.0",
+    version: "3.0",
     content: `<h2>1. Acceptance of Terms</h2>
 <p>By accessing and using Wall-V's services, you agree to be bound by these Terms &amp; Conditions. If you do not agree to these terms, please do not use our services.</p>
 
 <h2>2. Services Description</h2>
 <p>Wall-V provides AI-powered software development, web and mobile application development, hosting services, digital product sales, and consulting services. We reserve the right to modify, suspend, or discontinue any service at any time.</p>
 
-<h2>3. User Accounts</h2>
+<h2>3. Domain Registration Services</h2>
+<p>Wall-V acts as an authorized reseller for domain registration services through PKNIC (Pakistan Network Information Center) and other domain registries. By registering a domain through Wall-V, you acknowledge and agree to the following:</p>
+
+<h3>3.1 PKNIC Domain Registration (.pk domains)</h3>
+<p>Domain registrations under the .pk TLD are governed by PKNIC policies and procedures. Key terms include:</p>
+<ul>
+<li><strong>Pre-payment Required</strong>: Funds must be available in your Wall-V account before domain registration can be processed.</li>
+<li><strong>Billing Cycle</strong>: PKNIC domains are billed biennially (2-year terms). Maximum registration period is 10 years.</li>
+<li><strong>Pricing</strong>: Current PKNIC pricing is Rs. 2,100/year for Pakistan-based registrants and $15.99/year for international registrants. Prices are subject to change by PKNIC without notice.</li>
+<li><strong>No Refunds</strong>: PKNIC does not provide refunds after payment has been processed for domain registration.</li>
+</ul>
+
+<h3>3.2 Domain Name Rules</h3>
+<ul>
+<li>Domain names cannot be modified after registration. To change a domain name, you must cancel the existing registration and register a new one.</li>
+<li>You are solely responsible for ensuring that your domain name registration does not infringe upon the rights of any third party.</li>
+<li>Wall-V reserves the right to refuse or cancel domain registrations that violate these terms or applicable laws.</li>
+<li>Domain names that are prohibited or reserved for technical, ethical, or national considerations cannot be registered.</li>
+</ul>
+
+<h3>3.3 Registrant Responsibilities</h3>
+<ul>
+<li>You must provide accurate and current contact information during registration.</li>
+<li>You are responsible for maintaining the accuracy of your registration information.</li>
+<li>You must ensure your account has sufficient funds for domain renewals before the expiration date.</li>
+<li>Wall-V is not responsible for domain expiration due to insufficient funds or failure to renew.</li>
+</ul>
+
+<h3>3.4 Domain Transfer and Cancellation</h3>
+<ul>
+<li>Domain registrations are non-transferable between registrars.</li>
+<li>To transfer a domain away from PKNIC, you must follow PKNIC's transfer procedures.</li>
+<li>Cancellation requests must be submitted through your Wall-V account dashboard.</li>
+<li>No refunds are provided for cancelled domains unless required by applicable law.</li>
+</ul>
+
+<h3>3.5 Limitation of Liability for Domain Services</h3>
+<p>Wall-V acts as an intermediary between you and domain registries. We are not responsible for:</p>
+<ul>
+<li>Domain registration failures or delays caused by registries</li>
+<li>Disputes over domain name ownership</li>
+<li>Registry-imposed fees or price changes</li>
+<li>Loss of domain registration due to registry actions or policies</li>
+<li>Technical issues with DNS propagation or domain resolution</li>
+</ul>
+
+<h2>4. User Accounts</h2>
 <p>You are responsible for maintaining the confidentiality of your account credentials and for all activities that occur under your account. You agree to notify us immediately of any unauthorized use of your account.</p>
 
-<h2>4. Payment &amp; Billing</h2>
+<h2>5. Payment &amp; Billing</h2>
 <p>All payments are processed through our secure payment partners. Prices are subject to change with 30 days' notice. Refunds are subject to our Refund Policy. Late payments may incur a 1.5% monthly fee.</p>
 
-<h2>5. Intellectual Property</h2>
+<h2>6. Intellectual Property</h2>
 <p>All content, trademarks, and intellectual property on this website are owned by Wall-V or its licensors. Custom development work ownership is transferred upon full payment as specified in individual project agreements.</p>
 
-<h2>6. Limitation of Liability</h2>
+<h2>7. Limitation of Liability</h2>
 <p>Wall-V shall not be liable for any indirect, incidental, special, consequential, or punitive damages resulting from your use of our services. Our total liability shall not exceed the amount paid by you in the twelve months preceding the claim.</p>
 
-<h2>7. Indemnification</h2>
+<h2>8. Indemnification</h2>
 <p>You agree to indemnify and hold Wall-V harmless from any claims, losses, or damages, including legal fees, resulting from your use of our services or violation of these terms.</p>
 
-<h2>8. Termination</h2>
+<h2>9. Termination</h2>
 <p>Either party may terminate this agreement with 30 days' written notice. We reserve the right to immediately terminate accounts that violate these terms.</p>
 
-<h2>9. Governing Law</h2>
+<h2>10. Governing Law</h2>
 <p>These terms are governed by the laws of Pakistan. Any disputes shall be resolved in the courts of Karachi, Pakistan.</p>
 
-<h2>10. Contact</h2>
+<h2>11. Contact</h2>
 <p>For questions about these terms, contact us at legal@wall-v.com.</p>`,
   },
   {
     slug: "disclaimer",
     title: "Disclaimer",
     type: "disclaimer",
-    version: "2.0",
+    version: "3.0",
     content: `<h2>General Information Disclaimer</h2>
 <p>The information provided on Wall-V's website, applications, and services is for general informational purposes only. All information is provided in good faith; however, we make no representation or warranty of any kind, express or implied, regarding the accuracy, adequacy, validity, reliability, availability, or completeness of any information on our services.</p>
 
@@ -57,6 +103,52 @@ const pages = [
 
 <h2>AI Hallucination Disclaimer</h2>
 <p>Our AI systems may occasionally produce outputs that are factually incorrect, fabricated, or not based on real data — commonly known as "hallucinations." Users are strongly advised to independently verify all AI-generated information before relying on it for any purpose. Wall-V does not accept responsibility for decisions made based on hallucinated or inaccurate AI output.</p>
+
+<h2>Domain Registration Disclaimer</h2>
+<p>Wall-V provides domain registration services as an authorized reseller through PKNIC and other domain registries. By using our domain registration services, you acknowledge and agree to the following:</p>
+
+<h3>3.1 PKNIC Domain Registration</h3>
+<ul>
+<li><strong>No Control Over Registry Policies</strong>: PKNIC reserves the right to modify domain registration policies, pricing, and procedures at any time without prior notice. Wall-V has no control over these changes.</li>
+<li><strong>Registration Delays</strong>: Domain registration times vary and are not guaranteed. Propagation times depend on DNS servers and registry processes beyond Wall-V's control.</li>
+<li><strong>Price Increases</strong>: PKNIC has implemented fee increases of approximately 30% every two years. Further increases may occur without notice. Wall-V is not responsible for registry-imposed price changes.</li>
+<li><strong>No Refund Guarantee</strong>: PKNIC does not provide refunds after payment has been processed. Wall-V cannot guarantee refunds for domain registrations once submitted to the registry.</li>
+</ul>
+
+<h3>3.2 Domain Name Disputes</h3>
+<ul>
+<li>Wall-V is not responsible for domain name disputes between third parties.</li>
+<li>You are solely responsible for ensuring your domain registration does not infringe upon trademarks or other intellectual property rights.</li>
+<li>Domain disputes are subject to the registry's dispute resolution policies (e.g., PKNIC's dispute resolution procedures).</li>
+<li>Wall-V may be required to comply with court orders or registry decisions regarding domain registration or transfer.</li>
+</ul>
+
+<h3>3.3 DNS and Technical Limitations</h3>
+<ul>
+<li>DNS propagation times vary and are not guaranteed by Wall-V.</li>
+<li>Domain availability checks are performed in real-time but may not reflect immediate changes in the registry database.</li>
+<li>Wall-V is not responsible for DNS outages, propagation delays, or technical issues beyond our control.</li>
+<li>Domain parking, forwarding, or redirection services are provided on an "as-is" basis without warranty.</li>
+</ul>
+
+<h3>3.4 Registrant Responsibilities</h3>
+<ul>
+<li>You are responsible for maintaining accurate contact information in your domain registration.</li>
+<li>You must ensure sufficient funds are available in your Wall-V account before domain registration or renewal.</li>
+<li>Wall-V is not liable for domain expiration due to insufficient funds or failure to renew.</li>
+<li>Domain registrations cannot be modified after submission to the registry. To change a domain name, you must cancel and re-register.</li>
+</ul>
+
+<h3>3.5 Limitation of Liability</h3>
+<p>Wall-V acts solely as an intermediary between you and domain registries. We are not responsible for:</p>
+<ul>
+<li>Domain registration failures, rejections, or delays caused by registries</li>
+<li>Disputes over domain name ownership or trademark infringement</li>
+<li>Registry-imposed fees, penalties, or price increases</li>
+<li>Loss of domain registration due to registry actions, policies, or disputes</li>
+<li>Technical issues with DNS propagation or domain resolution</li>
+<li>Suspension or cancellation of domain registration by the registry</li>
+</ul>
 
 <h2>No Legal Advice Disclaimer</h2>
 <p>Nothing on this website or in our services constitutes legal advice. The information provided is for general informational purposes only. You should consult with a qualified legal professional for advice specific to your situation.</p>
