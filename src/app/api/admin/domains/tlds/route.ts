@@ -12,6 +12,29 @@ function isCCTLD(tld: string): boolean {
   return ccTLDs.includes(tld);
 }
 
+const FALLBACK_RP_TLDS = [
+  { tld: "com", registration: 13.50, renewal: 13.50 },
+  { tld: "net", registration: 14.00, renewal: 14.00 },
+  { tld: "org", registration: 14.50, renewal: 14.50 },
+  { tld: "info", registration: 25.50, renewal: 25.50 },
+  { tld: "xyz", registration: 16.00, renewal: 16.00 },
+  { tld: "online", registration: 33.00, renewal: 33.00 },
+  { tld: "site", registration: 33.00, renewal: 33.00 },
+  { tld: "tech", registration: 56.50, renewal: 56.50 },
+  { tld: "store", registration: 49.00, renewal: 49.00 },
+  { tld: "uk", registration: 7.95, renewal: 7.95 },
+  { tld: "co.uk", registration: 7.95, renewal: 7.95 },
+  { tld: "eu", registration: 7.50, renewal: 7.50 },
+  { tld: "us", registration: 9.00, renewal: 9.00 },
+  { tld: "ca", registration: 18.50, renewal: 18.50 },
+];
+
+const FALLBACK_WS_TLDS = [
+  { tld: "pk", registration: 4299, renewal: 4299 },
+  { tld: "com.pk", registration: 4299, renewal: 4299 },
+  { tld: "edu.pk", registration: 4299, renewal: 4299 },
+];
+
 export async function GET(request: NextRequest) {
   try {
     const user = await getAuthUser();
@@ -35,7 +58,9 @@ export async function GET(request: NextRequest) {
     }> = [];
 
     if (!provider || provider === "resellerspanel") {
-      const rpTLDs = await rpGetTLDs();
+      let rpTLDs = await rpGetTLDs();
+      if (rpTLDs.length === 0) rpTLDs = FALLBACK_RP_TLDS;
+
       rpTLDs.forEach((tld, index) => {
         const margin = isCCTLD(tld.tld) ? MARGIN_CCTLD : MARGIN_GENERIC;
         tlds.push({
@@ -53,7 +78,17 @@ export async function GET(request: NextRequest) {
     }
 
     if (!provider || provider === "websouls") {
-      const pkPricing = await getPKDomainPricing();
+      let pkPricing;
+      try {
+        pkPricing = await getPKDomainPricing();
+      } catch {
+        pkPricing = {
+          pk: { registration: 4299, renewal: 4299 },
+          comPk: { registration: 4299, renewal: 4299 },
+          eduPk: { registration: 4299, renewal: 4299 },
+        };
+      }
+
       const pkTLDs = [
         { tld: "pk", ...pkPricing.pk },
         { tld: "com.pk", ...pkPricing.comPk },
