@@ -29,8 +29,6 @@ interface SEOSettings {
 interface APIKeys {
   openaiApiKey: string;
   anthropicApiKey: string;
-  twocheckoutMerchantCode: string;
-  twocheckoutSecretKey: string;
   smtpHost: string;
   smtpPort: string;
   smtpUser: string;
@@ -110,8 +108,6 @@ export default function GeneralSettingsPage() {
   const [apiKeys, setApiKeys] = useState<APIKeys>({
     openaiApiKey: "",
     anthropicApiKey: "",
-    twocheckoutMerchantCode: "",
-    twocheckoutSecretKey: "",
     smtpHost: "smtp.gmail.com",
     smtpPort: "587",
     smtpUser: "",
@@ -485,14 +481,6 @@ BEHAVIOR:
             <div className="grid md:grid-cols-2 gap-4">
               <SecretInput label="OpenAI API Key" value={apiKeys.openaiApiKey} onChange={(v) => setApiKeys({ ...apiKeys, openaiApiKey: v })} placeholder="sk-..." />
               <SecretInput label="Anthropic API Key" value={apiKeys.anthropicApiKey} onChange={(v) => setApiKeys({ ...apiKeys, anthropicApiKey: v })} placeholder="sk-ant-..." />
-            </div>
-          </div>
-
-          <div className="rounded-lg border p-6 space-y-4">
-            <h3 className="font-semibold">Payment Gateway</h3>
-            <div className="grid md:grid-cols-2 gap-4">
-              <SecretInput label="2Checkout Merchant Code" value={apiKeys.twocheckoutMerchantCode} onChange={(v) => setApiKeys({ ...apiKeys, twocheckoutMerchantCode: v })} placeholder="Merchant code from 2Checkout" />
-              <SecretInput label="2Checkout Secret Key" value={apiKeys.twocheckoutSecretKey} onChange={(v) => setApiKeys({ ...apiKeys, twocheckoutSecretKey: v })} placeholder="Secret key from 2Checkout" />
             </div>
           </div>
 
