@@ -5,7 +5,7 @@ import DomainOffer from "@/models/domain-offer";
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getAuthUser();
@@ -13,9 +13,10 @@ export async function DELETE(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
+    const { id } = await params;
     await connectToDatabase();
 
-    const offer = await DomainOffer.findByIdAndDelete(params.id);
+    const offer = await DomainOffer.findByIdAndDelete(id);
 
     if (!offer) {
       return NextResponse.json({ error: "Offer not found" }, { status: 404 });
@@ -36,7 +37,7 @@ export async function DELETE(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getAuthUser();
@@ -44,10 +45,11 @@ export async function PATCH(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
+    const { id } = await params;
     const body = await request.json();
     await connectToDatabase();
 
-    const offer = await DomainOffer.findByIdAndUpdate(params.id, body, {
+    const offer = await DomainOffer.findByIdAndUpdate(id, body, {
       new: true,
     });
 
