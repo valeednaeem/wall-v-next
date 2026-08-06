@@ -13,7 +13,7 @@ const pages = [
     slug: "terms",
     title: "Terms & Conditions",
     type: "terms",
-    version: "3.0",
+    version: "4.0",
     content: `<h2>1. Acceptance of Terms</h2>
 <p>By accessing and using Wall-V's services, you agree to be bound by these Terms &amp; Conditions. If you do not agree to these terms, please do not use our services.</p>
 
@@ -21,18 +21,24 @@ const pages = [
 <p>Wall-V provides AI-powered software development, web and mobile application development, hosting services, digital product sales, and consulting services. We reserve the right to modify, suspend, or discontinue any service at any time.</p>
 
 <h2>3. Domain Registration Services</h2>
-<p>Wall-V acts as an authorized reseller for domain registration services through PKNIC (Pakistan Network Information Center) and other domain registries. By registering a domain through Wall-V, you acknowledge and agree to the following:</p>
+<p>Wall-V acts as an authorized reseller for domain registration services through multiple providers including ResellersPanel (ICANN-accredited registrar) and WebSouls (Pakistan-based registrar). By registering a domain through Wall-V, you acknowledge and agree to the following:</p>
 
-<h3>3.1 PKNIC Domain Registration (.pk domains)</h3>
-<p>Domain registrations under the .pk TLD are governed by PKNIC policies and procedures. Key terms include:</p>
+<h3>3.1 Domain Registration Providers</h3>
+<p>Wall-V utilizes the following domain registration providers:</p>
 <ul>
-<li><strong>Pre-payment Required</strong>: Funds must be available in your Wall-V account before domain registration can be processed.</li>
-<li><strong>Billing Cycle</strong>: PKNIC domains are billed biennially (2-year terms). Maximum registration period is 10 years.</li>
-<li><strong>Pricing</strong>: Current PKNIC pricing is Rs. 2,100/year for Pakistan-based registrants and $15.99/year for international registrants. Prices are subject to change by PKNIC without notice.</li>
-<li><strong>No Refunds</strong>: PKNIC does not provide refunds after payment has been processed for domain registration.</li>
+<li><strong>ResellersPanel</strong>: ICANN-accredited registrar for generic TLDs (.com, .net, .org, etc.) and country-code TLDs (.uk, .eu, .us, etc.)</li>
+<li><strong>WebSouls</strong>: Pakistan-based registrar for .pk domains (.pk, .com.pk, .edu.pk, etc.) and hosting services</li>
 </ul>
 
-<h3>3.2 Domain Name Rules</h3>
+<h3>3.2 Pricing and Margins</h3>
+<ul>
+<li><strong>Generic TLDs</strong>: 15% margin applied to ResellersPanel wholesale prices</li>
+<li><strong>Country-code TLDs</strong>: No margin applied (pass-through pricing)</li>
+<li><strong>.PK Domains</strong>: 15% margin applied to WebSouls pricing</li>
+<li>All prices are displayed in the currency specified at checkout (USD or PKR)</li>
+</ul>
+
+<h3>3.3 Domain Name Rules</h3>
 <ul>
 <li>Domain names cannot be modified after registration. To change a domain name, you must cancel the existing registration and register a new one.</li>
 <li>You are solely responsible for ensuring that your domain name registration does not infringe upon the rights of any third party.</li>
@@ -40,7 +46,7 @@ const pages = [
 <li>Domain names that are prohibited or reserved for technical, ethical, or national considerations cannot be registered.</li>
 </ul>
 
-<h3>3.3 Registrant Responsibilities</h3>
+<h3>3.4 Registrant Responsibilities</h3>
 <ul>
 <li>You must provide accurate and current contact information during registration.</li>
 <li>You are responsible for maintaining the accuracy of your registration information.</li>
@@ -48,15 +54,15 @@ const pages = [
 <li>Wall-V is not responsible for domain expiration due to insufficient funds or failure to renew.</li>
 </ul>
 
-<h3>3.4 Domain Transfer and Cancellation</h3>
+<h3>3.5 Domain Transfer and Cancellation</h3>
 <ul>
-<li>Domain registrations are non-transferable between registrars.</li>
-<li>To transfer a domain away from PKNIC, you must follow PKNIC's transfer procedures.</li>
+<li>Domain registrations are subject to the transfer policies of the respective registrar.</li>
+<li>To transfer a domain, you must follow the transfer procedures of your domain provider.</li>
 <li>Cancellation requests must be submitted through your Wall-V account dashboard.</li>
-<li>No refunds are provided for cancelled domains unless required by applicable law.</li>
+<li>Refunds are subject to the refund policies of the respective domain registrar.</li>
 </ul>
 
-<h3>3.5 Limitation of Liability for Domain Services</h3>
+<h3>3.6 Limitation of Liability for Domain Services</h3>
 <p>Wall-V acts as an intermediary between you and domain registries. We are not responsible for:</p>
 <ul>
 <li>Domain registration failures or delays caused by registries</li>
@@ -94,7 +100,7 @@ const pages = [
     slug: "disclaimer",
     title: "Disclaimer",
     type: "disclaimer",
-    version: "3.0",
+    version: "4.0",
     content: `<h2>General Information Disclaimer</h2>
 <p>The information provided on Wall-V's website, applications, and services is for general informational purposes only. All information is provided in good faith; however, we make no representation or warranty of any kind, express or implied, regarding the accuracy, adequacy, validity, reliability, availability, or completeness of any information on our services.</p>
 
@@ -105,25 +111,30 @@ const pages = [
 <p>Our AI systems may occasionally produce outputs that are factually incorrect, fabricated, or not based on real data — commonly known as "hallucinations." Users are strongly advised to independently verify all AI-generated information before relying on it for any purpose. Wall-V does not accept responsibility for decisions made based on hallucinated or inaccurate AI output.</p>
 
 <h2>Domain Registration Disclaimer</h2>
-<p>Wall-V provides domain registration services as an authorized reseller through PKNIC and other domain registries. By using our domain registration services, you acknowledge and agree to the following:</p>
+<p>Wall-V provides domain registration services as an authorized reseller through ResellersPanel and WebSouls. By using our domain registration services, you acknowledge and agree to the following:</p>
 
-<h3>3.1 PKNIC Domain Registration</h3>
+<h3>3.1 Domain Registration Providers</h3>
 <ul>
-<li><strong>No Control Over Registry Policies</strong>: PKNIC reserves the right to modify domain registration policies, pricing, and procedures at any time without prior notice. Wall-V has no control over these changes.</li>
-<li><strong>Registration Delays</strong>: Domain registration times vary and are not guaranteed. Propagation times depend on DNS servers and registry processes beyond Wall-V's control.</li>
-<li><strong>Price Increases</strong>: PKNIC has implemented fee increases of approximately 30% every two years. Further increases may occur without notice. Wall-V is not responsible for registry-imposed price changes.</li>
-<li><strong>No Refund Guarantee</strong>: PKNIC does not provide refunds after payment has been processed. Wall-V cannot guarantee refunds for domain registrations once submitted to the registry.</li>
+<li><strong>ResellersPanel</strong>: ICANN-accredited registrar for generic and country-code TLDs</li>
+<li><strong>WebSouls</strong>: Pakistan-based registrar for .pk domains and hosting services</li>
 </ul>
 
-<h3>3.2 Domain Name Disputes</h3>
+<h3>3.2 Provider Policies</h3>
+<ul>
+<li><strong>No Control Over Registry Policies</strong>: Domain registries reserve the right to modify policies, pricing, and procedures at any time without prior notice. Wall-V has no control over these changes.</li>
+<li><strong>Registration Delays</strong>: Domain registration times vary and are not guaranteed. Propagation times depend on DNS servers and registry processes beyond Wall-V's control.</li>
+<li><strong>Price Changes</strong>: Registry prices may change without notice. Wall-V is not responsible for registry-imposed price changes.</li>
+</ul>
+
+<h3>3.3 Domain Name Disputes</h3>
 <ul>
 <li>Wall-V is not responsible for domain name disputes between third parties.</li>
 <li>You are solely responsible for ensuring your domain registration does not infringe upon trademarks or other intellectual property rights.</li>
-<li>Domain disputes are subject to the registry's dispute resolution policies (e.g., PKNIC's dispute resolution procedures).</li>
+<li>Domain disputes are subject to the registry's dispute resolution policies.</li>
 <li>Wall-V may be required to comply with court orders or registry decisions regarding domain registration or transfer.</li>
 </ul>
 
-<h3>3.3 DNS and Technical Limitations</h3>
+<h3>3.4 DNS and Technical Limitations</h3>
 <ul>
 <li>DNS propagation times vary and are not guaranteed by Wall-V.</li>
 <li>Domain availability checks are performed in real-time but may not reflect immediate changes in the registry database.</li>
@@ -131,7 +142,7 @@ const pages = [
 <li>Domain parking, forwarding, or redirection services are provided on an "as-is" basis without warranty.</li>
 </ul>
 
-<h3>3.4 Registrant Responsibilities</h3>
+<h3>3.5 Registrant Responsibilities</h3>
 <ul>
 <li>You are responsible for maintaining accurate contact information in your domain registration.</li>
 <li>You must ensure sufficient funds are available in your Wall-V account before domain registration or renewal.</li>
@@ -139,7 +150,7 @@ const pages = [
 <li>Domain registrations cannot be modified after submission to the registry. To change a domain name, you must cancel and re-register.</li>
 </ul>
 
-<h3>3.5 Limitation of Liability</h3>
+<h3>3.6 Limitation of Liability</h3>
 <p>Wall-V acts solely as an intermediary between you and domain registries. We are not responsible for:</p>
 <ul>
 <li>Domain registration failures, rejections, or delays caused by registries</li>

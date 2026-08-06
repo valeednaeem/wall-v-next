@@ -61,65 +61,53 @@
         "Premium domains available at market pricing"
       ]
     },
+    "providers": {
+      "resellerspanel": {
+        "name": "ResellersPanel",
+        "type": "ICANN-Accredited Registrar",
+        "website": "https://www.resellerspanel.com",
+        "apiHost": "https://api.duoservers.com",
+        "coverage": "Generic TLDs and country-code TLDs",
+        "pricingModel": "Wholesale prices + 15% margin on generic TLDs, 0% margin on ccTLDs",
+        "features": [
+          "ICANN-accredited registrar",
+          "100+ TLDs available",
+          "Real-time domain availability check",
+          "Instant registration",
+          "WHOIS privacy protection",
+          "DNS management",
+          "Domain transfer support"
+        ]
+      },
+      "websouls": {
+        "name": "WebSouls",
+        "type": "Pakistan-Based Registrar",
+        "website": "https://websouls.com",
+        "coverage": ".pk domains and hosting services",
+        "pricingModel": "WebSouls pricing + 15% margin",
+        "features": [
+          "Pakistan-based registrar",
+          ".pk domain specialization",
+          "Hosting services included",
+          "Local support",
+          "WHMCS billing system",
+          "DNS hosting"
+        ]
+      }
+    },
     "features": [
       "Free WHOIS privacy protection included",
       "Free DNS management",
       "No hidden fees or charges",
       "Multi-year discounts available",
-      "Direct PKNIC API integration for .pk domains",
       "Real-time domain availability check",
-      "Instant registration for .pk domains",
+      "Instant registration",
       "Auto-renewal option available",
       "Grace period of 30 days after expiration",
       "Redemption period of 30 days after grace period",
       "Domain locking to prevent unauthorized transfers",
       "Two-factor authentication for domain management"
     ],
-    "pknic": {
-      "registry": "PKNIC (Pakistan Network Information Center)",
-      "website": "https://pknic.net.pk",
-      "pricing": {
-        "pakistan": "Rs. 2,100/year (biennial billing, max 10 years)",
-        "international": "$15.99/year (biennial billing, max 10 years)",
-        "lastUpdated": "August 1, 2026 (increased from Rs. 1,800)"
-      },
-      "paymentPolicy": "Pre-payment required. Funds must be available before registration.",
-      "domainVariants": [
-        { "tld": ".pk", "use": "General purpose" },
-        { "tld": ".com.pk", "use": "Commercial entities" },
-        { "tld": ".org.pk", "use": "Organizations" },
-        { "tld": ".net.pk", "use": "Network services" },
-        { "tld": ".web.pk", "use": "Web-related" },
-        { "tld": ".fam.pk", "use": "Family/personal" },
-        { "tld": ".edu.pk", "use": "Educational institutions" },
-        { "tld": ".gov.pk", "use": "Government entities (restricted)" }
-      ],
-      "rules": [
-        "Cannot choose names already in use",
-        "Cannot choose prohibited/reserved names",
-        "Registrant must ensure no trademark infringement",
-        "Once registered, domain name cannot be modified",
-        "Registrant must keep contact information current"
-      ],
-      "servicesProvided": [
-        "Operation of .PK root servers (DNS)",
-        "Administration of .PK domain registry",
-        "Management of Shared Registry System (SRS)",
-        "Public records management"
-      ],
-      "servicesNotProvided": [
-        "No IP allocations (contact ISP, IANA, ARIN, APNIC)",
-        "No technical tutorials or consultations",
-        "No web hosting, email, or DNS services",
-        "No www.XYZ.com.pk subdomains"
-      ],
-      "contact": {
-        "email": "staff@pknic.net.pk",
-        "phone": ["+92-(332)-477-1656", "+92-(332)-477-2669"],
-        "hours": "Monday-Friday, 9:30am-5:00pm (break 1:30pm-2:30pm)",
-        "office": "PKNIC Collection, 435 Tariq Block, Garden Town, Lahore, Pakistan"
-      }
-    },
     "dnsRecordTypes": [
       {
         "type": "A",

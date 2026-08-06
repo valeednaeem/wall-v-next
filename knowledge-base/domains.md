@@ -28,71 +28,70 @@
 - New gTLDs: .xyz, .online, .site, .website, .space
 - Premium domains available at market pricing
 
-## PKNIC Integration
+## Domain Registration Providers
 
-### Pakistan Domain (.pk) Registration
-- **Registry**: PKNIC (Pakistan Network Information Center) — https://pknic.net.pk
-- **Processing time**: Domain propagates within hours (zone files updated frequently)
-- **Eligibility**: Open to individuals and businesses worldwide
-- **Direct registration**: Via PKNIC Shared Registry System
+### ResellersPanel (ICANN-Accredited Registrar)
+- **Provider**: ResellersPanel (https://www.resellerspanel.com)
+- **API Host**: https://api.duoservers.com
+- **Coverage**: Generic TLDs (.com, .net, .org, etc.) and country-code TLDs (.uk, .eu, .us, etc.)
+- **Pricing Model**: Wholesale prices + 15% margin on generic TLDs, 0% margin on ccTLDs
+- **Features**:
+  - ICANN-accredited registrar
+  - 100+ TLDs available
+  - Real-time domain availability check
+  - Instant registration
+  - WHOIS privacy protection
+  - DNS management
+  - Domain transfer support
 
-### PKNIC Pricing (Official — Effective August 2026)
+### WebSouls (Pakistan-Based Registrar)
+- **Provider**: WebSouls (https://websouls.com)
+- **Coverage**: .pk domains (.pk, .com.pk, .edu.pk, etc.) and hosting services
+- **Pricing Model**: WebSouls pricing + 15% margin
+- **Features**:
+  - Pakistan-based registrar
+  - .pk domain specialization
+  - Hosting services included
+  - Local support
+  - WHMCS billing system
+  - DNS hosting
 
-| Registrant Location | Price | Billing Cycle | Max Term |
-|---------------------|-------|---------------|----------|
-| Pakistan-based | Rs. 2,100/year | Biennial (2-year) | 10 years |
-| International | $15.99/year | Biennial (2-year) | 10 years |
+## Domain Pricing Details
 
-**Note**: Prices increased by Rs. 300/domain/year on August 1, 2026 (from Rs. 1,800 to Rs. 2,100). International pricing unchanged.
+### Generic TLDs (via ResellersPanel)
 
-### PKNIC Payment Policy
-- **Pre-payment required**: Funds must be available in account before domain registration
-- Payment methods: Bank draft, cheque, prepaid cards, credit card
-- Domain credit can be used for registrations and renewal invoices
+| TLD | Registration | Renewal | Transfer | Notes |
+|-----|--------------|---------|----------|-------|
+| .com | $13.50/yr | $13.50/yr | $13.50/yr | Most popular |
+| .net | $14.00/yr | $14.00/yr | $14.00/yr | Network/tech |
+| .org | $14.50/yr | $14.50/yr | $14.50/yr | Organizations |
+| .info | $4.49/1st yr | $25.50/yr | $25.50/yr | Informational |
+| .xyz | $16.00/yr | $16.00/yr | $16.00/yr | Affordable |
+| .online | $9.99/1st yr | $33.00/yr | $33.00/yr | Online presence |
+| .site | $6.99/1st yr | $33.00/yr | $33.00/yr | Website |
+| .tech | $10.99/1st yr | $56.50/yr | $56.50/yr | Technology |
+| .store | $10.99/1st yr | $49.00/yr | $49.00/yr | E-commerce |
 
-### PKNIC Domain Variants Under .pk
-- **.pk** — General purpose
-- **.com.pk** — Commercial entities
-- **.org.pk** — Organizations
-- **.net.pk** — Network services
-- **.web.pk** — Web-related
-- **.fam.pk** — Family/personal
-- **.edu.pk** — Educational institutions
-- **.gov.pk** — Government entities (restricted)
+### Country-Code TLDs (via ResellersPanel)
 
-### PKNIC Domain Name Rules
-- Cannot choose names already in use by other organizations
-- Cannot choose names prohibited or reserved for technical, ethical, or national considerations
-- **Registrant responsibility**: Must ensure registration does not infringe another party's rights
-- Once registered, domain name cannot be modified (must re-register)
-- Registrant must keep contact information up to date
+| TLD | Registration | Renewal | Notes |
+|-----|--------------|---------|-------|
+| .uk | $7.95/yr | $7.95/yr | United Kingdom |
+| .co.uk | $7.95/yr | $7.95/yr | UK Commercial |
+| .eu | $7.50/yr | $7.50/yr | European Union |
+| .us | $9.00/yr | $9.00/yr | United States |
+| .ca | $18.50/yr | $18.50/yr | Canada |
+| .com.au | $15.50/yr | $15.50/yr | Australia |
+| .de | $12.50/yr | $12.50/yr | Germany |
+| .fr | $11.00/yr | $11.00/yr | France |
 
-### PKNIC Services Provided
-- Operation and maintenance of .PK root servers (DNS)
-- Administration of .PK domain registry (add, modify, delete domains)
-- Management of SRS (Shared Registry System) for registry partners
-- Public records management and dissemination
+### PK Domains (via WebSouls)
 
-### PKNIC Services NOT Provided
-- No IP allocations (contact ISP, IANA, ARIN, APNIC)
-- No technical tutorials or consultations
-- No web hosting, email, or DNS services
-- No subdomains of form www.XYZ.com.pk (create via ISP)
-
-### PKNIC Contact
-- **Email**: staff@pknic.net.pk
-- **Phone**: +92-(332)-477-1656, +92-(332)-477-2669
-- **Hours**: Monday–Friday, 9:30am–5:00pm (break 1:30pm–2:30pm)
-- **Office**: PKNIC Collection, 435 Tariq Block, Garden Town, Lahore, Pakistan
-- **Note**: PKNIC has no other offices or outlets. Resellers/agents are independent companies.
-
-### PKNIC Features at Wall-V
-- Direct PKNIC API integration
-- Real-time domain availability check
-- Instant registration for .pk domains
-- PKNIC account management
-- DNS hosting included
-- Support for all .pk subdomains
+| TLD | Registration | Renewal | Notes |
+|-----|--------------|---------|-------|
+| .pk | Rs 4,299/2yrs | Rs 4,299/2yrs | Pakistan |
+| .com.pk | Rs 4,299/2yrs | Rs 4,299/2yrs | Pakistan Commercial |
+| .edu.pk | Rs 4,299/2yrs | Rs 4,299/2yrs | Pakistan Educational |
 
 ## Domain Renewal
 

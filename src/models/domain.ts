@@ -4,6 +4,7 @@ export interface IDomain extends Document {
   user: mongoose.Types.ObjectId;
   domain: string;
   status: "active" | "pending" | "expired" | "suspended" | "transferring";
+  provider: "resellerspanel" | "websouls";
   registrar: string;
   registrarAccountId?: string;
   registrationDate: Date;
@@ -38,6 +39,11 @@ const DomainSchema = new Schema<IDomain>(
       type: String,
       enum: ["active", "pending", "expired", "suspended", "transferring"],
       default: "pending",
+    },
+    provider: {
+      type: String,
+      enum: ["resellerspanel", "websouls"],
+      required: true,
     },
     registrar: { type: String, required: true },
     registrarAccountId: String,
