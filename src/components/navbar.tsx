@@ -12,7 +12,7 @@ import { useSiteSettings } from "@/lib/use-site-settings";
 const services = [
   { title: "AI Automation", description: "Intelligent agents & workflows", href: "/services" },
   { title: "Web Hosting", description: "Shared, VPS & dedicated servers", href: "/hosting" },
-  { title: "Domain Names", description: "Register & manage domains", href: "/hosting" },
+  { title: "Domain Names", description: "Register & manage domains", href: "/domains" },
   { title: "Web Development", description: "Custom web applications", href: "/services" },
   { title: "ERP & CRM", description: "Business management solutions", href: "/services" },
   { title: "Maintenance", description: "Ongoing support & updates", href: "/contact" },
@@ -23,6 +23,7 @@ const navItems = [
   { label: "Services", href: "/services" },
   { label: "Products", href: "/products" },
   { label: "Hosting", href: "/hosting" },
+  { label: "Domains", href: "/domains" },
   { label: "Voice Agent", href: "/voice-agent" },
   { label: "Blog", href: "/blog" },
   { label: "Contact", href: "/contact" },
