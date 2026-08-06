@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { Providers } from "@/components/providers";
 import { CookieConsent } from "@/components/cookie-consent";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { Analytics } from "@vercel/analytics/react";
 
 const inter = Inter({
   weight: ["400", "500", "600", "700"],
@@ -67,6 +68,7 @@ export default function RootLayout({
         <Providers>{children}</Providers>
         <CookieConsent />
         <SpeedInsights />
+        <Analytics />
       </body>
     </html>
   );
