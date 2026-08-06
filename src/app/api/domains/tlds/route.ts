@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import connectToDatabase from "@/lib/mongodb";
-import HostingPlan from "@/models/hosting-plan";
+import DomainTLD from "@/models/domain-tld";
 
 export async function GET(request: NextRequest) {
   try {
@@ -12,20 +12,20 @@ export async function GET(request: NextRequest) {
     const query: Record<string, unknown> = { isActive: true };
     if (category) query.category = category;
 
-    const plans = await HostingPlan.find(query)
+    const tlds = await DomainTLD.find(query)
       .select("-createdBy -__v")
       .sort({ sortOrder: 1 })
       .lean();
 
     return NextResponse.json({
       success: true,
-      plans,
-      total: plans.length,
+      tlds,
+      total: tlds.length,
     });
   } catch (error) {
-    console.error("Get public hosting plans error:", error);
+    console.error("Get public domain TLDs error:", error);
     return NextResponse.json(
-      { error: "Failed to get hosting plans" },
+      { error: "Failed to get domain TLDs" },
       { status: 500 }
     );
   }

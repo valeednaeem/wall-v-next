@@ -1,17 +1,33 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Cloud, Check } from "lucide-react";
+import { Cloud, Check, Star } from "lucide-react";
 
 interface HostingPlan {
-  id: string;
+  _id: string;
   name: string;
+  slug: string;
   provider: string;
   price: number;
   renewalPrice: number;
   currency: string;
-  features: string[];
+  billingCycle: string;
+  finalPrice: number;
+  finalRenewalPrice: number;
   description: string;
+  shortDescription: string;
+  features: string[];
+  highlights: string[];
+  diskSpace: string;
+  bandwidth: string;
+  websites: number;
+  emailAccounts: string;
+  databases: string;
+  ssl: boolean;
+  backup: boolean;
+  migration: boolean;
+  sshAccess: boolean;
+  isPopular: boolean;
 }
 
 export function HostingPlans() {
@@ -36,9 +52,7 @@ export function HostingPlans() {
     }
   };
 
-  const formatPrice = (price: number, currency: string) => {
-    return `$${price.toFixed(2)}`;
-  };
+  const formatPrice = (price: number) => `$${price.toFixed(2)}`;
 
   if (loading) {
     return (
@@ -56,15 +70,16 @@ export function HostingPlans() {
         Choose the perfect plan for your website
       </p>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
-        {plans.map((plan, index) => (
+        {plans.map((plan) => (
           <div
-            key={plan.id}
+            key={plan._id}
             className={`rounded-2xl border p-6 bg-white relative ${
-              index === 1 ? "border-primary shadow-lg shadow-primary/10" : ""
+              plan.isPopular ? "border-primary shadow-lg shadow-primary/10" : ""
             }`}
           >
-            {index === 1 && (
-              <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-xs font-medium px-3 py-1 rounded-full">
+            {plan.isPopular && (
+              <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-xs font-medium px-3 py-1 rounded-full flex items-center gap-1">
+                <Star className="h-3 w-3" />
                 Most Popular
               </span>
             )}
@@ -77,25 +92,32 @@ export function HostingPlans() {
             </p>
             <div className="mt-4 mb-6">
               <span className="text-3xl font-bold">
-                {formatPrice(plan.price, plan.currency)}
+                {formatPrice(plan.finalPrice)}
               </span>
               <span className="text-muted-foreground text-sm">
-                /{plan.provider === "websouls" ? "yr" : "mo"}
+                /{plan.billingCycle === "annually" ? "yr" : plan.billingCycle === "monthly" ? "mo" : plan.billingCycle}
               </span>
             </div>
             <p className="text-sm text-muted-foreground mb-4">
-              {plan.description}
+              {plan.shortDescription || plan.description}
             </p>
             <ul className="space-y-2 mb-6">
-              {plan.features.slice(0, 6).map((f) => (
-                <li key={f} className="text-sm flex items-center gap-2">
-                  <Check className="h-4 w-4 text-green-500" /> {f}
-                </li>
-              ))}
+              {plan.highlights.length > 0
+                ? plan.highlights.map((f) => (
+                    <li key={f} className="text-sm flex items-center gap-2">
+                      <Check className="h-4 w-4 text-green-500" /> {f}
+                    </li>
+                  ))
+                : plan.features.slice(0, 5).map((f) => (
+                    <li key={f} className="text-sm flex items-center gap-2">
+                      <Check className="h-4 w-4 text-green-500" /> {f}
+                    </li>
+                  ))
+              }
             </ul>
             <button
               className={`w-full py-2.5 rounded-lg font-medium text-sm transition-colors ${
-                index === 1
+                plan.isPopular
                   ? "bg-primary text-primary-foreground hover:bg-primary/90"
                   : "bg-muted hover:bg-muted/80"
               }`}
