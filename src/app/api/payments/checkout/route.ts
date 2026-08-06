@@ -89,7 +89,7 @@ export async function POST(request: Request) {
       });
 
       // Generate 2Checkout buy link
-      const backRef = `${appUrl}/orders/${orderNumber}?status=success`;
+      const backRef = `${appUrl}/checkout/success?order=${orderNumber}`;
       const buyUrl = generateSecureBuyLink({
         items: checkoutItems,
         currency,
@@ -155,7 +155,7 @@ export async function POST(request: Request) {
         notes: `Project milestone payment — ${project.name} — ${milestone.name}`,
       });
 
-      const backRef = `${appUrl}/checkout/${projectId}/success?method=2checkout&order=${orderNumber}`;
+      const backRef = `${appUrl}/checkout/success?order=${orderNumber}`;
       const buyUrl = generateSecureBuyLink({
         items: checkoutItems,
         currency,
