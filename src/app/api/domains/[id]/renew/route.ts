@@ -6,7 +6,7 @@ import { renewDomain as wsRenew } from "@/lib/websouls";
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getAuthUser();
@@ -17,6 +17,7 @@ export async function POST(
       );
     }
 
+    const { id } = await params;
     const body = await request.json();
     const { years } = body;
 
@@ -28,7 +29,7 @@ export async function POST(
     }
 
     const domain = await Domain.findOne({
-      _id: params.id,
+      _id: id,
       user: user.userId,
     });
 

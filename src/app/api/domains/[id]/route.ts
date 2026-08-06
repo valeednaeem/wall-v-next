@@ -12,7 +12,7 @@ import {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getAuthUser();
@@ -23,8 +23,9 @@ export async function GET(
       );
     }
 
+    const { id } = await params;
     const domain = await Domain.findOne({
-      _id: params.id,
+      _id: id,
       user: user.userId,
     });
 
@@ -58,7 +59,7 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getAuthUser();
@@ -69,11 +70,12 @@ export async function PUT(
       );
     }
 
+    const { id } = await params;
     const body = await request.json();
     const { nameservers, autoRenew, whoisPrivacy } = body;
 
     const domain = await Domain.findOne({
-      _id: params.id,
+      _id: id,
       user: user.userId,
     });
 
@@ -127,7 +129,7 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getAuthUser();
@@ -138,8 +140,9 @@ export async function DELETE(
       );
     }
 
+    const { id } = await params;
     const domain = await Domain.findOneAndDelete({
-      _id: params.id,
+      _id: id,
       user: user.userId,
     });
 
