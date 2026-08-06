@@ -38,8 +38,14 @@ const sidebarItems: SidebarItem[] = [
     { label: "Inquiries", href: "/dashboard/crm/inquiries" },
   ]},
   { label: "Invoices", href: "/dashboard/invoices", icon: <Receipt className="h-4 w-4" /> },
-  { label: "Hosting", href: "/dashboard/hosting", icon: <Cloud className="h-4 w-4" /> },
-  { label: "Domains", href: "/dashboard/domains", icon: <Globe className="h-4 w-4" /> },
+  { label: "Hosting", href: "/dashboard/hosting", icon: <Cloud className="h-4 w-4" />, children: [
+    { label: "Hosting Plans", href: "/dashboard/hosting" },
+    { label: "Hosting Offers", href: "/dashboard/hosting/offers" },
+  ]},
+  { label: "Domains", href: "/dashboard/domains", icon: <Globe className="h-4 w-4" />, children: [
+    { label: "Domain TLDs", href: "/dashboard/domains" },
+    { label: "Domain Offers", href: "/dashboard/domains/offers" },
+  ]},
   { label: "Support", href: "/dashboard/support", icon: <Headphones className="h-4 w-4" /> },
   { label: "Users", href: "/dashboard/users", icon: <Users className="h-4 w-4" />, children: [
     { label: "All Users", href: "/dashboard/users" },
