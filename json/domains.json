@@ -1,0 +1,113 @@
+{
+  "name": "Domains",
+  "type": "domains",
+  "content": {
+    "registration": {
+      "startingPrice": "$9.99/yr",
+      "tlds": [
+        {
+          "tld": ".com",
+          "registrationPrice": "$9.99/yr",
+          "renewalPrice": "$12.99/yr",
+          "useCase": "Commercial, general purpose"
+        },
+        {
+          "tld": ".net",
+          "registrationPrice": "$11.99/yr",
+          "renewalPrice": "$13.99/yr",
+          "useCase": "Network, technology"
+        },
+        {
+          "tld": ".org",
+          "registrationPrice": "$9.99/yr",
+          "renewalPrice": "$12.99/yr",
+          "useCase": "Organizations, non-profits"
+        },
+        {
+          "tld": ".pk",
+          "registrationPrice": "$15.99/yr",
+          "renewalPrice": "$15.99/yr",
+          "useCase": "Pakistan domains"
+        },
+        {
+          "tld": ".io",
+          "registrationPrice": "$29.99/yr",
+          "renewalPrice": "$34.99/yr",
+          "useCase": "Tech startups, SaaS"
+        },
+        {
+          "tld": ".dev",
+          "registrationPrice": "$11.99/yr",
+          "renewalPrice": "$13.99/yr",
+          "useCase": "Developer projects"
+        },
+        {
+          "tld": ".app",
+          "registrationPrice": "$11.99/yr",
+          "renewalPrice": "$13.99/yr",
+          "useCase": "Applications"
+        },
+        {
+          "tld": ".co",
+          "registrationPrice": "$9.99/yr",
+          "renewalPrice": "$29.99/yr",
+          "useCase": "Companies, startups"
+        }
+      ],
+      "additionalTlds": [
+        "Country-code TLDs (ccTLDs): .uk, .ca, .au, .de, .fr, .jp, and more",
+        "Industry TLDs: .tech, .design, .agency, .studio, .store",
+        "New gTLDs: .xyz, .online, .site, .website, .space",
+        "Premium domains available at market pricing"
+      ]
+    },
+    "features": [
+      "Free WHOIS privacy protection included",
+      "Free DNS management",
+      "No hidden fees or charges",
+      "Multi-year discounts available",
+      "Direct PKNIC API integration for .pk domains",
+      "Real-time domain availability check",
+      "Instant registration for .pk domains",
+      "Auto-renewal option available",
+      "Grace period of 30 days after expiration",
+      "Redemption period of 30 days after grace period",
+      "Domain locking to prevent unauthorized transfers",
+      "Two-factor authentication for domain management"
+    ],
+    "dnsRecordTypes": [
+      {
+        "type": "A",
+        "purpose": "Maps domain to IPv4 address"
+      },
+      {
+        "type": "AAAA",
+        "purpose": "Maps domain to IPv6 address"
+      },
+      {
+        "type": "CNAME",
+        "purpose": "Alias pointing to another domain"
+      },
+      {
+        "type": "MX",
+        "purpose": "Mail exchange servers for email"
+      },
+      {
+        "type": "TXT",
+        "purpose": "Text records (SPF, DKIM, verification)"
+      },
+      {
+        "type": "SRV",
+        "purpose": "Service location records"
+      },
+      {
+        "type": "CAA",
+        "purpose": "Certificate Authority Authorization"
+      },
+      {
+        "type": "NS",
+        "purpose": "Nameserver delegation"
+      }
+    ]
+  }
+}

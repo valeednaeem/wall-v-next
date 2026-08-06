@@ -1,0 +1,135 @@
+{
+  "name": "AI Agents",
+  "type": "ai-agents",
+  "content": {
+    "agentTypes": [
+      {
+        "id": "general-assistant",
+        "name": "General Assistant",
+        "description": "General-purpose AI agent for any question or task",
+        "capabilities": [
+          "Handles broad inquiries about Wall-V services, capabilities, and general topics",
+          "Routes complex queries to specialized agents when needed",
+          "Maintains conversation context across multiple turns"
+        ]
+      },
+      {
+        "id": "project-discovery",
+        "name": "Project Discovery",
+        "description": "Multi-stage conversational agent for requirements gathering",
+        "capabilities": [
+          "Guides users through a structured discovery process",
+          "Extracts project goals, scope, budget, and timeline",
+          "Generates project briefs from conversation data",
+          "Converts qualified conversations into CRM inquiries"
+        ]
+      },
+      {
+        "id": "sales-agent",
+        "name": "Sales Agent",
+        "description": "Sales-focused agent leveraging the discovery engine",
+        "capabilities": [
+          "Identifies buying signals and qualifies leads",
+          "Recommends Wall-V services based on detected needs",
+          "Generates service estimates and demos",
+          "Manages follow-up sequences"
+        ]
+      },
+      {
+        "id": "support-agent",
+        "name": "Support Agent",
+        "description": "Customer support agent for existing clients",
+        "capabilities": [
+          "Handles technical support inquiries",
+          "Troubleshoots platform issues",
+          "Escalates complex issues to human agents",
+          "Tracks support ticket status"
+        ]
+      },
+      {
+        "id": "content-writer",
+        "name": "Content Writer",
+        "description": "Content generation agent for marketing and documentation",
+        "capabilities": [
+          "Produces blog posts, product descriptions, and web copy",
+          "Adapts tone and style based on brand guidelines",
+          "Supports SEO optimization",
+          "Generates content in multiple languages"
+        ]
+      },
+      {
+        "id": "technical-assistant",
+        "name": "Technical Assistant",
+        "description": "Technical consulting agent for architecture and implementation",
+        "capabilities": [
+          "Provides code-level guidance and best practices",
+          "Recommends technology stacks",
+          "Analyzes technical requirements",
+          "Supports integration planning"
+        ]
+      }
+    ],
+    "discoveryStages": [
+      { "stage": 1, "id": "greeting", "name": "Greeting", "description": "Initial greeting and welcome message" },
+      { "stage": 2, "id": "identify-intent", "name": "Identify Intent", "description": "Determine the user's primary intent" },
+      { "stage": 3, "id": "understand-goal", "name": "Understand Goal", "description": "Understand the user's project goals" },
+      { "stage": 4, "id": "discover-requirements", "name": "Discover Requirements", "description": "Gather detailed functional requirements" },
+      { "stage": 5, "id": "identify-scope", "name": "Identify Scope", "description": "Determine project scope and complexity" },
+      { "stage": 6, "id": "budget-timeline", "name": "Budget & Timeline", "description": "Discuss budget range and timeline expectations" },
+      { "stage": 7, "id": "recommend-solution", "name": "Recommend Solution", "description": "Recommend Wall-V services matching needs" },
+      { "stage": 8, "id": "generate-brief", "name": "Generate Brief", "description": "Generate a comprehensive project summary" },
+      { "stage": 9, "id": "user-confirmation", "name": "User Confirmation", "description": "Confirm the generated brief with the user" },
+      { "stage": 10, "id": "create-inquiry", "name": "Create Inquiry", "description": "Save the conversation as a CRM inquiry" },
+      { "stage": 11, "id": "completed", "name": "Completed", "description": "Conversation complete" }
+    ],
+    "supportedLanguages": [
+      { "name": "English", "code": "en" },
+      { "name": "Spanish", "code": "es" },
+      { "name": "French", "code": "fr" },
+      { "name": "German", "code": "de" },
+      { "name": "Arabic", "code": "ar" },
+      { "name": "Chinese", "code": "zh" },
+      { "name": "Japanese", "code": "ja" },
+      { "name": "Korean", "code": "ko" },
+      { "name": "Portuguese", "code": "pt" },
+      { "name": "Russian", "code": "ru" },
+      { "name": "Hindi", "code": "hi" },
+      { "name": "Turkish", "code": "tr" },
+      { "name": "Urdu", "code": "ur" }
+    ],
+    "projectTypes": [
+      { "category": "Web", "types": ["website", "web-application", "redesign"] },
+      { "category": "Mobile", "types": ["mobile-app"] },
+      { "category": "E-commerce", "types": ["ecommerce"] },
+      { "category": "Software", "types": ["saas", "crm", "erp"] },
+      { "category": "AI", "types": ["ai-integration"] },
+      { "category": "Infrastructure", "types": ["hosting", "domain"] },
+      { "category": "Digital", "types": ["digital-product"] },
+      { "category": "Marketing", "types": ["seo-marketing"] },
+      { "category": "Services", "types": ["consulting", "other"] }
+    ],
+    "detectableFeatures": [
+      { "feature": "User Authentication", "description": "Login, registration, role-based access" },
+      { "feature": "Payment Processing", "description": "Stripe, PayPal, 2Checkout integration" },
+      { "feature": "E-commerce", "description": "Product catalogs, carts, checkout" },
+      { "feature": "Booking System", "description": "Scheduling, reservations, calendar" },
+      { "feature": "Messaging", "description": "Real-time chat, direct messages" },
+      { "feature": "Notifications", "description": "Push, email, in-app alerts" },
+      { "feature": "Dashboards", "description": "Analytics panels, admin interfaces" },
+      { "feature": "Search", "description": "Full-text search, filtering" },
+      { "feature": "File Uploads", "description": "Document and media handling" },
+      { "feature": "User Roles", "description": "Permissions, access control" },
+      { "feature": "AI Features", "description": "Machine learning, automation" },
+      { "feature": "API Integration", "description": "Third-party API connections" },
+      { "feature": "Multi-Language", "description": "Localization, internationalization" },
+      { "feature": "Responsive Design", "description": "Mobile-first, cross-device" },
+      { "feature": "SEO", "description": "Search engine optimization" },
+      { "feature": "Social Media Integration", "description": "Social login, sharing" },
+      { "feature": "Email Integration", "description": "SMTP, transactional email" },
+      { "feature": "Maps", "description": "Location services, geolocation" },
+      { "feature": "Reporting", "description": "Data visualization, exports" },
+      { "feature": "Real-time Updates", "description": "WebSockets, live data" },
+      { "feature": "Offline Support", "description": "Service workers, caching" }
+    ]
+  }
+}

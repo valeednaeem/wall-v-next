@@ -1,0 +1,297 @@
+{
+  "name": "Pricing",
+  "type": "pricing",
+  "content": {
+    "websitePlans": [
+      {
+        "name": "Starter",
+        "monthlyPrice": 499,
+        "annualPrice": 399,
+        "annualSavings": 100,
+        "pages": 1,
+        "storage": "5GB",
+        "bandwidth": "10GB",
+        "support": "Email",
+        "hosting": "1 year",
+        "domain": "1 year",
+        "ssl": "Basic",
+        "seo": "Basic",
+        "analytics": "Basic",
+        "aiFeatures": "No",
+        "mobileApp": "No",
+        "crm": "No",
+        "features": [
+          "Single-page or landing page",
+          "Basic responsive design",
+          "Contact form integration",
+          "Standard hosting (1 year included)",
+          "Free domain (1 year included)",
+          "Basic SEO setup",
+          "Email support"
+        ],
+        "idealFor": [
+          "Freelancers and individuals",
+          "Startups testing ideas",
+          "Simple landing pages",
+          "Personal portfolios"
+        ],
+        "whatsIncluded": [
+          "Professional design template",
+          "Mobile-responsive layout",
+          "Basic analytics setup",
+          "SSL certificate",
+          "Standard page load optimization"
+        ]
+      },
+      {
+        "name": "Professional",
+        "monthlyPrice": 1499,
+        "annualPrice": 1199,
+        "annualSavings": 300,
+        "pages": 10,
+        "storage": "25GB",
+        "bandwidth": "100GB",
+        "support": "Priority Email & Chat",
+        "hosting": "1 year",
+        "domain": "1 year",
+        "ssl": "Premium",
+        "seo": "Advanced",
+        "analytics": "Advanced",
+        "aiFeatures": "Chatbot",
+        "mobileApp": "No",
+        "crm": "Basic",
+        "features": [
+          "Up to 10 pages",
+          "Custom UI/UX design",
+          "AI chatbot integration",
+          "CRM setup with lead tracking",
+          "Premium hosting (1 year included)",
+          "Free domain (1 year included)",
+          "Advanced SEO and analytics",
+          "Priority email and chat support"
+        ],
+        "idealFor": [
+          "Small to medium businesses",
+          "Service-based companies",
+          "E-commerce startups",
+          "Professional practices"
+        ],
+        "whatsIncluded": [
+          "Custom brand-aligned design",
+          "Content management system",
+          "Lead capture forms",
+          "Social media integration",
+          "Google Analytics setup",
+          "Email marketing integration",
+          "Blog setup"
+        ]
+      },
+      {
+        "name": "Enterprise",
+        "monthlyPrice": 2999,
+        "annualPrice": 2499,
+        "annualSavings": 500,
+        "pages": "Unlimited",
+        "storage": "100GB",
+        "bandwidth": "Unlimited",
+        "support": "24/7 Dedicated",
+        "hosting": "1 year",
+        "domain": "1 year",
+        "ssl": "Custom",
+        "seo": "Full Suite",
+        "analytics": "Custom",
+        "aiFeatures": "Full Automation",
+        "mobileApp": "Yes",
+        "crm": "Custom ERP/CRM",
+        "features": [
+          "Unlimited pages and features",
+          "Custom ERP/CRM development",
+          "AI automation workflows",
+          "Native mobile app (iOS and Android)",
+          "Dedicated cloud server",
+          "Custom domain and SSL",
+          "Full SEO and marketing suite",
+          "24/7 dedicated support",
+          "Monthly strategy calls",
+          "SLA with 99.9% uptime"
+        ],
+        "idealFor": [
+          "Large enterprises",
+          "High-traffic websites",
+          "Complex business requirements",
+          "Multi-location businesses"
+        ],
+        "whatsIncluded": [
+          "Dedicated project manager",
+          "Custom API integrations",
+          "Advanced security features",
+          "Performance optimization",
+          "Disaster recovery setup",
+          "Training and documentation",
+          "Priority development queue"
+        ]
+      }
+    ],
+    "addons": [
+      {
+        "name": "Additional Domain",
+        "price": "$9.99/yr",
+        "description": "Register additional domain names",
+        "features": [
+          "Register multiple domain names",
+          "Point to existing hosting",
+          "Separate DNS management",
+          "WHOIS privacy included"
+        ]
+      },
+      {
+        "name": "Extra Email Accounts",
+        "price": "$3.99/yr each",
+        "description": "Additional professional email accounts",
+        "features": [
+          "Professional email addresses",
+          "IMAP/POP3/SMTP access",
+          "Webmail interface",
+          "Spam and virus protection"
+        ]
+      },
+      {
+        "name": "SSL Certificate (Premium)",
+        "price": "$19.99/yr",
+        "description": "Extended validation or wildcard SSL",
+        "features": [
+          "Extended Validation (EV) SSL",
+          "Wildcard SSL for subdomains",
+          "Multi-domain SSL",
+          "Priority installation"
+        ]
+      },
+      {
+        "name": "Automated Backups",
+        "price": "$7.99/yr",
+        "description": "Daily automated backups with 30-day retention",
+        "features": [
+          "Daily automated backups",
+          "30-day retention period",
+          "One-click restore",
+          "Offsite backup storage"
+        ]
+      },
+      {
+        "name": "CDN Add-on",
+        "price": "$14.99/yr",
+        "description": "Global content delivery network",
+        "features": [
+          "Global content delivery",
+          "Edge caching",
+          "DDoS protection",
+          "Performance optimization"
+        ]
+      },
+      {
+        "name": "Extra Storage (10GB)",
+        "price": "$9.99/yr",
+        "description": "Additional SSD storage for your account",
+        "features": [
+          "Additional 10GB SSD storage",
+          "Instant provisioning",
+          "Scalable as needed",
+          "No downtime to add"
+        ]
+      }
+    ],
+    "policies": {
+      "moneyBackGuarantee": {
+        "period": "14-day",
+        "details": [
+          "Full refund if not satisfied",
+          "No questions asked",
+          "Refund processed within 5-7 business days",
+          "Domain registration fees non-refundable"
+        ]
+      },
+      "annualSavings": {
+        "discount": "20%",
+        "details": [
+          "Discount applied automatically",
+          "Lock in annual rate for subscription period",
+          "Upgrade or downgrade available"
+        ]
+      },
+      "planChanges": [
+        "Upgrade anytime, pay prorated difference",
+        "Downgrade at next billing cycle",
+        "No downgrade fees",
+        "Feature access adjusts immediately for upgrades"
+      ],
+      "customPlans": [
+        "Custom enterprise plans available",
+        "Tailored to specific requirements",
+        "Volume discounts for multiple sites",
+        "Contact sales for custom pricing"
+      ],
+      "tax": {
+        "rate": "8%",
+        "appliedTo": "All transactions",
+        "details": [
+          "Calculated at checkout",
+          "Applied to monthly and annual billing",
+          "Included in displayed prices (varies by region)"
+        ],
+        "exemptions": [
+          "Tax-exempt customers can provide exemption certificate",
+          "Government entities may be exempt",
+          "Non-profit organizations may qualify"
+        ]
+      }
+    },
+    "paymentMethods": [
+      {
+        "method": "Bank Transfer",
+        "availability": "All customers"
+      },
+      {
+        "method": "JazzCash",
+        "availability": "Pakistan customers"
+      },
+      {
+        "method": "EasyPaisa",
+        "availability": "Pakistan customers"
+      },
+      {
+        "method": "Stripe",
+        "availability": "Global (Credit/Debit cards)"
+      },
+      {
+        "method": "PayPal",
+        "availability": "Global"
+      },
+      {
+        "method": "NET-30",
+        "availability": "Enterprise customers only"
+      }
+    ],
+    "currencies": [
+      {
+        "name": "US Dollar",
+        "code": "USD",
+        "symbol": "$"
+      },
+      {
+        "name": "Euro",
+        "code": "EUR",
+        "symbol": "EUR"
+      },
+      {
+        "name": "British Pound",
+        "code": "GBP",
+        "symbol": "GBP"
+      },
+      {
+        "name": "Pakistani Rupee",
+        "code": "PKR",
+        "symbol": "PKR"
+      }
+    ]
+  }
+}

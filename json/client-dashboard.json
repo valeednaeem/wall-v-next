@@ -1,0 +1,111 @@
+{
+  "name": "Client Dashboard",
+  "type": "client-dashboard",
+  "content": {
+    "modules": [
+      {
+        "name": "Dashboard Home",
+        "description": "Overview page displaying key statistics and metrics including active projects, recent invoices, open support tickets, and account activity"
+      },
+      {
+        "name": "Projects",
+        "description": "Full project lifecycle management",
+        "stages": ["Planning", "In-Progress", "Review", "Testing", "Completed"],
+        "tracks": ["milestones", "deliverables", "timelines", "team assignments", "budget"]
+      },
+      {
+        "name": "Tasks",
+        "description": "Task management with subtask breakdowns",
+        "features": ["Subtask breakdowns", "Time tracking per task", "Assignee management", "Priority and status labels", "Due date tracking"]
+      },
+      {
+        "name": "Invoices",
+        "description": "Invoice generation and management",
+        "features": ["Line item breakdowns", "Tax calculations", "Payment status tracking", "PDF generation", "Recurring invoice support"]
+      },
+      {
+        "name": "Orders",
+        "description": "Order management with full lifecycle tracking from placement through fulfillment"
+      },
+      {
+        "name": "Hosting",
+        "description": "Hosting account management for client-hosted services with resource usage monitoring and renewal tracking"
+      },
+      {
+        "name": "Domains",
+        "description": "Domain registration and DNS management supporting domain lookup, registration, transfer, and DNS record configuration"
+      },
+      {
+        "name": "Support",
+        "description": "Support ticket system with threading for submitting and tracking issues through resolution"
+      },
+      {
+        "name": "Messages",
+        "description": "Internal messaging system for direct communication between team members and clients"
+      },
+      {
+        "name": "AI Assistant",
+        "description": "Built-in AI helper for content generation, suggestions, and automated tasks"
+      },
+      {
+        "name": "Notifications",
+        "description": "In-app notification system for alerts, updates, and activity feeds"
+      },
+      {
+        "name": "Downloads",
+        "description": "Digital product download management with access history"
+      },
+      {
+        "name": "Subscriptions",
+        "description": "Recurring billing and subscription management"
+      },
+      {
+        "name": "Licenses",
+        "description": "Software licensing management with activation and renewal tracking"
+      },
+      {
+        "name": "Billing",
+        "description": "Billing overview aggregating invoices, payments, and subscription status"
+      },
+      {
+        "name": "Teams",
+        "description": "Team management with role assignments and permission controls"
+      },
+      {
+        "name": "Settings",
+        "description": "Account and site configuration",
+        "sections": ["General", "Profile", "Security", "Payment", "Pricing", "Legal"]
+      }
+    ],
+    "crm": {
+      "leads": {
+        "description": "Sales pipeline management with lead scoring based on engagement, fit, and behavior",
+        "stages": [
+          { "stage": "New", "description": "Initial lead capture" },
+          { "stage": "Contacted", "description": "First outreach completed" },
+          { "stage": "Qualified", "description": "Lead meets criteria" },
+          { "stage": "Proposal", "description": "Proposal sent" },
+          { "stage": "Negotiation", "description": "Terms under discussion" },
+          { "stage": "Won", "description": "Deal closed successfully" },
+          { "stage": "Lost", "description": "Deal lost" }
+        ]
+      },
+      "clients": {
+        "description": "Client record management supporting three types",
+        "types": ["Individual", "Business", "Enterprise"],
+        "recordIncludes": ["project history", "total spending", "communication log", "account status"]
+      },
+      "inquiries": {
+        "description": "Multi-type inquiry management with priority levels and routing rules",
+        "types": ["Contact", "Support", "Sales", "Partnership"]
+      }
+    },
+    "support": {
+      "ticketSystem": {
+        "features": ["Unique ticket numbers for tracking", "Category-based routing to appropriate teams", "Message threads with file attachments", "Internal notes not visible to clients", "First response time tracking", "Resolution time metrics", "Satisfaction rating on close"],
+        "priorityLevels": ["Low", "Medium", "High", "Urgent"]
+      },
+      "statusWorkflow": ["open", "in-progress", "waiting", "resolved", "closed"]
+    }
+  }
+}

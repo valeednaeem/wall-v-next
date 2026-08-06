@@ -1,0 +1,46 @@
+{
+  "name": "E-Commerce",
+  "type": "ecommerce",
+  "content": {
+    "productTypes": [
+      { "type": "product", "description": "Physical product" },
+      { "type": "service", "description": "Service listing" },
+      { "type": "digital", "description": "Digital download" },
+      { "type": "hosting", "description": "Hosting plan" },
+      { "type": "domain", "description": "Domain service" },
+      { "type": "saas", "description": "SaaS subscription" },
+      { "type": "ai-service", "description": "AI-powered service" }
+    ],
+    "productFeatures": [
+      "Variants - Individual pricing per variant (size, color, tier)",
+      "Badges and Labels - Visual indicators (new, sale, popular)",
+      "Ratings and Reviews - 0-5 star rating system with written reviews",
+      "Specifications - Key-value attribute pairs",
+      "SEO Metadata - Per-product title, description, and Open Graph data",
+      "Promotional Pricing - salePrice field for discounted rates",
+      "Featured Products - Highlighted items on homepage and listings",
+      "Stock Management - Inventory tracking with low-stock alerts",
+      "SKU Tracking - Unique stock-keeping unit identifiers"
+    ],
+    "shoppingCart": {
+      "persistence": "localStorage-based, survives browser sessions",
+      "taxRate": "8% applied at checkout",
+      "guestCheckout": true,
+      "currencies": ["USD", "EUR", "GBP", "PKR"]
+    },
+    "orderLifecycle": ["pending", "confirmed", "processing", "completed"],
+    "paymentMethods": [
+      { "method": "2Checkout", "status": "Implemented", "description": "Primary payment gateway" },
+      { "method": "Stripe", "status": "Stub", "description": "Placeholder implementation" },
+      { "method": "PayPal", "status": "Stub", "description": "Placeholder implementation" },
+      { "method": "Manual Payment", "status": "Implemented", "description": "Bank transfer or manual verification" },
+      { "method": "JazzCash", "status": "Mentioned", "description": "Referenced in FAQ" },
+      { "method": "EasyPaisa", "status": "Mentioned", "description": "Referenced in FAQ" }
+    ],
+    "digitalDownloads": {
+      "downloadTracking": "Records each download event per user",
+      "licenseKeys": "Unique keys generated per purchase",
+      "accessControl": "Downloads restricted to verified purchasers with valid license"
+    }
+  }
+}

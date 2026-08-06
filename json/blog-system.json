@@ -1,0 +1,56 @@
+{
+  "name": "Blog System",
+  "type": "blog-system",
+  "content": {
+    "features": [
+      {
+        "name": "Post Management",
+        "items": ["CRUD Operations", "Draft System", "Scheduling", "Publishing", "Archiving"]
+      },
+      {
+        "name": "Content Organization",
+        "categories": "Hierarchical parent-child structure with nested support",
+        "tags": "Free-form tagging with post count tracking",
+        "series": "Group related posts into logical series with navigation"
+      },
+      {
+        "name": "Engagement Features",
+        "comments": {
+          "threaded": true,
+          "moderationStatuses": ["Pending", "Approved", "Rejected", "Spam"]
+        },
+        "interactions": ["Likes", "Shares", "Bookmarks"]
+      },
+      {
+        "name": "Content Creation",
+        "richTextEditor": "TipTap-based with full toolbar and media embedding",
+        "seoFeatures": ["Custom metadata per post", "URL slug management", "Reading time auto-calculation", "Featured image support"],
+        "postRelationships": ["Related posts linking", "Cross-reference support", "Manual and automatic suggestions"]
+      },
+      {
+        "name": "Analytics and Tracking",
+        "metrics": ["View count tracking", "Like count aggregation", "Comment count display", "Reading time estimation"]
+      },
+      {
+        "name": "Technical Implementation",
+        "dataModel": "MongoDB via Mongoose with relationships, revision history, and soft delete",
+        "apiEndpoints": "RESTful API with public, dashboard, and AI generation endpoints",
+        "performance": ["Efficient querying with proper indexing", "Pagination for large collections", "Caching strategies", "Optimized image loading"]
+      }
+    ],
+    "aiContentGeneration": {
+      "model": "Anthropic Claude API (claude-sonnet-4-20250514)",
+      "capabilities": [
+        "Blog Post Generation - Create full blog posts from prompts or outlines",
+        "Product Descriptions - Generate compelling product copy",
+        "SEO Content - Produce search-engine-optimized content",
+        "Brief Summaries - Create concise post summaries and excerpts"
+      ],
+      "usageNotes": [
+        "AI-generated content should be reviewed before publishing",
+        "Content is generated in the context of the platform's niche",
+        "Generation follows brand voice and style guidelines"
+      ]
+    }
+  }
+}

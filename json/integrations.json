@@ -1,0 +1,158 @@
+{
+  "name": "Integrations",
+  "type": "integrations",
+  "content": {
+    "paymentGateways": [
+      {
+        "provider": "2Checkout",
+        "status": "Fully Implemented",
+        "features": [
+          "Buy link generation for one-time and recurring payments",
+          "HMAC signature verification for request integrity",
+          "IPN (Instant Payment Notification) webhooks for order status updates"
+        ],
+        "environmentVariables": ["TWOCHECKOUT_MERCHANT_CODE", "TWOCHECKOUT_SECRET_KEY", "TWOCHECKOUT_BUY_LINK_SECRET"],
+        "apiRoutes": ["/api/payments/2checkout/*"]
+      },
+      {
+        "provider": "Stripe",
+        "status": "Stub (Ready for activation)",
+        "features": [
+          "Content Security Policy configured for Stripe domains"
+        ],
+        "environmentVariables": ["STRIPE_SECRET_KEY", "STRIPE_PUBLISHABLE_KEY", "STRIPE_WEBHOOK_SECRET"]
+      },
+      {
+        "provider": "PayPal",
+        "status": "Stub (Ready for activation)",
+        "environmentVariables": ["PAYPAL_CLIENT_ID", "PAYPAL_CLIENT_SECRET", "PAYPAL_MODE"]
+      }
+    ],
+    "aiServices": [
+      {
+        "provider": "OpenAI",
+        "model": "gpt-4o-mini",
+        "capabilities": [
+          "Powers the AI chatbot for real-time conversation",
+          "Drives the 11-stage requirement discovery process",
+          "Handles visitor qualification and intent capture"
+        ],
+        "environmentVariable": "OPENAI_API_KEY"
+      },
+      {
+        "provider": "Anthropic",
+        "model": "claude-sonnet-4-20250514",
+        "capabilities": [
+          "Generates technical content and blog posts",
+          "SEO content optimization",
+          "Long-form document generation"
+        ],
+        "environmentVariable": "ANTHROPIC_API_KEY"
+      }
+    ],
+    "voiceAI": {
+      "provider": "Dograh",
+      "status": "Full Integration",
+      "capabilities": [
+        "Docker-based voice AI platform",
+        "Real-time voice conversations with visitors",
+        "Webhook endpoints for call events and transcripts",
+        "Widget integration via NEXT_PUBLIC_DOGRAH_WIDGET_URL"
+      ],
+      "components": [
+        "useDograh hook for React integration",
+        "FloatingVoiceWidget for floating voice button",
+        "InlineVoicePanel for embedded voice interface"
+      ],
+      "apiEndpoints": [
+        "/api/voice/* - Voice agent management",
+        "/api/webhooks/dograh - Webhook receiver"
+      ],
+      "environmentVariables": [
+        { "variable": "NEXT_PUBLIC_DOGRAH_WIDGET_URL", "description": "Widget script URL" },
+        { "variable": "DOGRAH_API_URL", "description": "Dograh API base URL (default: http://localhost:3010)" },
+        { "variable": "DOGRAH_API_KEY", "description": "API authentication key (optional)" }
+      ]
+    },
+    "oauthProviders": [
+      {
+        "provider": "Google",
+        "environmentVariables": ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"],
+        "note": "Conditionally loaded - only initialized if environment variables are set"
+      },
+      {
+        "provider": "Facebook",
+        "environmentVariables": ["FACEBOOK_CLIENT_ID", "FACEBOOK_CLIENT_SECRET"]
+      },
+      {
+        "provider": "GitHub",
+        "environmentVariables": ["GITHUB_CLIENT_ID", "GITHUB_CLIENT_SECRET"]
+      },
+      {
+        "provider": "LinkedIn",
+        "environmentVariables": ["LINKEDIN_CLIENT_ID", "LINKEDIN_CLIENT_SECRET"]
+      }
+    ],
+    "email": {
+      "provider": "Nodemailer (SMTP)",
+      "capabilities": [
+        "Transactional email sending",
+        "Password reset emails",
+        "Proposal and invoice delivery",
+        "Notification emails"
+      ],
+      "environmentVariables": ["SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASS", "SMTP_FROM"]
+    },
+    "analytics": {
+      "providers": [
+        {
+          "name": "Vercel Analytics",
+          "capabilities": ["Traffic monitoring", "Page view tracking", "User behavior insights"]
+        },
+        {
+          "name": "Vercel Speed Insights",
+          "capabilities": ["Core Web Vitals tracking", "Performance metrics", "LCP, FID, CLS monitoring"]
+        }
+      ]
+    },
+    "hostingProvider": {
+      "frontend": {
+        "provider": "Vercel",
+        "features": [
+          "Automatic deployment from GitHub master branch",
+          "Serverless functions for API routes",
+          "Edge middleware for request handling",
+          "Built-in CDN and SSL"
+        ]
+      },
+      "database": {
+        "provider": "MongoDB Atlas",
+        "connectionVariable": "MONGODB_URI",
+        "default": "mongodb://localhost:27017/wallvnext (local development)"
+      },
+      "resellerPanel": {
+        "provider": "Reseller Panel (RSP)",
+        "status": "Stub",
+        "description": "Hosting management for client projects"
+      }
+    },
+    "domainProvider": {
+      "provider": "PKNIC",
+      "status": "Stub",
+      "capabilities": [
+        "Domain registration for .pk TLD",
+        "DNS management"
+      ]
+    },
+    "cors": {
+      "allowedOrigins": [
+        { "origin": "dograh.vercel.app", "purpose": "Dograh voice platform" },
+        { "origin": "app.dograh.com", "purpose": "Dograh application" },
+        { "origin": "api.dograh.com", "purpose": "Dograh API" },
+        { "origin": "www.wall-v.com", "purpose": "Production site" },
+        { "origin": "wall-v.com", "purpose": "Production site (bare)" },
+        { "origin": "localhost:3000", "purpose": "Local development" }
+      ]
+    }
+  }
+}

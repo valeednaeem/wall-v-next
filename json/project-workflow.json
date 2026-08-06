@@ -1,0 +1,184 @@
+{
+  "name": "Project Workflow",
+  "type": "project-workflow",
+  "content": {
+    "lifecycle": "Visitor -> AI Assistant -> Requirement Discovery -> Lead -> CRM -> Proposal -> Demo -> Approval -> Payment -> Development -> Testing -> Deployment -> Maintenance",
+    "stages": [
+      {
+        "stage": 1,
+        "name": "Visitor Lands on Website",
+        "description": "Public pages served via the (website) route group",
+        "details": [
+          "SEO-optimized with dynamic metadata, JSON-LD structured data, and sitemap",
+          "Entry points include home, blog, products, services, and pricing pages"
+        ]
+      },
+      {
+        "stage": 2,
+        "name": "AI Assistant Engages",
+        "description": "Voice or chat widget activates on the site",
+        "details": [
+          "Dograh voice agent handles real-time voice conversations",
+          "OpenAI-powered chatbot handles text-based conversations",
+          "Initial qualification questions are asked",
+          "Visitor intent is captured and categorized"
+        ]
+      },
+      {
+        "stage": 3,
+        "name": "Requirement Discovery",
+        "description": "11-Stage Conversation guided by AI assistant",
+        "details": [
+          "Project Type - Website, Mobile App, E-Commerce, CRM, AI Chatbot, AI Voice Agent",
+          "Business Goals - What the client wants to achieve",
+          "Target Audience - Who the product is for",
+          "Feature Requirements - Core features and functionality",
+          "Design Preferences - Visual style, branding, references",
+          "Technical Requirements - Integrations, platforms, constraints",
+          "Timeline - Expected delivery dates",
+          "Budget Range - Investment expectations",
+          "Existing Assets - Current websites, apps, or systems",
+          "Competitor Analysis - Market positioning",
+          "Success Metrics - How success will be measured"
+        ]
+      },
+      {
+        "stage": 4,
+        "name": "Lead Created in CRM",
+        "description": "Discovery responses structured and stored with lead scoring",
+        "details": [
+          "Lead scoring based on budget alignment, timeline urgency, project complexity, and decision-maker status",
+          "Lead statuses: new, qualified, proposal-sent, negotiation, won, lost"
+        ]
+      },
+      {
+        "stage": 5,
+        "name": "Proposal Generated",
+        "description": "AI generates detailed proposal based on discovery data",
+        "details": [
+          "Includes scope, timeline, pricing, and terms",
+          "Pricing calculated using project type and feature set",
+          "Formatted as professional document",
+          "Sent to client via email or client portal"
+        ]
+      },
+      {
+        "stage": 6,
+        "name": "Demo Generated",
+        "description": "AI HTML pages created to demonstrate proposed solution",
+        "details": [
+          "Visual mockups of key pages and features",
+          "Interactive prototypes where applicable",
+          "Client can review and provide feedback"
+        ]
+      },
+      {
+        "stage": 7,
+        "name": "Client Approval",
+        "description": "Client reviews proposal and demo",
+        "details": [
+          "Feedback is captured and incorporated",
+          "Revisions are made if needed",
+          "Final approval is recorded in the system"
+        ]
+      },
+      {
+        "stage": 8,
+        "name": "Payment Processing",
+        "description": "Invoice generated and payment collected via configured gateway",
+        "details": [
+          "2Checkout - Fully implemented with buy links, HMAC verification, and IPN webhooks",
+          "Stripe - Stub, configured and ready for activation",
+          "PayPal - Stub, configured and ready for activation",
+          "Payment status tracked in CRM",
+          "Receipts sent via email"
+        ]
+      },
+      {
+        "stage": 9,
+        "name": "Development with Milestones",
+        "description": "Project broken into milestones based on project type",
+        "details": [
+          "Each milestone has a deliverable, timeline, and payment trigger",
+          "Progress tracked in dashboard",
+          "Client receives updates at each milestone completion"
+        ]
+      },
+      {
+        "stage": 10,
+        "name": "Testing and QA",
+        "description": "Comprehensive testing against requirements",
+        "details": [
+          "Functional testing against requirements",
+          "Cross-browser and cross-device testing",
+          "Performance optimization",
+          "Security review",
+          "Client user acceptance testing (UAT)"
+        ]
+      },
+      {
+        "stage": 11,
+        "name": "Deployment to Production",
+        "description": "Code deployed to production environment",
+        "details": [
+          "Domain and DNS configuration",
+          "SSL certificate setup",
+          "Monitoring and alerting configured",
+          "Client handoff and training"
+        ]
+      },
+      {
+        "stage": 12,
+        "name": "Ongoing Maintenance and Support",
+        "description": "Post-launch support and enhancements",
+        "details": [
+          "Bug fixes and patches",
+          "Security updates",
+          "Performance monitoring",
+          "Feature enhancements",
+          "Support tickets via CRM"
+        ]
+      }
+    ],
+    "milestoneStructure": {
+      "website": [
+        { "milestone": "Discovery", "percentage": 15, "description": "Requirements gathering, sitemap, wireframes" },
+        { "milestone": "Design", "percentage": 20, "description": "UI/UX design, branding, mockups" },
+        { "milestone": "Development", "percentage": 35, "description": "Frontend and backend implementation" },
+        { "milestone": "Content / SEO", "percentage": 15, "description": "Content creation, SEO optimization, copywriting" },
+        { "milestone": "Testing / Launch", "percentage": 15, "description": "QA, bug fixes, deployment, go-live" }
+      ],
+      "mobileApp": [
+        { "milestone": "Discovery / Design", "percentage": 20, "description": "Requirements, wireframes, UI/UX design" },
+        { "milestone": "Core Development", "percentage": 40, "description": "App development, core features" },
+        { "milestone": "Integration / Testing", "percentage": 25, "description": "API integrations, testing, performance" },
+        { "milestone": "Launch", "percentage": 15, "description": "App store submission, deployment" }
+      ],
+      "ecommerce": [
+        { "milestone": "Discovery / Design", "percentage": 15, "description": "Requirements, catalog structure, design" },
+        { "milestone": "Store Setup", "percentage": 25, "description": "Product setup, categories, inventory" },
+        { "milestone": "Payment / Checkout", "percentage": 25, "description": "Payment gateway, checkout flow, shipping" },
+        { "milestone": "Features / SEO", "percentage": 20, "description": "Custom features, SEO, marketing tools" },
+        { "milestone": "Testing / Launch", "percentage": 15, "description": "QA, load testing, deployment" }
+      ],
+      "crm": [
+        { "milestone": "Requirements / Design", "percentage": 15, "description": "Workflow mapping, data model, UI design" },
+        { "milestone": "Core Build", "percentage": 35, "description": "Core CRM features, data management" },
+        { "milestone": "Integrations", "percentage": 25, "description": "Third-party integrations, API connections" },
+        { "milestone": "Training / Launch", "percentage": 25, "description": "User training, data migration, go-live" }
+      ],
+      "aiChatbot": [
+        { "milestone": "Discovery / Training", "percentage": 20, "description": "Use case definition, training data prep" },
+        { "milestone": "Bot Development", "percentage": 35, "description": "Conversation flows, AI model training" },
+        { "milestone": "Integration", "percentage": 25, "description": "Website integration, API connections" },
+        { "milestone": "Optimization / Launch", "percentage": 20, "description": "Performance tuning, analytics setup, go-live" }
+      ],
+      "aiVoiceAgent": [
+        { "milestone": "Discovery / Design", "percentage": 15, "description": "Voice UX design, conversation mapping" },
+        { "milestone": "Agent Development", "percentage": 35, "description": "Voice agent setup, prompt engineering" },
+        { "milestone": "Integration / Testing", "percentage": 25, "description": "Phone/SIP integration, testing" },
+        { "milestone": "Optimization / Launch", "percentage": 20, "description": "Voice quality tuning, analytics, go-live" }
+      ]
+    }
+  }
+}

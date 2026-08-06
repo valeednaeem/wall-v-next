@@ -1,0 +1,371 @@
+{
+  "name": "Services Catalog",
+  "type": "services",
+  "content": {
+    "services": [
+      {
+        "name": "Web Development",
+        "key": "web-development",
+        "category": "Development",
+        "priceType": "project",
+        "basePrice": 1999,
+        "tiers": [
+          {
+            "name": "Basic",
+            "price": 1999,
+            "features": [
+              "Up to 5 pages",
+              "Responsive design",
+              "Contact form",
+              "Basic SEO"
+            ],
+            "support": "1 month"
+          },
+          {
+            "name": "Standard",
+            "price": 4999,
+            "features": [
+              "Up to 15 pages",
+              "Custom design",
+              "CMS integration",
+              "Advanced SEO"
+            ],
+            "support": "3 months"
+          },
+          {
+            "name": "Premium",
+            "price": 9999,
+            "features": [
+              "Unlimited pages",
+              "Full-stack",
+              "Database integration",
+              "Admin dashboard"
+            ],
+            "support": "6 months"
+          }
+        ],
+        "features": []
+      },
+      {
+        "name": "Mobile Applications",
+        "key": "mobile-applications",
+        "category": "Development",
+        "priceType": "project",
+        "basePrice": 4999,
+        "tiers": [
+          {
+            "name": "MVP",
+            "price": 4999,
+            "features": [
+              "Cross-platform (React Native)",
+              "Core features",
+              "Push notifications",
+              "App Store submission"
+            ],
+            "support": "1 month"
+          },
+          {
+            "name": "Standard",
+            "price": 9999,
+            "features": [
+              "Cross-platform + native feel",
+              "Offline support",
+              "API integrations"
+            ],
+            "support": "3 months"
+          },
+          {
+            "name": "Premium",
+            "price": 19999,
+            "features": [
+              "Native iOS + Android",
+              "Custom animations",
+              "Real-time features"
+            ],
+            "support": "6 months"
+          }
+        ],
+        "features": []
+      },
+      {
+        "name": "E-Commerce",
+        "key": "e-commerce",
+        "category": "Development",
+        "priceType": "project",
+        "basePrice": 3999,
+        "tiers": [
+          {
+            "name": "Starter",
+            "price": 3999,
+            "features": [
+              "Up to 50 products",
+              "Stripe integration",
+              "Order management",
+              "Basic analytics"
+            ],
+            "support": "1 month"
+          },
+          {
+            "name": "Growth",
+            "price": 7999,
+            "features": [
+              "Up to 500 products",
+              "Multi-payment",
+              "Inventory management",
+              "Discounts",
+              "Email integration"
+            ],
+            "support": "3 months"
+          },
+          {
+            "name": "Enterprise",
+            "price": 14999,
+            "features": [
+              "Unlimited products",
+              "Custom checkout",
+              "ERP integration",
+              "B2B features",
+              "Priority support"
+            ],
+            "support": "6 months"
+          }
+        ],
+        "features": []
+      },
+      {
+        "name": "CRM Systems",
+        "key": "crm-systems",
+        "category": "Enterprise",
+        "priceType": "project",
+        "basePrice": 3499,
+        "tiers": [],
+        "features": [
+          "Lead management and tracking",
+          "Sales pipeline visualization",
+          "Client communication history",
+          "Invoicing and billing",
+          "Reporting and analytics dashboards"
+        ]
+      },
+      {
+        "name": "ERP Systems",
+        "key": "erp-systems",
+        "category": "Enterprise",
+        "priceType": "project",
+        "basePrice": 7999,
+        "tiers": [],
+        "features": [
+          "Financial management and accounting",
+          "Human resources management",
+          "Inventory and supply chain management",
+          "Real-time dashboards and reporting",
+          "Third-party integrations (accounting software, payment gateways, etc.)"
+        ]
+      },
+      {
+        "name": "SaaS Development",
+        "key": "saas-development",
+        "category": "Development",
+        "priceType": "project",
+        "basePrice": 14999,
+        "tiers": [],
+        "features": [
+          "Multi-tenant architecture",
+          "Subscription billing integration",
+          "Role-based access control (RBAC)",
+          "Admin dashboard and user management",
+          "RESTful API and documentation"
+        ]
+      },
+      {
+        "name": "AI Chatbot",
+        "key": "ai-chatbot",
+        "category": "AI",
+        "priceType": "project",
+        "basePrice": 2499,
+        "tiers": [
+          {
+            "name": "Basic",
+            "price": 2499,
+            "features": [
+              "Rule-based + AI hybrid",
+              "FAQ training",
+              "Web widget",
+              "Basic analytics"
+            ],
+            "support": "1 month"
+          },
+          {
+            "name": "Professional",
+            "price": 4999,
+            "features": [
+              "RAG architecture",
+              "Custom knowledge base",
+              "CRM integration",
+              "Multi-language",
+              "Advanced analytics"
+            ],
+            "support": "3 months"
+          },
+          {
+            "name": "Enterprise",
+            "price": 9999,
+            "features": [
+              "Fine-tuned LLM",
+              "Multi-system integration",
+              "Human-in-the-loop",
+              "Custom workflows",
+              "Priority support"
+            ],
+            "support": "6 months"
+          }
+        ],
+        "features": []
+      },
+      {
+        "name": "AI Voice Agent",
+        "key": "ai-voice-agent",
+        "category": "AI",
+        "priceType": "project",
+        "basePrice": 3999,
+        "tiers": [
+          {
+            "name": "Starter",
+            "price": 3999,
+            "features": [
+              "Single agent",
+              "Phone answering",
+              "Basic call routing",
+              "Transcripts"
+            ],
+            "support": "1 month"
+          },
+          {
+            "name": "Professional",
+            "price": 7999,
+            "features": [
+              "Multi-agent",
+              "CRM integration",
+              "Appointment booking",
+              "Call analytics"
+            ],
+            "support": "3 months"
+          },
+          {
+            "name": "Enterprise",
+            "price": 14999,
+            "features": [
+              "Custom deployment",
+              "Custom voice cloning",
+              "Multi-language",
+              "Complex workflows",
+              "API access",
+              "Dedicated support"
+            ],
+            "support": "6 months"
+          }
+        ],
+        "features": []
+      },
+      {
+        "name": "AI Process Automation",
+        "key": "ai-process-automation",
+        "category": "AI",
+        "priceType": "project",
+        "basePrice": 1999,
+        "tiers": [],
+        "features": [
+          "Workflow automation and orchestration",
+          "Data extraction and transformation",
+          "Document processing and classification",
+          "Integration with existing tools and platforms"
+        ]
+      },
+      {
+        "name": "Digital Marketing",
+        "key": "digital-marketing",
+        "category": "Marketing",
+        "priceType": "monthly",
+        "basePrice": 999,
+        "tiers": [
+          {
+            "name": "Starter",
+            "price": 999,
+            "features": [
+              "Keyword research",
+              "On-page SEO",
+              "Monthly reporting"
+            ],
+            "support": "Standard"
+          },
+          {
+            "name": "Growth",
+            "price": 1999,
+            "features": [
+              "Google Ads management",
+              "Social media marketing",
+              "Content strategy"
+            ],
+            "support": "Standard"
+          },
+          {
+            "name": "Enterprise",
+            "price": 3999,
+            "features": [
+              "Multi-channel campaigns",
+              "Conversion rate optimization",
+              "Dedicated strategist"
+            ],
+            "support": "Priority"
+          }
+        ],
+        "features": []
+      },
+      {
+        "name": "UI/UX Design",
+        "key": "ui-ux-design",
+        "category": "Design",
+        "priceType": "project",
+        "basePrice": 1499,
+        "tiers": [],
+        "features": [
+          "Wireframing and information architecture",
+          "Interactive prototyping",
+          "Brand identity and visual design",
+          "Design system creation and documentation",
+          "Usability testing and iteration"
+        ]
+      },
+      {
+        "name": "Technical Consulting",
+        "key": "technical-consulting",
+        "category": "Consulting",
+        "priceType": "hourly",
+        "basePrice": 175,
+        "tiers": [],
+        "features": [
+          "Architecture review and optimization",
+          "Technology selection and evaluation",
+          "Performance audit and tuning",
+          "Security review and hardening",
+          "Team mentoring and training"
+        ]
+      },
+      {
+        "name": "DevOps & Cloud",
+        "key": "devops-cloud",
+        "category": "Infrastructure",
+        "priceType": "hourly",
+        "basePrice": 150,
+        "tiers": [],
+        "features": [
+          "AWS / Google Cloud Platform / Azure deployment",
+          "CI/CD pipeline setup and optimization",
+          "Docker and Kubernetes containerization",
+          "Monitoring, alerting, and logging",
+          "Security audit and compliance"
+        ]
+      }
+    ]
+  }
+}
