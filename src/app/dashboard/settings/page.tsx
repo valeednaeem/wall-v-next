@@ -29,10 +29,8 @@ interface SEOSettings {
 interface APIKeys {
   openaiApiKey: string;
   anthropicApiKey: string;
-  stripePublicKey: string;
-  stripeSecretKey: string;
-  paypalClientId: string;
-  paypalClientSecret: string;
+  twocheckoutMerchantCode: string;
+  twocheckoutSecretKey: string;
   smtpHost: string;
   smtpPort: string;
   smtpUser: string;
@@ -112,10 +110,8 @@ export default function GeneralSettingsPage() {
   const [apiKeys, setApiKeys] = useState<APIKeys>({
     openaiApiKey: "",
     anthropicApiKey: "",
-    stripePublicKey: "",
-    stripeSecretKey: "",
-    paypalClientId: "",
-    paypalClientSecret: "",
+    twocheckoutMerchantCode: "",
+    twocheckoutSecretKey: "",
     smtpHost: "smtp.gmail.com",
     smtpPort: "587",
     smtpUser: "",
@@ -493,12 +489,10 @@ BEHAVIOR:
           </div>
 
           <div className="rounded-lg border p-6 space-y-4">
-            <h3 className="font-semibold">Payment Gateways</h3>
+            <h3 className="font-semibold">Payment Gateway</h3>
             <div className="grid md:grid-cols-2 gap-4">
-              <SecretInput label="Stripe Public Key" value={apiKeys.stripePublicKey} onChange={(v) => setApiKeys({ ...apiKeys, stripePublicKey: v })} placeholder="pk_..." />
-              <SecretInput label="Stripe Secret Key" value={apiKeys.stripeSecretKey} onChange={(v) => setApiKeys({ ...apiKeys, stripeSecretKey: v })} placeholder="sk_..." />
-              <SecretInput label="PayPal Client ID" value={apiKeys.paypalClientId} onChange={(v) => setApiKeys({ ...apiKeys, paypalClientId: v })} />
-              <SecretInput label="PayPal Client Secret" value={apiKeys.paypalClientSecret} onChange={(v) => setApiKeys({ ...apiKeys, paypalClientSecret: v })} />
+              <SecretInput label="2Checkout Merchant Code" value={apiKeys.twocheckoutMerchantCode} onChange={(v) => setApiKeys({ ...apiKeys, twocheckoutMerchantCode: v })} placeholder="Merchant code from 2Checkout" />
+              <SecretInput label="2Checkout Secret Key" value={apiKeys.twocheckoutSecretKey} onChange={(v) => setApiKeys({ ...apiKeys, twocheckoutSecretKey: v })} placeholder="Secret key from 2Checkout" />
             </div>
           </div>
 
