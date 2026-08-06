@@ -129,7 +129,7 @@ export async function POST(request: Request) {
     });
 
     // Send email notifications (non-blocking)
-    const previewUrl = `${process.env.NEXT_PUBLIC_APP_URL || "https://wall-v-next-six.vercel.app"}/preview/${project._id}`;
+    const previewUrl = `${process.env.NEXT_PUBLIC_APP_URL || "https://www.wall-v.com"}/preview/${project._id}`;
     if (clientEmail) {
       const clientEmailData = projectCreatedEmail(name, clientName || "there", previewUrl);
       sendEmail({ ...clientEmailData, to: clientEmail }).catch(() => {});

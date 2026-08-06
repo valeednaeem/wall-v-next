@@ -4,6 +4,7 @@ const ALLOWED_ORIGINS = [
   "https://app.dograh.com",
   "https://api.dograh.com",
   "https://wall-v-next-six.vercel.app",
+  "https://www.wall-v.com",
   "https://wall-v.com",
   "http://localhost:3000",
 ];

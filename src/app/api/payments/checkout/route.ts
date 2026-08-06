@@ -30,7 +30,7 @@ export async function POST(request: Request) {
 
     await connectToDatabase();
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://wall-v-next-six.vercel.app";
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.wall-v.com";
     const orderNumber = generateOrderNumber();
 
     if (type === "product") {

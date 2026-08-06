@@ -70,7 +70,7 @@ export async function generateLegalMetadata(slug: string, fallbackTitle: string)
   const seo = data.seo as Record<string, string> | null;
   const title = seo?.metaTitle || data.title;
   const description = seo?.metaDescription || "";
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://wall-v-next-six.vercel.app";
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.wall-v.com";
 
   return {
     title: `${title} | Wall-V`,

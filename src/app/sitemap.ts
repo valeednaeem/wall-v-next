@@ -5,7 +5,7 @@ import Post from "@/models/blog-post";
 import Product from "@/models/product";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://wall-v-next-six.vercel.app";
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.wall-v.com";
 
   const entries: MetadataRoute.Sitemap = [
     {
