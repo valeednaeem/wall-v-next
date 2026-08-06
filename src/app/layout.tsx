@@ -4,6 +4,7 @@ import "./globals.css";
 import { cn } from "@/lib/utils";
 import { Providers } from "@/components/providers";
 import { CookieConsent } from "@/components/cookie-consent";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 const inter = Inter({
   weight: ["400", "500", "600", "700"],
@@ -65,6 +66,7 @@ export default function RootLayout({
       <body className="min-h-screen bg-white">
         <Providers>{children}</Providers>
         <CookieConsent />
+        <SpeedInsights />
       </body>
     </html>
   );
