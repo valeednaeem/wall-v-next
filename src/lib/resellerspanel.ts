@@ -249,21 +249,5 @@ export async function getAvailableTLDs(): Promise<
 export async function getHostingPlans(): Promise<
   Array<{ id: string; name: string; price: number; renewalPrice: number; description: string; features: string[] }>
 > {
-  const result = await apiCall("hosting_plans");
-
-  if (!result.success) {
-    return [];
-  }
-
-  const data = result.data as Record<string, unknown>;
-  const plans = data.plans as Array<Record<string, unknown>>;
-
-  return plans.map((plan) => ({
-    id: plan.id as string,
-    name: plan.name as string,
-    price: parseFloat(plan.price as string) || 0,
-    renewalPrice: parseFloat(plan.renewal_price as string) || parseFloat(plan.price as string) || 0,
-    description: plan.description as string,
-    features: (plan.features as string[]) || [],
-  }));
+  return [];
 }
