@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
-import { DomainSearch } from "@/components/domains/domain-search";
 import { HostingPlans } from "@/components/hosting/hosting-plans";
+import { DomainSearch } from "@/components/domains/domain-search";
 
 export const metadata: Metadata = {
   title: "Web Hosting & Domain Services",
   description:
-    "Reliable web hosting with 99.9% uptime. Shared, VPS, and cloud hosting plans. Free SSL, daily backups, 24/7 support.",
+    "Reliable web hosting with 99.9% uptime. Shared, VPS, and cloud hosting plans. Free SSL, daily backups, 24/7 support. Register domains at competitive prices.",
 };
 
 const faqs = [
@@ -31,7 +31,7 @@ const faqs = [
   },
 ];
 
-export default function HostingPage() {
+export default function HostingDomainPage() {
   return (
     <div className="container mx-auto px-4 py-16">
       {/* Hero */}
@@ -41,7 +41,7 @@ export default function HostingPage() {
         </h1>
         <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
           Enterprise-grade hosting with 99.9% uptime, free SSL, and 24/7
-          support.
+          support. Register your perfect domain from 70+ TLDs.
         </p>
       </div>
 

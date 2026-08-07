@@ -139,7 +139,7 @@ export default function HomePage() {
                   ))}
                 </ul>
                 <Link
-                  href="/hosting"
+                  href="/hosting-domain"
                   className={`block w-full text-center py-2.5 rounded-lg font-medium text-sm transition-colors ${
                     idx === 1
                       ? "bg-primary text-primary-foreground hover:bg-primary/90"
@@ -152,7 +152,7 @@ export default function HomePage() {
             ))}
           </div>
           <div className="text-center mt-8">
-            <Link href="/hosting" className="text-sm font-medium text-primary hover:underline">
+            <Link href="/hosting-domain" className="text-sm font-medium text-primary hover:underline">
               View all hosting plans →
             </Link>
           </div>

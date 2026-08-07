@@ -8,8 +8,7 @@ const footerSections = [
     title: "Services",
     links: [
       { name: "AI Automation", href: "/services" },
-      { name: "Web Hosting", href: "/hosting" },
-      { name: "Domain Names", href: "/hosting" },
+      { name: "Web Hosting & Domains", href: "/hosting-domain" },
       { name: "Web Development", href: "/services" },
       { name: "ERP & CRM", href: "/services" },
       { name: "Maintenance", href: "/contact" },

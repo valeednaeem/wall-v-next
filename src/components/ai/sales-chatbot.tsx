@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Bot, User, Sparkles, X, MessageSquare, Loader2, Globe, CheckCircle, Eye, CreditCard, UserCheck } from "lucide-react";
+import { Send, Bot, User, Sparkles, X, MessageSquare, Loader2, Globe, CheckCircle, Eye, CreditCard, UserCheck, Image as ImageIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Message {
@@ -25,6 +25,11 @@ interface DemoResult {
   previewUrl: string;
   demoId: string;
   projectType: string;
+}
+
+interface ImageResult {
+  imageUrl: string;
+  revisedPrompt?: string;
 }
 
 const LANGUAGES = [
@@ -73,6 +78,7 @@ export function SalesChatbot() {
   const [sessionId, setSessionId] = useState("");
   const [conversationState, setConversationState] = useState<DiscoveryState | null>(null);
   const [demoResult, setDemoResult] = useState<DemoResult | null>(null);
+  const [generatedImage, setGeneratedImage] = useState<ImageResult | null>(null);
   const [toolLoading, setToolLoading] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -123,7 +129,7 @@ export function SalesChatbot() {
       setMessages([{
         role: "assistant",
         content: greetings[language] || greetings.en,
-        suggestions: ["I need a website", "I need a mobile app", "I need AI/automation", "I need hosting", "I have an idea"],
+        suggestions: ["I need a website", "I need a mobile app", "I need AI/automation", "I need hosting", "Generate image", "I have an idea"],
       }]);
     }
   }, [isOpen, language]);
@@ -166,10 +172,10 @@ export function SalesChatbot() {
         const action = data.data.action;
 
         if (stage === "recommend-solution" || stage === "identify-scope" || stage === "budget-timeline") {
-          suggestions = [...suggestions, "Generate a demo", "Get a quote", "Check my account"];
+          suggestions = [...suggestions, "Generate a demo", "Generate image", "Get a quote", "Check my account"];
         }
         if (action === "confirm") {
-          suggestions = [...suggestions, "Generate a demo", "Get a quote"];
+          suggestions = [...suggestions, "Generate a demo", "Generate image", "Get a quote"];
         }
 
         const aiMessage: Message = {
@@ -343,6 +349,47 @@ export function SalesChatbot() {
     }
   }, [conversationState]);
 
+  const handleGenerateImage = useCallback(async (prompt?: string) => {
+    const imagePrompt = prompt || "A professional logo for a modern tech company";
+    setToolLoading("image");
+    setGeneratedImage(null);
+    try {
+      const res = await fetch("/api/ai/generate-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt: imagePrompt,
+          size: "1024x1024",
+          quality: "medium",
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setGeneratedImage({
+          imageUrl: data.data.imageUrl,
+          revisedPrompt: data.data.revisedPrompt,
+        });
+        setMessages((prev) => [...prev, {
+          role: "assistant",
+          content: `Here's your generated image! I used this prompt: "${imagePrompt}"`,
+          suggestions: ["Generate another", "Looks great!", "I need changes"],
+        }]);
+      } else {
+        setMessages((prev) => [...prev, {
+          role: "assistant",
+          content: "I had trouble generating the image. Could you try describing what you want differently?",
+        }]);
+      }
+    } catch {
+      setMessages((prev) => [...prev, {
+        role: "assistant",
+        content: "Failed to generate image. Please try again.",
+      }]);
+    } finally {
+      setToolLoading(null);
+    }
+  }, []);
+
   const handleSaveInquiry = useCallback(async () => {
     if (inquirySaved) return;
     setIsLoading(true);
@@ -410,6 +457,17 @@ export function SalesChatbot() {
     }
     if (suggestion === "Check my account") {
       handleCheckAccount();
+      return;
+    }
+    if (suggestion === "Generate image" || suggestion === "Generate another") {
+      handleGenerateImage();
+      return;
+    }
+    if (suggestion === "I need changes" && generatedImage) {
+      setMessages((prev) => [...prev, {
+        role: "assistant",
+        content: "What would you like me to change about the image? Describe the new version you'd like.",
+      }]);
       return;
     }
 
@@ -535,7 +593,7 @@ export function SalesChatbot() {
     }
 
     sendMessage(suggestion);
-  }, [conversationState, handleGenerateDemo, handleBilling, handleCheckAccount, sendMessage]);
+  }, [conversationState, handleGenerateDemo, handleBilling, handleCheckAccount, handleGenerateImage, generatedImage, sendMessage]);
 
   return (
     <>
@@ -641,11 +699,37 @@ export function SalesChatbot() {
               </div>
             )}
 
+            {/* Generated Image */}
+            {generatedImage && (
+              <div className="ml-10 border rounded-xl overflow-hidden bg-white shadow-sm">
+                <div className="px-3 py-2 bg-muted/50 flex items-center justify-between">
+                  <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                    <ImageIcon className="h-3 w-3" />
+                    Generated Image
+                  </span>
+                  <a
+                    href={generatedImage.imageUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-primary hover:underline flex items-center gap-1"
+                  >
+                    <Eye className="h-3 w-3" />
+                    Open full size
+                  </a>
+                </div>
+                <img
+                  src={generatedImage.imageUrl}
+                  alt="Generated image"
+                  className="w-full h-auto"
+                />
+              </div>
+            )}
+
             {/* Suggestion Buttons */}
             {messages.length > 0 && !isLoading && !toolLoading && messages[messages.length - 1].suggestions && (
               <div className="flex flex-wrap gap-2 ml-10">
                 {messages[messages.length - 1].suggestions!.map((suggestion) => {
-                  const isTool = ["Generate a demo", "Get a quote", "Get a quote for this", "Check my account"].includes(suggestion);
+                  const isTool = ["Generate a demo", "Get a quote", "Get a quote for this", "Check my account", "Generate image", "Generate another"].includes(suggestion);
                   return (
                     <button
                       key={suggestion}
@@ -661,6 +745,8 @@ export function SalesChatbot() {
                       {suggestion === "Get a quote" && <CreditCard className="h-3 w-3 inline mr-1" />}
                       {suggestion === "Get a quote for this" && <CreditCard className="h-3 w-3 inline mr-1" />}
                       {suggestion === "Check my account" && <UserCheck className="h-3 w-3 inline mr-1" />}
+                      {suggestion === "Generate image" && <ImageIcon className="h-3 w-3 inline mr-1" />}
+                      {suggestion === "Generate another" && <ImageIcon className="h-3 w-3 inline mr-1" />}
                       {suggestion}
                     </button>
                   );

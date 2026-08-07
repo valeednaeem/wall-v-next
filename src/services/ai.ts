@@ -175,3 +175,69 @@ Be specific, professional, and actionable. Focus on technical feasibility.`;
 
   return ai.generateContent(prompt);
 }
+
+// ─── Image Generation (OpenAI gpt-image-2) ──────────────────────────────────
+
+export interface ImageGenerationOptions {
+  prompt: string;
+  size?: "1024x1024" | "1536x1024" | "1024x1536" | "auto";
+  quality?: "low" | "medium" | "high";
+  background?: "auto" | "transparent" | "opaque";
+}
+
+export interface ImageGenerationResult {
+  success: boolean;
+  imageUrl?: string;
+  revisedPrompt?: string;
+  error?: string;
+}
+
+export async function generateImage(options: ImageGenerationOptions): Promise<ImageGenerationResult> {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    return { success: false, error: "OPENAI_API_KEY not configured" };
+  }
+
+  try {
+    const response = await fetch("https://api.openai.com/v1/images/generations", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: "gpt-image-2",
+        prompt: options.prompt,
+        n: 1,
+        size: options.size || "1024x1024",
+        quality: options.quality || "medium",
+        background: options.background || "auto",
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return {
+        success: false,
+        error: data.error?.message || `Image generation failed (${response.status})`,
+      };
+    }
+
+    const image = data.data?.[0];
+    if (!image?.url) {
+      return { success: false, error: "No image returned from API" };
+    }
+
+    return {
+      success: true,
+      imageUrl: image.url,
+      revisedPrompt: image.revised_prompt,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Image generation failed",
+    };
+  }
+}
