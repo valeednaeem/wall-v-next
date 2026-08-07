@@ -21,20 +21,16 @@ interface DiscoveryState {
   turnCount: number;
 }
 
-interface DemoResult {
-  previewUrl: string;
-  demoId: string;
-  projectType: string;
-}
-
 interface ImageResult {
   imageUrl: string;
   revisedPrompt?: string;
 }
 
-interface CodeResult {
-  code: string;
-  explanation?: string;
+interface GeneratedAsset {
+  type: "image" | "code";
+  imageUrl?: string;
+  code?: string;
+  filename?: string;
 }
 
 const LANGUAGES = [
@@ -82,9 +78,7 @@ export function SalesChatbot() {
   const [inquirySaved, setInquirySaved] = useState(false);
   const [sessionId, setSessionId] = useState("");
   const [conversationState, setConversationState] = useState<DiscoveryState | null>(null);
-  const [demoResult, setDemoResult] = useState<DemoResult | null>(null);
-  const [generatedImage, setGeneratedImage] = useState<ImageResult | null>(null);
-  const [generatedCode, setGeneratedCode] = useState<CodeResult | null>(null);
+  const [generatedAssets, setGeneratedAssets] = useState<GeneratedAsset[]>([]);
   const [toolLoading, setToolLoading] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -112,7 +106,7 @@ export function SalesChatbot() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, []);
 
-  useEffect(() => { scrollToBottom(); }, [messages, scrollToBottom, demoResult]);
+  useEffect(() => { scrollToBottom(); }, [messages, scrollToBottom, generatedAssets]);
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -135,7 +129,7 @@ export function SalesChatbot() {
       setMessages([{
         role: "assistant",
         content: greetings[language] || greetings.en,
-        suggestions: ["I need a website", "I need a mobile app", "I need AI/automation", "I need hosting", "Generate image", "Generate code", "I have an idea"],
+        suggestions: ["I need a website", "I need a mobile app", "I need AI/automation", "I need hosting", "Generate project", "I have an idea"],
       }]);
     }
   }, [isOpen, language]);
@@ -178,10 +172,10 @@ export function SalesChatbot() {
         const action = data.data.action;
 
         if (stage === "recommend-solution" || stage === "identify-scope" || stage === "budget-timeline") {
-          suggestions = [...suggestions, "Generate a demo", "Generate image", "Generate code", "Get a quote", "Check my account"];
+          suggestions = [...suggestions, "Generate project", "Generate image", "Generate code", "Get a quote", "Check my account"];
         }
         if (action === "confirm") {
-          suggestions = [...suggestions, "Generate a demo", "Generate image", "Generate code", "Get a quote"];
+          suggestions = [...suggestions, "Generate project", "Generate image", "Generate code", "Get a quote"];
         }
 
         const aiMessage: Message = {
@@ -210,53 +204,6 @@ export function SalesChatbot() {
   }, [input, isLoading, messages, language, sessionId, conversationState]);
 
   // Tool handlers
-  const handleGenerateDemo = useCallback(async () => {
-    if (!conversationState?.brief) return;
-    setToolLoading("demo");
-    try {
-      const brief = conversationState.brief;
-      const res = await fetch("/api/voice-agent/generate-demo", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          project_type: (brief.projectType as string) || "website",
-          project_name: (brief.title as string) || "My Project",
-          features: (brief.features as string[]) || [],
-          client_name: (brief as unknown as Record<string, unknown>)._contactName as string || "Client",
-          client_email: (brief as unknown as Record<string, unknown>)._contactEmail as string || "",
-          client_phone: (brief as unknown as Record<string, unknown>)._contactPhone as string || "",
-          caller_name: (brief as unknown as Record<string, unknown>)._contactName as string || "Client",
-          caller_phone: (brief as unknown as Record<string, unknown>)._contactPhone as string || "",
-        }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setDemoResult({
-          previewUrl: data.data.preview_url,
-          demoId: data.data.demo_id,
-          projectType: data.data.project_type || "website",
-        });
-        setMessages((prev) => [...prev, {
-          role: "assistant",
-          content: `Here's your demo preview! You can view it below.`,
-          suggestions: ["Looks great!", "Get a quote for this", "I need changes"],
-        }]);
-      } else {
-        setMessages((prev) => [...prev, {
-          role: "assistant",
-          content: "I had trouble generating the demo. Let me try a different approach — could you describe what you'd like to see?",
-        }]);
-      }
-    } catch {
-      setMessages((prev) => [...prev, {
-        role: "assistant",
-        content: "Failed to generate demo. Please try again.",
-      }]);
-    } finally {
-      setToolLoading(null);
-    }
-  }, [conversationState]);
-
   const handleBilling = useCallback(async () => {
     if (!conversationState?.brief) return;
     setToolLoading("billing")
@@ -290,7 +237,7 @@ export function SalesChatbot() {
         setMessages((prev) => [...prev, {
           role: "assistant",
           content: summary,
-          suggestions: ["Generate a demo", "Looks good, save it", "I need changes"],
+          suggestions: ["Generate project", "Looks good, save it", "I need changes"],
         }]);
       } else {
         setMessages((prev) => [...prev, {
@@ -358,7 +305,6 @@ export function SalesChatbot() {
   const handleGenerateImage = useCallback(async (prompt?: string) => {
     const imagePrompt = prompt || "A professional logo for a modern tech company";
     setToolLoading("image");
-    setGeneratedImage(null);
     try {
       const res = await fetch("/api/ai/generate-image", {
         method: "POST",
@@ -371,14 +317,11 @@ export function SalesChatbot() {
       });
       const data = await res.json();
       if (data.success) {
-        setGeneratedImage({
-          imageUrl: data.data.imageUrl,
-          revisedPrompt: data.data.revisedPrompt,
-        });
+        setGeneratedAssets((prev) => [...prev, { type: "image", imageUrl: data.data.imageUrl }]);
         setMessages((prev) => [...prev, {
           role: "assistant",
-          content: `Here's your generated image! I used this prompt: "${imagePrompt}"`,
-          suggestions: ["Generate another", "Looks great!", "I need changes"],
+          content: `Here's your generated image!`,
+          suggestions: ["Generate another", "Generate code", "Looks great!"],
         }]);
       } else {
         setMessages((prev) => [...prev, {
@@ -399,7 +342,6 @@ export function SalesChatbot() {
   const handleGenerateCode = useCallback(async (prompt?: string) => {
     const codePrompt = prompt || "Create a simple React component";
     setToolLoading("code");
-    setGeneratedCode(null);
     try {
       const res = await fetch("/api/ai/generate-code", {
         method: "POST",
@@ -410,14 +352,11 @@ export function SalesChatbot() {
       });
       const data = await res.json();
       if (data.success) {
-        setGeneratedCode({
-          code: data.data.code,
-          explanation: data.data.explanation,
-        });
+        setGeneratedAssets((prev) => [...prev, { type: "code", code: data.data.code }]);
         setMessages((prev) => [...prev, {
           role: "assistant",
           content: `Here's your generated code!${data.data.explanation ? `\n\n${data.data.explanation}` : ""}`,
-          suggestions: ["Generate another", "Looks good!", "I need changes"],
+          suggestions: ["Generate image", "Generate another", "Looks good!"],
         }]);
       } else {
         setMessages((prev) => [...prev, {
@@ -429,6 +368,52 @@ export function SalesChatbot() {
       setMessages((prev) => [...prev, {
         role: "assistant",
         content: "Failed to generate code. Please try again.",
+      }]);
+    } finally {
+      setToolLoading(null);
+    }
+  }, []);
+
+  const handleGenerateProject = useCallback(async (prompt?: string) => {
+    const projectPrompt = prompt || "Build a complete website with logo";
+    setToolLoading("project");
+    try {
+      // Generate code
+      const codeRes = await fetch("/api/ai/generate-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: projectPrompt }),
+      });
+      const codeData = await codeRes.json();
+
+      // Generate logo if mentioned
+      const assets: GeneratedAsset[] = [];
+      if (codeData.success) {
+        assets.push({ type: "code", code: codeData.data.code });
+      }
+
+      if (projectPrompt.toLowerCase().includes("logo") || projectPrompt.toLowerCase().includes("brand")) {
+        const imageRes = await fetch("/api/ai/generate-image", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt: `Logo for: ${projectPrompt}` }),
+        });
+        const imageData = await imageRes.json();
+        if (imageData.success) {
+          assets.push({ type: "image", imageUrl: imageData.data.imageUrl });
+        }
+      }
+
+      setGeneratedAssets((prev) => [...prev, ...assets]);
+      setMessages((prev) => [...prev, {
+        role: "assistant",
+        content: `Here's your project! I generated ${assets.filter(a => a.type === "code").length} code file(s)${assets.some(a => a.type === "image") ? " and logo/images" : ""}.`,
+        suggestions: ["Generate another", "Get a quote", "Looks great!"],
+      }]);
+    } catch {
+      setMessages((prev) => [...prev, {
+        role: "assistant",
+        content: "Failed to generate project. Please try again.",
       }]);
     } finally {
       setToolLoading(null);
@@ -492,10 +477,6 @@ export function SalesChatbot() {
 
   // Handle tool suggestion clicks
   const handleSuggestionClick = useCallback((suggestion: string) => {
-    if (suggestion === "Generate a demo") {
-      handleGenerateDemo();
-      return;
-    }
     if (suggestion === "Get a quote" || suggestion === "Get a quote for this") {
       handleBilling();
       return;
@@ -512,23 +493,18 @@ export function SalesChatbot() {
       handleGenerateCode();
       return;
     }
-    if (suggestion === "Generate another") {
-      // Generate another of whatever was last generated
-      if (generatedCode) {
-        handleGenerateCode();
-      } else {
-        handleGenerateImage();
-      }
+    if (suggestion === "Generate project" || suggestion === "Generate another") {
+      handleGenerateProject();
       return;
     }
-    if (suggestion === "I need changes" && generatedImage) {
+    if (suggestion === "I need changes" && generatedAssets.some(a => a.type === "image")) {
       setMessages((prev) => [...prev, {
         role: "assistant",
         content: "What would you like me to change about the image? Describe the new version you'd like.",
       }]);
       return;
     }
-    if (suggestion === "I need changes" && generatedCode) {
+    if (suggestion === "I need changes" && generatedAssets.some(a => a.type === "code")) {
       setMessages((prev) => [...prev, {
         role: "assistant",
         content: "What would you like me to change about the code? Describe the modifications you need.",
@@ -658,7 +634,7 @@ export function SalesChatbot() {
     }
 
     sendMessage(suggestion);
-  }, [conversationState, handleGenerateDemo, handleBilling, handleCheckAccount, handleGenerateImage, handleGenerateCode, generatedImage, generatedCode, sendMessage]);
+  }, [conversationState, handleBilling, handleCheckAccount, handleGenerateImage, handleGenerateCode, handleGenerateProject, sendMessage]);
 
   return (
     <>
@@ -741,81 +717,60 @@ export function SalesChatbot() {
               </div>
             ))}
 
-            {/* Demo Preview */}
-            {demoResult && (
-              <div className="ml-10 border rounded-xl overflow-hidden bg-white shadow-sm">
-                <div className="px-3 py-2 bg-muted/50 flex items-center justify-between">
-                  <span className="text-xs font-medium text-muted-foreground">Demo Preview</span>
-                  <a
-                    href={demoResult.previewUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-primary hover:underline flex items-center gap-1"
-                  >
-                    <Eye className="h-3 w-3" />
-                    Open full page
-                  </a>
-                </div>
-                <iframe
-                  src={demoResult.previewUrl}
-                  className="w-full h-48 border-0"
-                  title="Demo Preview"
-                />
+            {/* Generated Assets */}
+            {generatedAssets.map((asset, idx) => (
+              <div key={idx} className="ml-10 border rounded-xl overflow-hidden bg-white shadow-sm">
+                {asset.type === "image" && asset.imageUrl && (
+                  <>
+                    <div className="px-3 py-2 bg-muted/50 flex items-center justify-between">
+                      <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                        <ImageIcon className="h-3 w-3" />
+                        Generated Image
+                      </span>
+                      <a
+                        href={asset.imageUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-primary hover:underline flex items-center gap-1"
+                      >
+                        <Eye className="h-3 w-3" />
+                        Open full size
+                      </a>
+                    </div>
+                    <img
+                      src={asset.imageUrl}
+                      alt="Generated image"
+                      className="w-full h-auto"
+                    />
+                  </>
+                )}
+                {asset.type === "code" && asset.code && (
+                  <>
+                    <div className="px-3 py-2 bg-muted/50 flex items-center justify-between">
+                      <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                        <Code className="h-3 w-3" />
+                        Generated Code
+                      </span>
+                      <button
+                        onClick={() => navigator.clipboard.writeText(asset.code || "")}
+                        className="text-xs text-primary hover:underline flex items-center gap-1"
+                      >
+                        Copy code
+                      </button>
+                    </div>
+                    <pre className="p-4 overflow-x-auto text-sm bg-gray-900 text-gray-100 max-h-64 overflow-y-auto">
+                      <code>{asset.code}</code>
+                    </pre>
+                  </>
+                )}
               </div>
-            )}
-
-            {/* Generated Image */}
-            {generatedImage && (
-              <div className="ml-10 border rounded-xl overflow-hidden bg-white shadow-sm">
-                <div className="px-3 py-2 bg-muted/50 flex items-center justify-between">
-                  <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                    <ImageIcon className="h-3 w-3" />
-                    Generated Image
-                  </span>
-                  <a
-                    href={generatedImage.imageUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-primary hover:underline flex items-center gap-1"
-                  >
-                    <Eye className="h-3 w-3" />
-                    Open full size
-                  </a>
-                </div>
-                <img
-                  src={generatedImage.imageUrl}
-                  alt="Generated image"
-                  className="w-full h-auto"
-                />
-              </div>
-            )}
-
-            {/* Generated Code */}
-            {generatedCode && (
-              <div className="ml-10 border rounded-xl overflow-hidden bg-white shadow-sm">
-                <div className="px-3 py-2 bg-muted/50 flex items-center justify-between">
-                  <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                    <Code className="h-3 w-3" />
-                    Generated Code
-                  </span>
-                  <button
-                    onClick={() => navigator.clipboard.writeText(generatedCode.code)}
-                    className="text-xs text-primary hover:underline flex items-center gap-1"
-                  >
-                    Copy code
-                  </button>
-                </div>
-                <pre className="p-4 overflow-x-auto text-sm bg-gray-900 text-gray-100">
-                  <code>{generatedCode.code}</code>
-                </pre>
-              </div>
-            )}
+            ))}
 
             {/* Suggestion Buttons */}
             {messages.length > 0 && !isLoading && !toolLoading && messages[messages.length - 1].suggestions && (
               <div className="flex flex-wrap gap-2 ml-10">
                 {messages[messages.length - 1].suggestions!.map((suggestion) => {
-                  const isTool = ["Generate a demo", "Get a quote", "Get a quote for this", "Check my account", "Generate image", "Generate code", "Generate another"].includes(suggestion);
+                  const isTool = ["Generate project", "Get a quote", "Get a quote for this", "Check my account", "Generate image", "Generate code", "Generate another"].includes(suggestion);
                   return (
                     <button
                       key={suggestion}
@@ -827,7 +782,7 @@ export function SalesChatbot() {
                           : "hover:bg-primary/5 hover:border-primary/30 text-muted-foreground hover:text-foreground"
                       )}
                     >
-                      {suggestion === "Generate a demo" && <Eye className="h-3 w-3 inline mr-1" />}
+                      {suggestion === "Generate project" && <Code className="h-3 w-3 inline mr-1" />}
                       {suggestion === "Get a quote" && <CreditCard className="h-3 w-3 inline mr-1" />}
                       {suggestion === "Get a quote for this" && <CreditCard className="h-3 w-3 inline mr-1" />}
                       {suggestion === "Check my account" && <UserCheck className="h-3 w-3 inline mr-1" />}
