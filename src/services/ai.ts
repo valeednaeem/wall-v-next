@@ -241,3 +241,86 @@ export async function generateImage(options: ImageGenerationOptions): Promise<Im
     };
   }
 }
+
+// ─── Code Generation (OpenAI GPT-4o) ────────────────────────────────────────
+
+export interface CodeGenerationOptions {
+  prompt: string;
+  language?: string;
+  framework?: string;
+}
+
+export interface CodeGenerationResult {
+  success: boolean;
+  code?: string;
+  explanation?: string;
+  error?: string;
+}
+
+export async function generateCode(options: CodeGenerationOptions): Promise<CodeGenerationResult> {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    return { success: false, error: "OPENAI_API_KEY not configured" };
+  }
+
+  const systemPrompt = `You are an expert full-stack developer. Generate clean, production-ready code based on the user's request.
+
+Rules:
+- Return ONLY the code in a markdown code block with the language tag
+- Include brief comments explaining key parts
+- Use modern best practices
+- If a framework is specified, use it properly
+- If no language specified, use TypeScript/React for frontend, Node.js for backend
+- Do NOT include explanations outside the code block`;
+
+  const userPrompt = options.prompt + (options.language ? `\n\nLanguage: ${options.language}` : "") + (options.framework ? `\n\nFramework: ${options.framework}` : "");
+
+  try {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: "gpt-4o",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        temperature: 0.3,
+        max_tokens: 4096,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return {
+        success: false,
+        error: data.error?.message || `Code generation failed (${response.status})`,
+      };
+    }
+
+    const content = data.choices?.[0]?.message?.content || "";
+    if (!content) {
+      return { success: false, error: "No code generated" };
+    }
+
+    // Extract code from markdown code block
+    const codeMatch = content.match(/```(?:\w+)?\n([\s\S]*?)```/);
+    const code = codeMatch ? codeMatch[1].trim() : content;
+    const explanation = content.replace(/```[\s\S]*?```/g, "").trim();
+
+    return {
+      success: true,
+      code,
+      explanation: explanation || undefined,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Code generation failed",
+    };
+  }
+}
