@@ -233,7 +233,7 @@ export function SalesChatbot() {
       });
       const data = await res.json();
       if (data.success) {
-        const summary = data.data.agent_summary || `Total: $${data.data.totalAmount}`;
+        const summary = data.agent_summary || `Total: $${data.invoice?.total || 0}`;
         setMessages((prev) => [...prev, {
           role: "assistant",
           content: summary,
@@ -278,18 +278,18 @@ export function SalesChatbot() {
         }),
       });
       const data = await res.json();
-      if (data.success && data.data.found) {
-        const client = data.data.client;
+      if (data.success && data.client) {
+        const client = data.client;
         setMessages((prev) => [...prev, {
           role: "assistant",
           content: `Found your account! You have ${client.totalProjects || 0} project(s) with us. How can I help you today?`,
-          suggestions: ["Generate a demo", "Get a quote", "Start a new project"],
+          suggestions: ["Generate project", "Get a quote", "Start a new project"],
         }]);
       } else {
         setMessages((prev) => [...prev, {
           role: "assistant",
           content: "I don't see an existing account, but I've noted your details. Let's get started on your project!",
-          suggestions: ["Generate a demo", "Get a quote", "I need a website"],
+          suggestions: ["Generate project", "Get a quote", "I need a website"],
         }]);
       }
     } catch {
