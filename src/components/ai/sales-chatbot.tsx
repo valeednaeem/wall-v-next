@@ -129,7 +129,7 @@ export function SalesChatbot() {
       setMessages([{
         role: "assistant",
         content: greetings[language] || greetings.en,
-        suggestions: ["I need a website", "I need a mobile app", "I need AI/automation", "I need hosting", "Generate project", "I have an idea"],
+        suggestions: ["I need a website", "I need a mobile app", "I need AI/automation", "I need hosting", "I have an idea"],
       }]);
     }
   }, [isOpen, language]);
@@ -171,11 +171,11 @@ export function SalesChatbot() {
         const stage = data.data.stage;
         const action = data.data.action;
 
-        if (stage === "recommend-solution" || stage === "identify-scope" || stage === "budget-timeline") {
-          suggestions = [...suggestions, "Generate project", "Generate image", "Generate code", "Get a quote", "Check my account"];
+        if (stage === "generate-brief" || stage === "create-inquiry" || action === "confirm") {
+          suggestions = [...suggestions, "Generate project", "Get a quote"];
         }
-        if (action === "confirm") {
-          suggestions = [...suggestions, "Generate project", "Generate image", "Generate code", "Get a quote"];
+        if (stage === "recommend-solution" || stage === "identify-scope" || stage === "budget-timeline") {
+          suggestions = [...suggestions, "Check my account"];
         }
 
         const aiMessage: Message = {
