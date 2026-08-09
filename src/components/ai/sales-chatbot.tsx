@@ -166,17 +166,22 @@ export function SalesChatbot() {
       const data = await res.json();
 
       if (data.success) {
-        // Merge tool suggestions when in recommendation stage
-        let suggestions = data.data.suggestions || [];
+        // Only show suggestions at key decision points, not every message
+        let suggestions: string[] = [];
         const stage = data.data.stage;
         const action = data.data.action;
+        const lastCategory = data.data.conversationState?.lastQuestionCategory;
 
-        if (stage === "generate-brief" || stage === "create-inquiry" || action === "confirm") {
-          suggestions = [...suggestions, "Generate project", "Get a quote"];
+        // Show suggestions only when AI asks a question (not when providing info)
+        if (action === "confirm") {
+          // Brief ready - show action buttons
+          suggestions = ["Generate project", "Get a quote", "I need changes"];
+        } else if (lastCategory === "projectType" || lastCategory === "objective") {
+          // Early stages - show relevant project suggestions
+          suggestions = data.data.suggestions || [];
         }
-        if (stage === "recommend-solution" || stage === "identify-scope" || stage === "budget-timeline") {
-          suggestions = [...suggestions, "Check my account"];
-        }
+        // Don't show suggestions for other stages (budget, timeline, contact info, etc.)
+        // Let the user type naturally
 
         const aiMessage: Message = {
           role: "assistant",
@@ -221,7 +226,7 @@ export function SalesChatbot() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           project_type: (brief.projectType as string) || "website",
-          project_name: (brief.title as string) || "My Project",
+          project_name: (brief.title as string) || "",
           features: (brief.features as string[]) || [],
           client_name: (brief as unknown as Record<string, unknown>)._contactName as string || "Client",
           client_email: (brief as unknown as Record<string, unknown>)._contactEmail as string || "pending@wall-v.com",
@@ -229,6 +234,12 @@ export function SalesChatbot() {
           caller_name: (brief as unknown as Record<string, unknown>)._contactName as string || "Client",
           caller_phone: (brief as unknown as Record<string, unknown>)._contactPhone as string || "",
           total_budget: budgetNum,
+          objective: (brief.objective as string) || "",
+          industry: (brief.businessContext as Record<string, unknown>)?.industry as string || "",
+          target_audience: (brief.targetAudience as string) || "",
+          timeline: (brief.desiredTimeline as string) || "",
+          design_preferences: (brief.designPreferences as string) || "",
+          integrations: (brief.integrations as string[]) || [],
         }),
       });
       const data = await res.json();

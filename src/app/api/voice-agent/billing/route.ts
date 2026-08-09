@@ -95,6 +95,12 @@ export async function POST(request: Request) {
       tax_rate,
       discount,
       notes,
+      objective,
+      industry,
+      target_audience,
+      timeline,
+      design_preferences,
+      integrations,
     } = body;
 
     if (!client_name || !total_budget) {
@@ -134,6 +140,12 @@ export async function POST(request: Request) {
     // Build milestones with amounts
     const milestones = buildMilestones(budget, project_type || "website");
 
+    // Build dynamic project name from details
+    const projectTypeLabel = (project_type || "Project").replace(/-/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase());
+    const objectiveLabel = body.objective ? ` — ${body.objective}` : "";
+    const industryLabel = body.industry ? ` (${body.industry})` : "";
+    const projectName = project_name || `${projectTypeLabel} for ${client_name}${industryLabel}${objectiveLabel}`;
+
     // Find or create project
     let project = null;
     if (project_id) {
@@ -142,10 +154,10 @@ export async function POST(request: Request) {
     if (!project) {
       const demoId = `demo-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
       project = await Project.create({
-        name: project_name || `${(project_type || "Project").replace(/-/g, " ")} — ${client_name}`,
+        name: projectName,
         slug: `${(project_type || "project").toLowerCase().replace(/\s+/g, "-")}-${Date.now()}`,
-        title: `${(project_type || "Project").replace(/-/g, " ")} — ${client_name}`,
-        description: notes || `Project for ${client_name}`,
+        title: projectName,
+        description: notes || `${projectTypeLabel} project for ${client_name}${industry ? ` in ${industry}` : ""}${objective ? `. Goal: ${objective}` : ""}`,
         client: {
           name: client_name,
           email: safeEmail,
@@ -161,9 +173,15 @@ export async function POST(request: Request) {
           projectType: project_type || "website",
           features: features || [],
           budget: `$${budget.toLocaleString()}`,
+          objective: objective || "",
+          industry: industry || "",
+          targetAudience: target_audience || "",
+          timeline: timeline || "",
+          designPreferences: design_preferences || "",
+          integrations: integrations || [],
         },
         demoId,
-        tags: ["voice-agent", "dograh"],
+        tags: ["voice-agent", "dograh", project_type || "unknown", industry || ""].filter(Boolean),
       });
     } else {
       // Update existing project with milestones and budget
