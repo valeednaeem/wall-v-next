@@ -243,6 +243,9 @@ export async function POST(request: Request) {
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://wall-v.com";
 
+    const firstMilestoneName = milestones[0]?.name || "Discovery & Planning";
+    const firstMilestoneAmount = milestones[0]?.amount || 0;
+
     const agentSummary = [
       `Here's the cost breakdown for your ${project_type || "project"}:`,
       milestoneSummary,
@@ -251,7 +254,9 @@ export async function POST(request: Request) {
       discountAmt > 0 ? `Discount: -$${discountAmt.toLocaleString()} USD.` : null,
       `Total: $${total.toLocaleString()} USD.`,
       `Invoice number: ${invoice.invoiceNumber}.`,
-      `You can proceed to checkout at: ${appUrl}/checkout/${project._id}`,
+      `Your first milestone is "${firstMilestoneName}" costing $${firstMilestoneAmount.toLocaleString()}. This will produce a working prototype you can preview.`,
+      `I've prepared this in your Wall-V dashboard. You can view the full project and milestone details at: ${appUrl}/projects/${project._id}/milestones`,
+      `To proceed with payment, visit: ${appUrl}/checkout/${project._id}`,
     ].filter(Boolean).join(" ");
 
     console.log("[Billing] Created:", {

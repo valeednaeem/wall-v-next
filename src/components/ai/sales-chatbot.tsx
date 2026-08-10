@@ -431,6 +431,148 @@ export function SalesChatbot() {
     }
   }, []);
 
+  // Project Summary tool
+  const handleProjectSummary = useCallback(async () => {
+    setToolLoading("summary");
+    try {
+      const res = await fetch("/api/ai/project-summary", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conversationState }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        const summary = data.summary;
+        const budget = data.budget;
+        const firstMilestone = data.firstMilestone;
+        const content = [
+          `**Project Summary: ${data.projectName}**`,
+          "",
+          `**Type:** ${data.projectType.replace(/-/g, " ")}`,
+          `**Objective:** ${summary.overview.objective}`,
+          `**Industry:** ${summary.overview.industry}`,
+          `**Target Audience:** ${summary.overview.targetAudience}`,
+          "",
+          "**Requirements:**",
+          ...summary.requirements.confirmed.map((r: string) => `- ${r}`),
+          summary.requirements.assumptions.length > 0 ? `\n**Assumptions:** ${summary.requirements.assumptions.join("; ")}` : "",
+          "",
+          `**Estimated Budget:** $${budget.estimatedBudget.min.toLocaleString()} - $${budget.estimatedBudget.max.toLocaleString()}`,
+          `**Timeline:** ${budget.timeline.min}-${budget.timeline.max} ${budget.timeline.unit}`,
+          "",
+          firstMilestone ? `**First Milestone:** ${firstMilestone.name}` : "",
+          firstMilestone ? `**Amount:** $${firstMilestone.amount.toLocaleString()}` : "",
+          firstMilestone ? `**Deliverables:** ${firstMilestone.deliverables.join(", ")}` : "",
+        ].filter(Boolean).join("\n");
+
+        setMessages((prev) => [...prev, {
+          role: "assistant",
+          content,
+          suggestions: ["Generate first milestone", "Get a quote", "Proceed to checkout"],
+        }]);
+      }
+    } catch {
+      setMessages((prev) => [...prev, {
+        role: "assistant",
+        content: "Failed to load project summary. Please try again.",
+      }]);
+    } finally {
+      setToolLoading(null);
+    }
+  }, [conversationState]);
+
+  // Generate First Milestone tool
+  const handleGenerateMilestone = useCallback(async () => {
+    setToolLoading("milestone");
+    try {
+      // First create the project
+      const brief = conversationState?.brief;
+      if (!brief) {
+        setMessages((prev) => [...prev, {
+          role: "assistant",
+          content: "I need more project details first. Let me ask you a few questions.",
+        }]);
+        return;
+      }
+
+      const budgetStr = (brief.estimatedBudget as string) || "";
+      const budgetNum = (() => {
+        const raw = budgetStr.replace(/[^0-9.-]/g, "");
+        const parts = raw.split("-").map(Number).filter((n) => !isNaN(n) && n > 0);
+        if (parts.length >= 2) return Math.round((parts[0] + parts[1]) / 2);
+        return parts[0] || 1000;
+      })();
+
+      // Create project via create-project endpoint
+      const createRes = await fetch("/api/ai/create-project", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: (brief.title as string) || `${(brief.projectType as string || "project").replace(/-/g, " ")} Project`,
+          description: (brief.objective as string) || `Custom ${(brief.projectType as string || "website").replace(/-/g, " ")} project`,
+          clientName: (brief.businessContext as Record<string, unknown>)?.industry || "Client",
+          clientEmail: "",
+          projectType: brief.projectType || "website",
+          features: brief.features || [],
+          budget: budgetStr || `$${budgetNum}`,
+          timeline: brief.desiredTimeline || "",
+          designStyle: brief.designPreferences || "",
+          language,
+          estimatedQuote: {
+            min: budgetNum,
+            max: Math.round(budgetNum * 1.4),
+            currency: "USD",
+          },
+        }),
+      });
+      const createData = await createRes.json();
+
+      if (createData.success && createData.project) {
+        // Generate first milestone
+        const genRes = await fetch(`/api/projects/${createData.project.id}/milestones/generate`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ milestoneIndex: 0 }),
+        });
+        const genData = await genRes.json();
+
+        if (genData.success) {
+          const previewUrl = `/projects/${createData.project.id}/milestones/0/preview`;
+          setMessages((prev) => [...prev, {
+            role: "assistant",
+            content: [
+              "**Your project and first milestone are ready!**",
+              "",
+              `**Project:** ${createData.project.name}`,
+              `**Status:** Created with ${createData.project.milestones?.length || 5} milestones`,
+              "",
+              `**Milestone 1:** ${genData.milestone.name}`,
+              `**Status:** Prototype generated`,
+              "",
+              `Preview your prototype here: ${previewUrl}`,
+              "",
+              "You can view, approve, or request changes from the milestones page.",
+            ].join("\n"),
+            suggestions: ["View milestones", "Proceed to checkout", "Start a new topic"],
+          }]);
+        } else {
+          setMessages((prev) => [...prev, {
+            role: "assistant",
+            content: "Project created but milestone generation failed. You can generate it from the dashboard.",
+            suggestions: ["View project", "Try again"],
+          }]);
+        }
+      }
+    } catch {
+      setMessages((prev) => [...prev, {
+        role: "assistant",
+        content: "Failed to generate milestone. Please try again.",
+      }]);
+    } finally {
+      setToolLoading(null);
+    }
+  }, [conversationState, language]);
+
   const handleSaveInquiry = useCallback(async () => {
     if (inquirySaved) return;
     setIsLoading(true);
@@ -506,6 +648,22 @@ export function SalesChatbot() {
     }
     if (suggestion === "Generate project" || suggestion === "Generate another") {
       handleGenerateProject();
+      return;
+    }
+    if (suggestion === "View project summary" || suggestion === "Show summary") {
+      handleProjectSummary();
+      return;
+    }
+    if (suggestion === "Generate first milestone" || suggestion === "Generate milestone") {
+      handleGenerateMilestone();
+      return;
+    }
+    if (suggestion === "View milestones") {
+      window.open("/dashboard", "_blank");
+      return;
+    }
+    if (suggestion === "Proceed to checkout") {
+      window.open("/dashboard", "_blank");
       return;
     }
     if (suggestion === "I need changes" && generatedAssets.some(a => a.type === "image")) {
@@ -645,7 +803,7 @@ export function SalesChatbot() {
     }
 
     sendMessage(suggestion);
-  }, [conversationState, handleBilling, handleCheckAccount, handleGenerateImage, handleGenerateCode, handleGenerateProject, sendMessage]);
+  }, [conversationState, handleBilling, handleCheckAccount, handleGenerateImage, handleGenerateCode, handleGenerateProject, handleProjectSummary, handleGenerateMilestone, sendMessage]);
 
   return (
     <>
@@ -781,7 +939,7 @@ export function SalesChatbot() {
             {messages.length > 0 && !isLoading && !toolLoading && messages[messages.length - 1].suggestions && (
               <div className="flex flex-wrap gap-2 ml-10">
                 {messages[messages.length - 1].suggestions!.map((suggestion) => {
-                  const isTool = ["Generate project", "Get a quote", "Get a quote for this", "Check my account", "Generate image", "Generate code", "Generate another"].includes(suggestion);
+                  const isTool = ["Generate project", "Get a quote", "Get a quote for this", "Check my account", "Generate image", "Generate code", "Generate another", "View project summary", "Show summary", "Generate first milestone", "Generate milestone", "View milestones", "Proceed to checkout"].includes(suggestion);
                   return (
                     <button
                       key={suggestion}
@@ -800,6 +958,12 @@ export function SalesChatbot() {
                       {suggestion === "Generate image" && <ImageIcon className="h-3 w-3 inline mr-1" />}
                       {suggestion === "Generate code" && <Code className="h-3 w-3 inline mr-1" />}
                       {suggestion === "Generate another" && <ImageIcon className="h-3 w-3 inline mr-1" />}
+                      {suggestion === "View project summary" && <Eye className="h-3 w-3 inline mr-1" />}
+                      {suggestion === "Show summary" && <Eye className="h-3 w-3 inline mr-1" />}
+                      {suggestion === "Generate first milestone" && <Sparkles className="h-3 w-3 inline mr-1" />}
+                      {suggestion === "Generate milestone" && <Sparkles className="h-3 w-3 inline mr-1" />}
+                      {suggestion === "View milestones" && <Eye className="h-3 w-3 inline mr-1" />}
+                      {suggestion === "Proceed to checkout" && <CreditCard className="h-3 w-3 inline mr-1" />}
                       {suggestion}
                     </button>
                   );

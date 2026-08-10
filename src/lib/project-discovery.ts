@@ -968,6 +968,11 @@ function generateDynamicSuggestions(state: ConversationState): string[] {
     return ["ASAP", "Within a month", "No rush"];
   }
 
+  // If brief is complete, suggest project actions
+  if (!missing.length || (missing.length <= 1 && missing[0] !== "projectType")) {
+    return ["View project summary", "Generate first milestone", "Get a quote"];
+  }
+
   return ["Tell me more", "What do you recommend?", "Let's get started"];
 }
 

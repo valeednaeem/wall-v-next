@@ -176,6 +176,25 @@ export default function CheckoutPage() {
       </div>
 
       <div className="max-w-5xl mx-auto px-4 py-8">
+        {/* Step Indicator */}
+        <div className="flex items-center justify-center gap-2 mb-8">
+          {[
+            { num: 1, label: "Project Details" },
+            { num: 2, label: "Payment Method" },
+            { num: 3, label: "Payment" },
+          ].map((step, i) => (
+            <div key={step.num} className="flex items-center gap-2">
+              <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold ${
+                i === 0 ? "bg-primary text-primary-foreground" : "bg-gray-200 text-gray-500"
+              }`}>
+                {step.num}
+              </div>
+              <span className={`text-sm ${i === 0 ? "font-medium" : "text-muted-foreground"}`}>{step.label}</span>
+              {i < 2 && <div className="w-8 h-px bg-gray-200 mx-2" />}
+            </div>
+          ))}
+        </div>
+
         <div className="grid lg:grid-cols-5 gap-8">
           {/* Payment Form */}
           <div className="lg:col-span-3 space-y-6">

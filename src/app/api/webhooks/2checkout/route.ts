@@ -130,6 +130,15 @@ export async function POST(request: Request) {
             await project.save();
           }
 
+          // Update project payment status
+          const completedMilestones = project.milestones.filter(
+            (m: { status: string }) => m.status === "completed"
+          ).length;
+          project.paymentStatus = completedMilestones === project.milestones.length ? "paid" : "partial";
+          if (project.status === "pending-payment") {
+            project.status = "in-progress";
+          }
+
           // Create invoice
           await Invoice.create({
             invoiceNumber: `INV-${order.orderNumber}`,

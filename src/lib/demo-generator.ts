@@ -130,6 +130,373 @@ function getDefaultFeatures(projectType: string): string[] {
   return defaults[type] || ["Custom Feature 1", "Custom Feature 2", "Custom Feature 3", "Custom Feature 4", "Custom Feature 5"];
 }
 
+// ─── Milestone-Aware Prototype Generation ────────────────────────────────────
+
+export interface MilestonePrototypeRequirements {
+  projectType: string;
+  projectName: string;
+  clientName: string;
+  clientEmail: string;
+  milestoneIndex: number;
+  milestoneName: string;
+  milestoneDescription: string;
+  deliverables: string[];
+  features: string[];
+  budget?: string;
+  totalBudget?: number;
+  milestoneAmount?: number;
+  timeline?: string;
+  designPreferences?: string;
+  industry?: string;
+  objective?: string;
+  totalMilestones: number;
+}
+
+export function generateMilestonePrototype(
+  requirements: MilestonePrototypeRequirements,
+  projectId: string
+): string {
+  const template = getTemplate(requirements.projectType);
+  const c1 = template.colors[0];
+  const c2 = template.colors[1];
+  const c3 = template.colors[2];
+
+  const progress = Math.round(((requirements.milestoneIndex + 1) / requirements.totalMilestones) * 100);
+  const features = requirements.features.length > 0
+    ? requirements.features
+    : getDefaultFeatures(requirements.projectType);
+
+  // Generate milestone-specific content based on index
+  const milestoneContent = getMilestoneContent(
+    requirements.projectType,
+    requirements.milestoneIndex,
+    requirements.milestoneName,
+    requirements.deliverables,
+    features,
+    requirements
+  );
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${requirements.projectName} — ${requirements.milestoneName}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+    * { font-family: 'Inter', sans-serif; }
+    .gradient-bg { background: linear-gradient(135deg, ${c1}, ${c2}, ${c3}); }
+    .gradient-text { background: linear-gradient(135deg, ${c1}, ${c2}); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .card-hover:hover { transform: translateY(-4px); box-shadow: 0 20px 40px rgba(0,0,0,0.1); }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    .fade-in { animation: fadeIn 0.6s ease-out forwards; }
+    .delay-1 { animation-delay: 0.1s; opacity: 0; }
+    .delay-2 { animation-delay: 0.2s; opacity: 0; }
+    .delay-3 { animation-delay: 0.3s; opacity: 0; }
+    .wireframe-box { border: 2px dashed #d1d5db; border-radius: 8px; padding: 16px; background: #f9fafb; }
+    .wireframe-line { height: 12px; background: #e5e7eb; border-radius: 4px; margin-bottom: 8px; }
+    .wireframe-line.short { width: 60%; }
+    .wireframe-line.medium { width: 80%; }
+    .wireframe-block { height: 120px; background: #e5e7eb; border-radius: 8px; }
+    .check-item { display: flex; align-items: center; gap: 8px; padding: 8px 0; }
+    .check-icon { width: 20px; height: 20px; border-radius: 50%; background: ${c1}; display: flex; align-items: center; justify-content: center; }
+  </style>
+</head>
+<body class="bg-gray-50">
+  <!-- Milestone Header -->
+  <section class="gradient-bg text-white py-12 px-6">
+    <div class="max-w-6xl mx-auto">
+      <div class="flex items-center justify-between mb-6">
+        <a href="/projects/${projectId}/milestones" class="text-white/80 hover:text-white text-sm flex items-center gap-1">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+          Back to Milestones
+        </a>
+        <div class="text-sm opacity-80">Version 1</div>
+      </div>
+      
+      <div class="inline-block bg-white/20 text-white px-4 py-1.5 rounded-full text-xs font-medium mb-4 backdrop-blur-sm">
+        Milestone ${requirements.milestoneIndex + 1} of ${requirements.totalMilestones}
+      </div>
+      <h1 class="text-3xl md:text-4xl font-bold mb-3">${requirements.milestoneName}</h1>
+      <p class="text-lg opacity-90 max-w-2xl">${requirements.milestoneDescription}</p>
+      
+      <!-- Progress Bar -->
+      <div class="mt-6 max-w-md">
+        <div class="flex justify-between text-xs mb-1.5">
+          <span>Project Progress</span>
+          <span>${progress}%</span>
+        </div>
+        <div class="w-full bg-white/20 rounded-full h-2">
+          <div class="bg-white rounded-full h-2 transition-all" style="width: ${progress}%"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Deliverables -->
+  <section class="py-12 px-6 bg-white">
+    <div class="max-w-6xl mx-auto">
+      <h2 class="text-2xl font-bold mb-6">Deliverables</h2>
+      <div class="grid md:grid-cols-2 gap-4">
+        ${requirements.deliverables.map((d) => `
+          <div class="flex items-start gap-3 p-4 rounded-xl border border-gray-100 hover:border-gray-200 transition-colors">
+            <div class="check-icon shrink-0 mt-0.5">
+              <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+            </div>
+            <div>
+              <p class="font-medium text-sm">${d}</p>
+            </div>
+          </div>
+        `).join("")}
+      </div>
+    </div>
+  </section>
+
+  <!-- Milestone Content (varies by type and milestone) -->
+  <section class="py-12 px-6">
+    <div class="max-w-6xl mx-auto">
+      ${milestoneContent}
+    </div>
+  </section>
+
+  <!-- Budget Summary -->
+  <section class="py-12 px-6 bg-white">
+    <div class="max-w-4xl mx-auto">
+      <h2 class="text-2xl font-bold mb-6 text-center">Budget Summary</h2>
+      <div class="grid md:grid-cols-3 gap-6">
+        <div class="text-center p-6 rounded-2xl border border-gray-100">
+          <p class="text-sm text-gray-500 mb-1">Milestone Budget</p>
+          <p class="text-3xl font-bold" style="color: ${c1}">$${(requirements.milestoneAmount || 0).toLocaleString()}</p>
+        </div>
+        <div class="text-center p-6 rounded-2xl border border-gray-100">
+          <p class="text-sm text-gray-500 mb-1">Total Project</p>
+          <p class="text-3xl font-bold text-gray-800">$${(requirements.totalBudget || 0).toLocaleString()}</p>
+        </div>
+        <div class="text-center p-6 rounded-2xl border border-gray-100">
+          <p class="text-sm text-gray-500 mb-1">Timeline</p>
+          <p class="text-3xl font-bold text-gray-800">${requirements.timeline || "TBD"}</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features Preview -->
+  <section class="py-12 px-6">
+    <div class="max-w-6xl mx-auto">
+      <h2 class="text-2xl font-bold mb-6 text-center">Project Features</h2>
+      <div class="grid md:grid-cols-3 gap-6">
+        ${getFeatureIcons(features.slice(0, 6))}
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="gradient-bg text-white py-12 px-6">
+    <div class="max-w-4xl mx-auto text-center">
+      <h2 class="text-2xl font-bold mb-3">Ready to Proceed?</h2>
+      <p class="opacity-90 mb-6">This milestone is ready for your review. Approve to continue to the next phase.</p>
+      <div class="flex gap-4 justify-center">
+        <a href="/projects/${projectId}/milestones" class="bg-white px-8 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all" style="color: ${c1}">
+          View All Milestones
+        </a>
+        <a href="/checkout/${projectId}" class="border-2 border-white text-white px-8 py-3 rounded-xl font-semibold hover:bg-white/10 transition-colors">
+          Proceed to Checkout
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <footer class="bg-gray-900 text-gray-400 py-6 px-6 text-center text-sm">
+    <p>Generated by Wall-V AI — <a href="/" class="text-white hover:underline">wall-v.com</a></p>
+  </footer>
+</body>
+</html>`;
+}
+
+function getMilestoneContent(
+  projectType: string,
+  milestoneIndex: number,
+  milestoneName: string,
+  deliverables: string[],
+  features: string[],
+  requirements: MilestonePrototypeRequirements
+): string {
+  const nameLower = milestoneName.toLowerCase();
+
+  // Discovery & Planning
+  if (nameLower.includes("discovery") || nameLower.includes("planning") || milestoneIndex === 0) {
+    return `
+      <h2 class="text-2xl font-bold mb-6">Project Discovery</h2>
+      <div class="grid md:grid-cols-2 gap-8">
+        <div>
+          <h3 class="text-lg font-semibold mb-4">Requirements Overview</h3>
+          <div class="space-y-3">
+            <div class="p-4 rounded-xl bg-gray-50">
+              <p class="text-xs text-gray-500 mb-1">Project Type</p>
+              <p class="font-medium">${requirements.projectType.replace(/-/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())}</p>
+            </div>
+            ${requirements.objective ? `
+            <div class="p-4 rounded-xl bg-gray-50">
+              <p class="text-xs text-gray-500 mb-1">Objective</p>
+              <p class="font-medium">${requirements.objective}</p>
+            </div>` : ""}
+            ${requirements.industry ? `
+            <div class="p-4 rounded-xl bg-gray-50">
+              <p class="text-xs text-gray-500 mb-1">Industry</p>
+              <p class="font-medium">${requirements.industry}</p>
+            </div>` : ""}
+            <div class="p-4 rounded-xl bg-gray-50">
+              <p class="text-xs text-gray-500 mb-1">Target Audience</p>
+              <p class="font-medium">${requirements.clientName || "End users"}</p>
+            </div>
+          </div>
+        </div>
+        <div>
+          <h3 class="text-lg font-semibold mb-4">Sitemap</h3>
+          <div class="wireframe-box space-y-2">
+            <div class="font-medium text-sm text-gray-700 mb-2">Proposed Structure</div>
+            ${features.slice(0, 6).map((f: string) => `
+              <div class="flex items-center gap-2 text-sm text-gray-600">
+                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                ${f}
+              </div>
+            `).join("")}
+          </div>
+          <h3 class="text-lg font-semibold mb-4 mt-6">Wireframe Concept</h3>
+          <div class="wireframe-box">
+            <div class="wireframe-line medium"></div>
+            <div class="wireframe-line short"></div>
+            <div class="wireframe-block mt-4"></div>
+            <div class="grid grid-cols-3 gap-2 mt-4">
+              <div class="wireframe-block" style="height: 60px"></div>
+              <div class="wireframe-block" style="height: 60px"></div>
+              <div class="wireframe-block" style="height: 60px"></div>
+            </div>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  // Design
+  if (nameLower.includes("design") || milestoneIndex === 1) {
+    return `
+      <h2 class="text-2xl font-bold mb-6">Design Concept</h2>
+      <div class="grid md:grid-cols-2 gap-8">
+        <div>
+          <h3 class="text-lg font-semibold mb-4">Visual Direction</h3>
+          <div class="wireframe-box p-6">
+            <div class="grid grid-cols-3 gap-3 mb-4">
+              <div class="h-20 rounded-lg" style="background: ${getTemplate(requirements.projectType).colors[0]}"></div>
+              <div class="h-20 rounded-lg" style="background: ${getTemplate(requirements.projectType).colors[1]}"></div>
+              <div class="h-20 rounded-lg" style="background: ${getTemplate(requirements.projectType).colors[2]}"></div>
+            </div>
+            <p class="text-xs text-gray-500 text-center">Color palette</p>
+          </div>
+          <div class="mt-4 space-y-2">
+            ${features.slice(0, 4).map((f: string) => `
+              <div class="flex items-center gap-2 text-sm">
+                <div class="w-2 h-2 rounded-full" style="background: ${getTemplate(requirements.projectType).colors[0]}"></div>
+                ${f}
+              </div>
+            `).join("")}
+          </div>
+        </div>
+        <div>
+          <h3 class="text-lg font-semibold mb-4">Layout Preview</h3>
+          <div class="rounded-xl border-2 border-gray-200 overflow-hidden">
+            <div class="h-8 flex items-center px-3 gap-1.5" style="background: ${getTemplate(requirements.projectType).colors[0]}">
+              <div class="w-2 h-2 rounded-full bg-white/40"></div>
+              <div class="w-2 h-2 rounded-full bg-white/40"></div>
+              <div class="w-2 h-2 rounded-full bg-white/40"></div>
+            </div>
+            <div class="p-4 bg-white">
+              <div class="wireframe-line medium"></div>
+              <div class="wireframe-line short"></div>
+              <div class="wireframe-block mt-4"></div>
+            </div>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  // Development
+  if (nameLower.includes("development") || nameLower.includes("build") || milestoneIndex === 2) {
+    return `
+      <h2 class="text-2xl font-bold mb-6">Development Progress</h2>
+      <div class="grid md:grid-cols-2 gap-8">
+        <div>
+          <h3 class="text-lg font-semibold mb-4">Core Features</h3>
+          <div class="space-y-3">
+            ${features.map((f: string) => `
+              <div class="flex items-center gap-3 p-3 rounded-lg border border-gray-100">
+                <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background: ${getTemplate(requirements.projectType).colors[0]}15">
+                  <svg class="w-4 h-4" style="color: ${getTemplate(requirements.projectType).colors[0]}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                </div>
+                <span class="text-sm font-medium">${f}</span>
+              </div>
+            `).join("")}
+          </div>
+        </div>
+        <div>
+          <h3 class="text-lg font-semibold mb-4">Technical Stack</h3>
+          <div class="grid grid-cols-2 gap-3">
+            ${["Next.js", "React", "TypeScript", "Tailwind CSS", "MongoDB", "Node.js"].map((tech: string) => `
+              <div class="p-3 rounded-lg bg-gray-50 text-center text-sm font-medium">${tech}</div>
+            `).join("")}
+          </div>
+          <h3 class="text-lg font-semibold mb-4 mt-6">Code Preview</h3>
+          <div class="rounded-xl bg-gray-900 p-4 text-green-400 text-xs font-mono overflow-hidden">
+            <div class="opacity-60">// Component structure</div>
+            <div>export default function Page() {</div>
+            <div class="ml-4">return (</div>
+            <div class="ml-8">&lt;Layout&gt;</div>
+            <div class="ml-12">&lt;Hero /&gt;</div>
+            <div class="ml-12">&lt;Features /&gt;</div>
+            <div class="ml-12">&lt;CTA /&gt;</div>
+            <div class="ml-8">&lt;/Layout&gt;</div>
+            <div class="ml-4">);</div>
+            <div>}</div>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  // Default content
+  return `
+    <h2 class="text-2xl font-bold mb-6">${milestoneName}</h2>
+    <div class="grid md:grid-cols-2 gap-8">
+      <div>
+        <h3 class="text-lg font-semibold mb-4">What's Included</h3>
+        <div class="space-y-3">
+          ${deliverables.map((d: string) => `
+            <div class="flex items-start gap-3 p-3 rounded-lg border border-gray-100">
+              <div class="check-icon shrink-0 mt-0.5">
+                <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+              </div>
+              <span class="text-sm">${d}</span>
+            </div>
+          `).join("")}
+        </div>
+      </div>
+      <div>
+        <h3 class="text-lg font-semibold mb-4">Preview</h3>
+        <div class="wireframe-box">
+          <div class="wireframe-line medium"></div>
+          <div class="wireframe-line short"></div>
+          <div class="wireframe-block mt-4"></div>
+        </div>
+      </div>
+    </div>`;
+}
+
+/**
+ * Get available project types for milestone prototypes
+ */
+export function getSupportedProjectTypes(): string[] {
+  return Object.keys(TEMPLATES);
+}
+
 export function generateDemoHTML(requirements: DemoRequirements, projectId: string): string {
   const template = getTemplate(requirements.projectType || "website");
   const name = requirements.name || "Your Project";

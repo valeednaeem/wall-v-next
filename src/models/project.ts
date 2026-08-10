@@ -5,7 +5,7 @@ export interface IProject extends Document {
   slug: string;
   title?: string;
   description: string;
-  client: mongoose.Types.ObjectId | { name: string; email: string };
+  client: mongoose.Types.ObjectId | { name: string; email: string; phone?: string };
   status: "planning" | "in-progress" | "review" | "testing" | "completed" | "on-hold" | "cancelled" | "demo" | "pending-payment";
   priority: "low" | "medium" | "high" | "urgent";
   budget: number;
@@ -19,13 +19,43 @@ export interface IProject extends Document {
     user: mongoose.Types.ObjectId;
     role: string;
   }[];
+  projectManager?: mongoose.Types.ObjectId;
   milestones: {
     name: string;
     description?: string;
     dueDate?: Date;
     amount?: number;
-    status: "pending" | "in-progress" | "completed";
+    status: "pending" | "in-progress" | "completed" | "generated" | "review" | "approved" | "changes-requested";
     completedAt?: Date;
+    deliverables?: string[];
+    outputType?: string;
+    generatedAt?: Date;
+    approvedAt?: Date;
+    previewUrl?: string;
+    version?: number;
+    feedback?: {
+      content: string;
+      rating?: number;
+      submittedAt: Date;
+      submittedBy?: mongoose.Types.ObjectId;
+    };
+  }[];
+  milestoneVersions?: {
+    version: number;
+    milestoneName: string;
+    milestoneIndex: number;
+    previewUrl: string;
+    demoId: string;
+    generatedAt: Date;
+    requirements?: Record<string, unknown>;
+    feedback?: {
+      content: string;
+      rating?: number;
+      submittedAt: Date;
+      submittedBy?: mongoose.Types.ObjectId;
+    };
+    status: "generated" | "approved" | "rejected";
+    generatedBy: "ai" | "admin" | "system";
   }[];
   tasks: mongoose.Types.ObjectId[];
   files: {
@@ -46,6 +76,10 @@ export interface IProject extends Document {
     budget?: string;
     timeline?: string;
     designStyle?: string;
+    objective?: string;
+    industry?: string;
+    targetAudience?: string;
+    integrations?: string[];
   };
   quote?: {
     min: number;
@@ -53,6 +87,19 @@ export interface IProject extends Document {
     currency: string;
   };
   language?: string;
+  // Checkout fields
+  orderId?: mongoose.Types.ObjectId;
+  paymentStatus?: "unpaid" | "partial" | "paid";
+  // Project updates
+  updates?: {
+    title: string;
+    description: string;
+    author: mongoose.Types.ObjectId;
+    createdAt: Date;
+    milestoneIndex?: number;
+    taskId?: mongoose.Types.ObjectId;
+    files?: { name: string; url: string }[];
+  }[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -87,14 +134,46 @@ const ProjectSchema = new Schema<IProject>(
         role: String,
       },
     ],
+    projectManager: { type: Schema.Types.ObjectId, ref: "User" },
     milestones: [
       {
         name: String,
         description: String,
         dueDate: Date,
         amount: { type: Number, min: 0 },
-        status: { type: String, enum: ["pending", "in-progress", "completed"], default: "pending" },
+        status: { type: String, enum: ["pending", "in-progress", "completed", "generated", "review", "approved", "changes-requested"], default: "pending" },
         completedAt: Date,
+        deliverables: [String],
+        outputType: String,
+        generatedAt: Date,
+        approvedAt: Date,
+        previewUrl: String,
+        version: { type: Number, default: 1 },
+        feedback: {
+          content: String,
+          rating: Number,
+          submittedAt: Date,
+          submittedBy: { type: Schema.Types.ObjectId, ref: "User" },
+        },
+      },
+    ],
+    milestoneVersions: [
+      {
+        version: Number,
+        milestoneName: String,
+        milestoneIndex: Number,
+        previewUrl: String,
+        demoId: String,
+        generatedAt: Date,
+        requirements: Schema.Types.Mixed,
+        feedback: {
+          content: String,
+          rating: Number,
+          submittedAt: Date,
+          submittedBy: { type: Schema.Types.ObjectId, ref: "User" },
+        },
+        status: { type: String, enum: ["generated", "approved", "rejected"], default: "generated" },
+        generatedBy: { type: String, enum: ["ai", "admin", "system"], default: "ai" },
       },
     ],
     tasks: [{ type: Schema.Types.ObjectId, ref: "Task" }],
@@ -118,6 +197,10 @@ const ProjectSchema = new Schema<IProject>(
       budget: String,
       timeline: String,
       designStyle: String,
+      objective: String,
+      industry: String,
+      targetAudience: String,
+      integrations: [String],
     },
     quote: {
       min: Number,
@@ -125,6 +208,21 @@ const ProjectSchema = new Schema<IProject>(
       currency: { type: String, default: "USD" },
     },
     language: { type: String, default: "en" },
+    // Checkout fields
+    orderId: { type: Schema.Types.ObjectId, ref: "Order" },
+    paymentStatus: { type: String, enum: ["unpaid", "partial", "paid"], default: "unpaid" },
+    // Project updates
+    updates: [
+      {
+        title: String,
+        description: String,
+        author: { type: Schema.Types.ObjectId, ref: "User" },
+        createdAt: { type: Date, default: Date.now },
+        milestoneIndex: Number,
+        taskId: { type: Schema.Types.ObjectId, ref: "Task" },
+        files: [{ name: String, url: String }],
+      },
+    ],
   },
   { timestamps: true }
 );
@@ -133,6 +231,9 @@ ProjectSchema.index({ slug: 1 });
 ProjectSchema.index({ client: 1 });
 ProjectSchema.index({ status: 1 });
 ProjectSchema.index({ demoId: 1 });
+ProjectSchema.index({ projectManager: 1 });
+ProjectSchema.index({ paymentStatus: 1 });
+ProjectSchema.index({ "milestones.status": 1 });
 
 export default mongoose.models.Project ||
   mongoose.model<IProject>("Project", ProjectSchema);

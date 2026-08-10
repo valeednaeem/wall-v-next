@@ -13,9 +13,19 @@ interface Milestone {
   name: string;
   description: string;
   dueDate: string;
-  status: "pending" | "in-progress" | "completed";
+  status: "pending" | "in-progress" | "completed" | "generated" | "review" | "approved" | "changes-requested";
   completedAt?: string;
   amount?: number;
+  deliverables?: string[];
+  generatedAt?: Date;
+  approvedAt?: Date;
+  previewUrl?: string;
+  version?: number;
+  feedback?: {
+    content: string;
+    rating?: number;
+    submittedAt: Date;
+  };
 }
 
 interface Project {
@@ -128,10 +138,19 @@ export default function EditProjectPage() {
     if (!project) return;
     const milestones = [...project.milestones];
     const current = milestones[idx].status;
+    const statusCycle: Record<string, string> = {
+      "pending": "in-progress",
+      "in-progress": "completed",
+      "completed": "pending",
+      "generated": "review",
+      "review": "approved",
+      "approved": "completed",
+      "changes-requested": "in-progress",
+    };
     milestones[idx] = {
       ...milestones[idx],
-      status: current === "completed" ? "pending" : current === "pending" ? "in-progress" : "completed",
-      completedAt: current !== "completed" ? new Date().toISOString() : undefined,
+      status: (statusCycle[current] || "pending") as Milestone["status"],
+      completedAt: statusCycle[current] === "completed" ? new Date().toISOString() : undefined,
     };
     setProject({ ...project, milestones });
   };
@@ -319,10 +338,12 @@ export default function EditProjectPage() {
                 {project.milestones.map((m, idx) => (
                   <div key={idx} className="flex items-start gap-3 p-3 rounded-lg border bg-muted/30">
                     <button onClick={() => toggleMilestoneStatus(idx)} className="mt-0.5">
-                      {m.status === "completed" ? (
+                      {m.status === "completed" || m.status === "approved" ? (
                         <CheckCircle2 className="h-5 w-5 text-green-600" />
-                      ) : m.status === "in-progress" ? (
+                      ) : m.status === "in-progress" || m.status === "generated" || m.status === "review" ? (
                         <Clock className="h-5 w-5 text-yellow-600" />
+                      ) : m.status === "changes-requested" ? (
+                        <div className="h-5 w-5 rounded-full border-2 border-orange-400 bg-orange-100" />
                       ) : (
                         <div className="h-5 w-5 rounded-full border-2 border-muted-foreground/30" />
                       )}
@@ -332,6 +353,13 @@ export default function EditProjectPage() {
                         {m.name}
                       </p>
                       {m.description && <p className="text-xs text-muted-foreground mt-0.5">{m.description}</p>}
+                      {m.deliverables && m.deliverables.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1.5">
+                          {m.deliverables.map((d, di) => (
+                            <span key={di} className="text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">{d}</span>
+                          ))}
+                        </div>
+                      )}
                       <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
                         {m.dueDate && (
                           <span className="flex items-center gap-1">
@@ -342,12 +370,31 @@ export default function EditProjectPage() {
                         {m.amount != null && m.amount > 0 && (
                           <span className="flex items-center gap-1">
                             <DollarSign className="h-3 w-3" />
-                            {m.amount}
+                            ${m.amount.toLocaleString()}
                           </span>
                         )}
+                        {m.version && m.version > 1 && (
+                          <span className="text-xs text-muted-foreground">v{m.version}</span>
+                        )}
                       </div>
+                      {m.feedback && (
+                        <div className="mt-2 p-2 rounded bg-orange-50 border border-orange-200">
+                          <p className="text-xs text-orange-700 font-medium">Client Feedback:</p>
+                          <p className="text-xs text-orange-800">{m.feedback.content}</p>
+                        </div>
+                      )}
                     </div>
                     <div className="flex items-center gap-1">
+                      {(m.status === "generated" || m.status === "review") && m.previewUrl && (
+                        <a
+                          href={m.previewUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-2 py-1 rounded text-xs bg-primary/10 text-primary hover:bg-primary/20"
+                        >
+                          Preview
+                        </a>
+                      )}
                       <button onClick={() => editMilestone(idx)} className="p-1 rounded hover:bg-accent text-xs">
                         Edit
                       </button>
