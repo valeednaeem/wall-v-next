@@ -10,6 +10,16 @@ interface Stats {
   totalPosts: number;
   totalInquiries: number;
   recentInquiries: any[];
+  totalProjects: number;
+  activeProjects: number;
+  completedProjects: number;
+  totalClients: number;
+  activeClients: number;
+  totalLeads: number;
+  qualifiedLeads: number;
+  totalOrders: number;
+  pendingOrders: number;
+  totalRevenue: number;
 }
 
 export default function DashboardPage() {
@@ -64,7 +74,24 @@ export default function DashboardPage() {
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {[
-          { label: "Total Users", value: data?.totalUsers || 0, icon: "👤", color: "text-blue-500" },
+          { label: "Total Projects", value: data?.totalProjects || 0, icon: "📁", color: "text-blue-500" },
+          { label: "Active Projects", value: data?.activeProjects || 0, icon: "🔄", color: "text-green-500" },
+          { label: "Total Clients", value: data?.totalClients || 0, icon: "👤", color: "text-purple-500" },
+          { label: "Total Revenue", value: `$${(data?.totalRevenue || 0).toLocaleString()}`, icon: "💰", color: "text-orange-500" },
+        ].map((stat) => (
+          <div key={stat.label} className="rounded-lg border p-6">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">{stat.label}</p>
+              <span className={`text-2xl ${stat.color}`}>{stat.icon}</span>
+            </div>
+            <p className="mt-2 text-3xl font-bold">{stat.value}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {[
+          { label: "Total Users", value: data?.totalUsers || 0, icon: "👥", color: "text-blue-500" },
           { label: "Total Products", value: data?.totalProducts || 0, icon: "📦", color: "text-green-500" },
           { label: "Blog Posts", value: data?.totalPosts || 0, icon: "✍️", color: "text-purple-500" },
           { label: "Inquiries", value: data?.totalInquiries || 0, icon: "📩", color: "text-orange-500" },

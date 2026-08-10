@@ -5,7 +5,7 @@ import { getAuthUser } from "@/lib/auth";
 import { pickFields } from "@/lib/pick-fields";
 import { escapeRegex } from "@/lib/escape-regex";
 
-const LEAD_FIELDS = ["name", "email", "company", "phone", "source", "status", "notes", "value"];
+const LEAD_FIELDS = ["name", "email", "company", "phone", "source", "status", "notes", "budget", "requirements", "serviceInterest", "tags"];
 
 export async function GET(request: Request) {
   try {

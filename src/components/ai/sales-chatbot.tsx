@@ -80,6 +80,7 @@ export function SalesChatbot() {
   const [conversationState, setConversationState] = useState<DiscoveryState | null>(null);
   const [generatedAssets, setGeneratedAssets] = useState<GeneratedAsset[]>([]);
   const [toolLoading, setToolLoading] = useState<string | null>(null);
+  const [lastProjectUrl, setLastProjectUrl] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const langMenuRef = useRef<HTMLDivElement>(null);
@@ -245,6 +246,9 @@ export function SalesChatbot() {
       const data = await res.json();
       if (data.success) {
         const summary = data.agent_summary || `Total: $${data.invoice?.total || 0}`;
+        if (data.checkout_url) {
+          setLastProjectUrl(data.checkout_url);
+        }
         setMessages((prev) => [...prev, {
           role: "assistant",
           content: summary,
@@ -528,6 +532,7 @@ export function SalesChatbot() {
       const createData = await createRes.json();
 
       if (createData.success && createData.project) {
+        setLastProjectUrl(createData.project.checkoutUrl || `/checkout/${createData.project.id}`);
         // Generate first milestone
         const genRes = await fetch(`/api/projects/${createData.project.id}/milestones/generate`, {
           method: "POST",
@@ -663,7 +668,7 @@ export function SalesChatbot() {
       return;
     }
     if (suggestion === "Proceed to checkout") {
-      window.open("/dashboard", "_blank");
+      window.open(lastProjectUrl || "/dashboard", "_blank");
       return;
     }
     if (suggestion === "I need changes" && generatedAssets.some(a => a.type === "image")) {
@@ -803,7 +808,7 @@ export function SalesChatbot() {
     }
 
     sendMessage(suggestion);
-  }, [conversationState, handleBilling, handleCheckAccount, handleGenerateImage, handleGenerateCode, handleGenerateProject, handleProjectSummary, handleGenerateMilestone, sendMessage]);
+  }, [conversationState, handleBilling, handleCheckAccount, handleGenerateImage, handleGenerateCode, handleGenerateProject, handleProjectSummary, handleGenerateMilestone, sendMessage, lastProjectUrl]);
 
   return (
     <>

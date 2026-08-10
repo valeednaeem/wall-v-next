@@ -84,6 +84,7 @@ export function AIChatInterface({ className }: { className?: string }) {
   const [creatingProject, setCreatingProject] = useState(false);
   const [langDropdownOpen, setLangDropdownOpen] = useState(false);
   const [conversationState, setConversationState] = useState<ConversationState | null>(null);
+  const [lastProject, setLastProject] = useState<{ previewUrl: string; checkoutUrl: string; id: string } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const langMenuRef = useRef<HTMLDivElement>(null);
@@ -198,6 +199,11 @@ export function AIChatInterface({ className }: { className?: string }) {
 
       const data = await res.json();
       if (data.success && data.project) {
+        setLastProject({
+          id: data.project.id,
+          previewUrl: data.project.previewUrl,
+          checkoutUrl: data.project.checkoutUrl,
+        });
         setMessages([...messages, {
           role: "assistant",
           content: `Your project has been created! Here are your links:\n\n**Preview:** ${data.project.previewUrl}\n**Checkout:** ${data.project.checkoutUrl}\n\nClick "Proceed to Checkout" to pay the first milestone and get started.`,
@@ -340,10 +346,10 @@ export function AIChatInterface({ className }: { className?: string }) {
                 onClick={() => {
                   if (suggestion === "Looks good, save it") {
                     handleCreateProject();
-                  } else if (suggestion === "Proceed to Checkout") {
-                    window.open("/dashboard/projects", "_blank");
-                  } else if (suggestion === "View Demo") {
-                    window.open("/dashboard/projects", "_blank");
+                  } else if (suggestion === "Proceed to Checkout" && lastProject) {
+                    window.open(lastProject.checkoutUrl, "_blank");
+                  } else if (suggestion === "View Demo" && lastProject) {
+                    window.open(lastProject.previewUrl, "_blank");
                   } else {
                     sendMessage(suggestion);
                   }

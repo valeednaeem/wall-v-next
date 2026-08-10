@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import ProductCategory from "@/models/product-category";
+import { getAuthUser } from "@/lib/auth";
+import { logError } from "@/lib/error-logger";
 
 export async function GET(
   request: Request,
@@ -21,7 +23,12 @@ export async function GET(
 
     return NextResponse.json({ success: true, data: { ...category, children } });
   } catch (error) {
-    console.error("Category GET error:", error);
+    await logError({
+      level: "error",
+      message: "Error fetching category",
+      source: "api/products/categories/[slug]",
+      stack: error instanceof Error ? error.stack : undefined,
+    });
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
@@ -30,7 +37,13 @@ export async function PUT(
   request: Request,
   { params }: { params: Promise<{ slug: string }> }
 ) {
+  let user;
   try {
+    user = await getAuthUser();
+    if (!user || !["super-admin", "admin", "manager"].includes(user.role)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     await connectToDatabase();
     const { slug } = await params;
     const body = await request.json();
@@ -42,7 +55,13 @@ export async function PUT(
 
     return NextResponse.json({ success: true, data: category });
   } catch (error) {
-    console.error("Category PUT error:", error);
+    await logError({
+      level: "error",
+      message: "Error updating category",
+      source: "api/products/categories/[slug]",
+      stack: error instanceof Error ? error.stack : undefined,
+      metadata: { userId: user?.userId },
+    });
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
@@ -51,7 +70,13 @@ export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ slug: string }> }
 ) {
+  let user;
   try {
+    user = await getAuthUser();
+    if (!user || !["super-admin", "admin", "manager"].includes(user.role)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     await connectToDatabase();
     const { slug } = await params;
 
@@ -62,7 +87,13 @@ export async function DELETE(
 
     return NextResponse.json({ success: true, message: "Category deleted" });
   } catch (error) {
-    console.error("Category DELETE error:", error);
+    await logError({
+      level: "error",
+      message: "Error deleting category",
+      source: "api/products/categories/[slug]",
+      stack: error instanceof Error ? error.stack : undefined,
+      metadata: { userId: user?.userId },
+    });
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

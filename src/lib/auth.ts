@@ -174,35 +174,3 @@ export async function getFullUser() {
   const user = await User.findById(authUser.userId).select("-password").lean();
   return user;
 }
-
-export function requireAuth(handler: Function) {
-  return async (req: Request, ctx?: unknown) => {
-    const authUser = await getAuthUser();
-    if (!authUser) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-    return handler(req, ctx, authUser);
-  };
-}
-
-export function requireRole(roles: string[]) {
-  return (handler: Function) => async (req: Request, ctx?: unknown) => {
-    const authUser = await getAuthUser();
-    if (!authUser) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-    if (!roles.includes(authUser.role)) {
-      return new Response(JSON.stringify({ error: "Forbidden" }), {
-        status: 403,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-    return handler(req, ctx, authUser);
-  };
-}

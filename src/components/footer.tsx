@@ -19,7 +19,7 @@ const footerSections = [
     links: [
       { name: "About Us", href: "/about" },
       { name: "Blog", href: "/blog" },
-      { name: "Careers", href: "/careers" },
+      { name: "Services", href: "/services" },
       { name: "Contact", href: "/contact" },
     ],
   },
@@ -27,8 +27,8 @@ const footerSections = [
     title: "Support",
     links: [
       { name: "Help Center", href: "/contact" },
-      { name: "Documentation", href: "/docs" },
-      { name: "Knowledge Base", href: "/kb" },
+      { name: "Services", href: "/services" },
+      { name: "Blog", href: "/blog" },
     ],
   },
   {

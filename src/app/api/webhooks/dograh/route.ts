@@ -9,6 +9,7 @@ import ServicePrice from "@/models/service-price";
 import { generateDemoHTML } from "@/lib/demo-generator";
 import { sendEmail, projectCreatedEmail } from "@/services/email";
 import { corsHeaders, handleOPTIONS } from "@/lib/cors";
+import { logError } from "@/lib/error-logger";
 
 function slugify(text: string): string {
   return text
@@ -481,21 +482,6 @@ export async function POST(request: Request) {
       const slug = slugify(projectName);
       const demoId = `demo-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
-      // Generate demo HTML from the collected data
-      const demoRequirements = {
-        projectType: primaryService?.serviceKey || mergedCaller.projectType || "website",
-        name: clientName,
-        email: clientEmail,
-        features: matchedServices.map((s) => s.name),
-        budget: mergedCaller.budget || (estimatedQuote ? `$${estimatedQuote.min.toLocaleString()} - $${estimatedQuote.max.toLocaleString()}` : ""),
-        timeline: mergedCaller.timeline || "",
-        description: summary || "",
-        selectedOption: mergedCaller.selectedOption || "",
-        company: clientCompany,
-        phone: clientPhone,
-      };
-      const demoHTML = generateDemoHTML(demoRequirements, demoId);
-
       const project = await Project.create({
         name: projectName,
         slug,
@@ -522,7 +508,6 @@ export async function POST(request: Request) {
           budget: mergedCaller.budget || (estimatedQuote ? `$${estimatedQuote.min.toLocaleString()} - $${estimatedQuote.max.toLocaleString()}` : ""),
           timeline: mergedCaller.timeline || primaryService ? `${primaryService?.tiers?.[0]?.name || "Standard"}` : "",
         },
-        demoHTML,
         demoId,
         quote: estimatedQuote
           ? {
@@ -534,6 +519,23 @@ export async function POST(request: Request) {
         tags: ["voice-agent", "dograh", ...matchedServices.map((s) => s.serviceKey)].filter(Boolean),
         notes: `Created by voice agent. Conversation: ${conversation._id}. Matched services: ${matchedServices.map((s) => s.name).join(", ") || "none detected"}`,
       });
+
+      // Generate demo HTML with real project ID
+      const demoRequirements = {
+        projectType: primaryService?.serviceKey || mergedCaller.projectType || "website",
+        name: clientName,
+        email: clientEmail,
+        features: matchedServices.map((s) => s.name),
+        budget: mergedCaller.budget || (estimatedQuote ? `$${estimatedQuote.min.toLocaleString()} - $${estimatedQuote.max.toLocaleString()}` : ""),
+        timeline: mergedCaller.timeline || "",
+        description: summary || "",
+        selectedOption: mergedCaller.selectedOption || "",
+        company: clientCompany,
+        phone: clientPhone,
+      };
+      const demoHTML = generateDemoHTML(demoRequirements, project._id.toString());
+      project.demoHTML = demoHTML;
+      await project.save();
 
       // Link client to project
       if (client) {
@@ -601,7 +603,12 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, conversationId: conversation._id }, { headers });
   } catch (error) {
-    console.error("[Dograh Webhook] Error:", error);
+    await logError({
+      level: "error",
+      message: "Error processing dograh webhook",
+      source: "api/webhooks/dograh",
+      stack: error instanceof Error ? error.stack : undefined,
+    });
     return NextResponse.json({ error: "Webhook processing failed" }, { status: 500, headers });
   }
 }

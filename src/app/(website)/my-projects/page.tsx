@@ -16,7 +16,7 @@ interface Project {
   budget: number;
   currency: string;
   deadline?: string;
-  client: { name: string; email: string };
+  client: { name: string; email: string; phone?: string } | string;
   milestones: {
     name: string;
     description?: string;

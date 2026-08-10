@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import Project from "@/models/project";
 import { generateDemoHTML } from "@/lib/demo-generator";
+import { logError } from "@/lib/error-logger";
 
 export async function POST(request: Request) {
   try {
@@ -17,9 +18,7 @@ export async function POST(request: Request) {
 
     await connectToDatabase();
 
-    const projectId = `demo-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-
-    const demoHTML = generateDemoHTML(requirements, projectId);
+    const demoId = `demo-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
     const project = await Project.create({
       title: `${requirements.name} - ${(requirements.projectType as string)?.replace(/-/g, " ")}`,
@@ -35,8 +34,7 @@ export async function POST(request: Request) {
         timeline: requirements.timeline,
         designStyle: requirements.designStyle,
       },
-      demoHTML,
-      demoId: projectId,
+      demoId,
       status: "demo",
       language,
       quote: {
@@ -46,17 +44,26 @@ export async function POST(request: Request) {
       },
     });
 
+    const demoHTML = generateDemoHTML(requirements, project._id.toString());
+    project.demoHTML = demoHTML;
+    await project.save();
+
     return NextResponse.json({
       success: true,
       data: {
         projectId: project._id.toString(),
-        demoId: projectId,
+        demoId,
         previewUrl: `/preview/${project._id}`,
         checkoutUrl: `/checkout/${project._id}`,
       },
     });
   } catch (error) {
-    console.error("Demo generation error:", error);
+    await logError({
+      level: "error",
+      message: "Error generating demo via AI",
+      source: "api/ai/demo",
+      stack: error instanceof Error ? error.stack : undefined,
+    });
     return NextResponse.json({ error: "Failed to generate demo" }, { status: 500 });
   }
 }

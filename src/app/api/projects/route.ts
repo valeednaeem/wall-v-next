@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import Project from "@/models/project";
+import Client from "@/models/client";
 import { getAuthUser } from "@/lib/auth";
 import { escapeRegex } from "@/lib/escape-regex";
+import mongoose from "mongoose";
+import { logError } from "@/lib/error-logger";
 
 function slugify(text: string): string {
   return text
@@ -11,9 +14,24 @@ function slugify(text: string): string {
     .replace(/^-|-$/g, "") + `-${Date.now()}`;
 }
 
+async function resolveClient(clientField: unknown): Promise<{ name: string; email: string; phone?: string } | null> {
+  if (!clientField) return null;
+  if (typeof clientField === "object" && clientField !== null) {
+    return clientField as { name: string; email: string; phone?: string };
+  }
+  if (typeof clientField === "string" && mongoose.Types.ObjectId.isValid(clientField)) {
+    const client = await Client.findById(clientField).select("name email phone").lean();
+    if (client) {
+      return { name: client.name, email: client.email, phone: client.phone };
+    }
+  }
+  return null;
+}
+
 export async function GET(request: Request) {
+  let user;
   try {
-    const user = await getAuthUser();
+    user = await getAuthUser();
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -36,6 +54,23 @@ export async function GET(request: Request) {
       ];
     }
 
+    // Scope projects to client for non-admin users
+    const adminRoles = ["super-admin", "admin", "manager"];
+    if (!adminRoles.includes(user.role)) {
+      // Find the client record for this user's email
+      const client = await Client.findOne({ email: user.email }).lean();
+      if (client) {
+        // Only show projects belonging to this client
+        query.$or = [
+          { "client.email": user.email },
+          { "client": client._id.toString() },
+        ];
+      } else {
+        // No client record = no projects
+        return NextResponse.json({ projects: [], total: 0, page, limit });
+      }
+    }
+
     const total = await Project.countDocuments(query);
     const projects = await Project.find(query)
       .sort({ createdAt: -1 })
@@ -43,16 +78,31 @@ export async function GET(request: Request) {
       .limit(limit)
       .lean();
 
-    return NextResponse.json({ projects, total, page, limit });
+    // Resolve client references - if client is a string (ObjectId), look up the Client
+    const resolvedProjects = await Promise.all(
+      projects.map(async (project) => {
+        const resolvedClient = await resolveClient(project.client);
+        return { ...project, client: resolvedClient || project.client };
+      })
+    );
+
+    return NextResponse.json({ projects: resolvedProjects, total, page, limit });
   } catch (error) {
-    console.error("Error fetching projects:", error);
+    await logError({
+      level: "error",
+      message: "Error fetching projects",
+      source: "api/projects",
+      stack: error instanceof Error ? error.stack : undefined,
+      metadata: { userId: user?.userId },
+    });
     return NextResponse.json({ error: "Failed to fetch projects" }, { status: 500 });
   }
 }
 
 export async function POST(request: Request) {
+  let user;
   try {
-    const user = await getAuthUser();
+    user = await getAuthUser();
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -79,7 +129,13 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ project }, { status: 201 });
   } catch (error) {
-    console.error("Error creating project:", error);
+    await logError({
+      level: "error",
+      message: "Error creating project",
+      source: "api/projects",
+      stack: error instanceof Error ? error.stack : undefined,
+      metadata: { userId: user?.userId },
+    });
     return NextResponse.json({ error: "Failed to create project" }, { status: 500 });
   }
 }
