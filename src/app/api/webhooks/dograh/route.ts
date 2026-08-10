@@ -5,6 +5,7 @@ import Lead from "@/models/lead";
 import Inquiry from "@/models/inquiry";
 import Client from "@/models/client";
 import Project from "@/models/project";
+import Preview, { createPreviewToken } from "@/models/preview";
 import ServicePrice from "@/models/service-price";
 import { generateDemoHTML } from "@/lib/demo-generator";
 import { sendEmail, projectCreatedEmail } from "@/services/email";
@@ -537,6 +538,28 @@ export async function POST(request: Request) {
       project.demoHTML = demoHTML;
       await project.save();
 
+      // Create secure preview token
+      const { token: previewToken, tokenHash } = createPreviewToken();
+      const previewExpiryMinutes = 5;
+      const preview = await Preview.create({
+        projectId: project._id,
+        token: previewToken,
+        tokenHash,
+        status: "active",
+        expiresAt: new Date(Date.now() + previewExpiryMinutes * 60 * 1000),
+        accessCount: 0,
+        maxAccesses: 10,
+        paymentRequired: true,
+        paymentStatus: "unpaid",
+        accessLog: [
+          {
+            timestamp: new Date(),
+            event: "PREVIEW_CREATED",
+            details: `Created via Dograh webhook for ${clientName}`,
+          },
+        ],
+      });
+
       // Link client to project
       if (client) {
         client.totalProjects = (client.totalProjects || 0) + 1;
@@ -580,7 +603,8 @@ export async function POST(request: Request) {
 
       // Send preview email to client
       if (clientEmail && clientEmail.includes("@")) {
-        const previewUrl = `${process.env.NEXT_PUBLIC_APP_URL || "https://wall-v.com"}/preview/${project._id}`;
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://wall-v.com";
+        const previewUrl = `${appUrl}/preview/${preview.token}`;
         const emailContent = projectCreatedEmail(projectName, clientName, previewUrl);
         sendEmail({ ...emailContent, to: clientEmail }).catch((err) =>
           console.error("[Dograh Webhook] Failed to send preview email:", err)
@@ -595,7 +619,7 @@ export async function POST(request: Request) {
         clientId: client?._id,
         projectId: project._id,
         demoId,
-        previewUrl: `/preview/${project._id}`,
+        previewUrl: `/preview/${preview.token}`,
         checkoutUrl: `/checkout/${project._id}`,
         quote: estimatedQuote,
       }, { headers });

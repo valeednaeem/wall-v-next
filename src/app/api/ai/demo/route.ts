@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import Project from "@/models/project";
+import Preview, { createPreviewToken } from "@/models/preview";
 import { generateDemoHTML } from "@/lib/demo-generator";
 import { logError } from "@/lib/error-logger";
 
@@ -20,8 +21,13 @@ export async function POST(request: Request) {
 
     const demoId = `demo-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
+    const projectName = `${requirements.name} - ${(requirements.projectType as string)?.replace(/-/g, " ")}`;
+    const slug = projectName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") + `-${Date.now()}`;
+
     const project = await Project.create({
-      title: `${requirements.name} - ${(requirements.projectType as string)?.replace(/-/g, " ")}`,
+      name: projectName,
+      slug,
+      title: projectName,
       description: requirements.description || `Custom ${requirements.projectType} project for ${requirements.name}`,
       client: {
         name: requirements.name,
@@ -48,12 +54,34 @@ export async function POST(request: Request) {
     project.demoHTML = demoHTML;
     await project.save();
 
+    // Create secure preview token
+    const { token: previewToken, tokenHash } = createPreviewToken();
+    const previewExpiryMinutes = 5;
+    const preview = await Preview.create({
+      projectId: project._id,
+      token: previewToken,
+      tokenHash,
+      status: "active",
+      expiresAt: new Date(Date.now() + previewExpiryMinutes * 60 * 1000),
+      accessCount: 0,
+      maxAccesses: 10,
+      paymentRequired: true,
+      paymentStatus: "unpaid",
+      accessLog: [
+        {
+          timestamp: new Date(),
+          event: "PREVIEW_CREATED",
+          details: `Created via AI demo endpoint for ${requirements.name}`,
+        },
+      ],
+    });
+
     return NextResponse.json({
       success: true,
       data: {
         projectId: project._id.toString(),
         demoId,
-        previewUrl: `/preview/${project._id}`,
+        previewUrl: `/preview/${preview.token}`,
         checkoutUrl: `/checkout/${project._id}`,
       },
     });

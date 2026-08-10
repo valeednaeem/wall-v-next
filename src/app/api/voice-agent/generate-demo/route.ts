@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import Project from "@/models/project";
 import Client from "@/models/client";
+import Preview, { createPreviewToken } from "@/models/preview";
 import { generateDemoHTML } from "@/lib/demo-generator";
 import { corsHeaders, handleOPTIONS } from "@/lib/cors";
 import { logError } from "@/lib/error-logger";
@@ -137,13 +138,35 @@ export async function POST(request: Request) {
     project.demoHTML = demoHTML;
     await project.save();
 
+    // Create secure preview token
+    const { token: previewToken, tokenHash } = createPreviewToken();
+    const previewExpiryMinutes = 5;
+    const preview = await Preview.create({
+      projectId: project._id,
+      token: previewToken,
+      tokenHash,
+      status: "active",
+      expiresAt: new Date(Date.now() + previewExpiryMinutes * 60 * 1000),
+      accessCount: 0,
+      maxAccesses: 10,
+      paymentRequired: true,
+      paymentStatus: "unpaid",
+      accessLog: [
+        {
+          timestamp: new Date(),
+          event: "PREVIEW_CREATED",
+          details: `Created via voice agent for ${client_name}`,
+        },
+      ],
+    });
+
     // Update client
     client.totalProjects = (client.totalProjects || 0) + 1;
     client.lastContact = new Date();
     await client.save();
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://wall-v.com";
-    const previewUrl = `${appUrl}/preview/${project._id}`;
+    const previewUrl = `${appUrl}/preview/${preview.token}`;
     const checkoutUrl = `${appUrl}/checkout/${project._id}`;
 
     console.log("[Generate Demo] Created:", { projectId: project._id, demoId, previewUrl });
