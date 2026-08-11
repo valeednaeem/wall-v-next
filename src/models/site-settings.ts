@@ -18,7 +18,6 @@ const SiteSettingsSchema = new Schema<ISiteSettings>(
   { timestamps: true }
 );
 
-SiteSettingsSchema.index({ key: 1 });
 SiteSettingsSchema.index({ category: 1 });
 
 export default mongoose.models.SiteSettings ||
