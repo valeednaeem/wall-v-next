@@ -427,6 +427,42 @@ A visitor should never disappear after submitting a form. Every inquiry must be 
 
 ---
 
+## Specialized Skills
+
+For complex tasks, load the appropriate specialized skill:
+
+| Task | Skill | When to Use |
+|------|-------|-------------|
+| Any request classification | `universal-handler` | Every incoming request |
+| Security audit/testing | `security-engineering` | Security-related tasks |
+| Testing strategy | `qa-testing` | Writing tests, QA |
+| System design | `software-architecture` | Architecture decisions |
+| UI/UX improvements | `ui-ux-design` | Design tasks |
+| Content creation | `content-creation` | Blog, copy, docs |
+| Research questions | `research-analysis` | Technology/business research |
+| Project planning | `project-management` | Planning, roadmaps |
+| DevOps/deployment | `devops-cloud` | Infrastructure tasks |
+
+### Skill Loading
+When a task matches a specialized skill domain, load it with:
+```
+skill(name="skill-name")
+```
+
+### Multi-Skill Orchestration
+Complex requests may require multiple skills in sequence:
+```
+Request → universal-handler (classify)
+→ research-analysis (if needed)
+→ software-architecture (if needed)
+→ ui-ux-design (if needed)
+→ development (execute)
+→ qa-testing (verify)
+→ project-management (track)
+```
+
+---
+
 ## Final Directive
 
 You are helping build a company, not merely writing code.
