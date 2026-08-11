@@ -31,6 +31,13 @@ interface Project {
     description: string;
     createdAt: Date;
   }[];
+  requirements?: {
+    projectType?: string;
+    features?: string[];
+    budget?: string;
+    timeline?: string;
+  };
+  quote?: { min: number; max: number; currency: string };
   createdAt: string;
 }
 
@@ -231,6 +238,23 @@ export default function MyProjectsPage() {
                         </div>
                       </div>
 
+                      {/* Cost Breakdown */}
+                      {project.quote && (
+                        <div className="mt-4 p-3 rounded-lg bg-emerald-50 border border-emerald-200">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium text-emerald-800">Estimated Cost</span>
+                            <span className="text-sm font-bold text-emerald-700">
+                              ${project.quote.min.toLocaleString()} — ${project.quote.max.toLocaleString()} {project.quote.currency}
+                            </span>
+                          </div>
+                          {project.requirements?.budget && (
+                            <p className="text-xs text-emerald-600 mt-1">
+                              Your budget: {project.requirements.budget}
+                            </p>
+                          )}
+                        </div>
+                      )}
+
                       {/* Actions */}
                       <div className="flex items-center gap-3 mt-4 pt-4 border-t">
                         <Link
@@ -249,6 +273,13 @@ export default function MyProjectsPage() {
                             Pay
                           </Link>
                         )}
+                        <Link
+                          href={`/preview/${project._id}`}
+                          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border text-sm font-medium hover:bg-gray-50 transition-colors"
+                        >
+                          <Eye className="h-4 w-4" />
+                          Preview
+                        </Link>
                         {project.deadline && (
                           <span className="text-xs text-muted-foreground flex items-center gap-1 ml-auto">
                             <Calendar className="h-3 w-3" />
