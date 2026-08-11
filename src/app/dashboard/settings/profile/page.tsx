@@ -65,9 +65,12 @@ export default function ProfileSettingsPage() {
       }));
     }
     fetch("/api/settings/profile")
-      .then((r) => r.json())
+      .then((r) => {
+        if (r.status === 401) { window.location.href = "/login?callbackUrl=/dashboard/settings/profile"; return null; }
+        return r.json();
+      })
       .then((d) => {
-        if (d.success) {
+        if (d?.success) {
           setProfile(d.data.profile);
           setPortfolio(d.data.portfolio || []);
         }
@@ -84,6 +87,7 @@ export default function ProfileSettingsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ profile }),
       });
+      if (res.status === 401) { window.location.href = "/login?callbackUrl=/dashboard/settings/profile"; return; }
       const data = await res.json();
       if (res.ok && data.success) {
         if (data.data?.profile) setProfile(data.data.profile);
@@ -106,6 +110,7 @@ export default function ProfileSettingsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ portfolio }),
       });
+      if (res.status === 401) { window.location.href = "/login?callbackUrl=/dashboard/settings/profile"; return; }
       const data = await res.json();
       if (res.ok && data.success) {
         setSaveMessage({ type: "success", text: "Portfolio saved successfully" });

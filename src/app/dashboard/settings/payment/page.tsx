@@ -60,9 +60,13 @@ export default function PaymentSettingsPage() {
 
   useEffect(() => {
     fetch("/api/settings/payments")
-      .then((r) => r.json())
+      .then((r) => {
+        if (r.status === 401) { window.location.href = "/login?callbackUrl=/dashboard/settings/payment"; return null; }
+        if (r.status === 403) { return null; }
+        return r.json();
+      })
       .then((d) => {
-        if (d.success && d.data) {
+        if (d?.success && d.data) {
           if (d.data.stats) setStats(d.data.stats);
           if (d.data.transactions) setTransactions(d.data.transactions);
           if (d.data.gateways) setGateways(d.data.gateways);

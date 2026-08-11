@@ -157,14 +157,27 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   },
 });
 
-// Legacy JWT helpers for API routes that still use cookie-based auth
+// Auth helper for API routes — tries legacy JWT cookie first, falls back to NextAuth session
 export async function getAuthUser(): Promise<JWTPayload | null> {
+  // First try the legacy custom JWT token cookie
   const cookieStore = await cookies();
   const token = cookieStore.get("token")?.value;
-  if (!token) return null;
-  const payload = verifyToken(token);
-  if (!payload) return null;
-  return payload;
+  if (token) {
+    const payload = verifyToken(token);
+    if (payload) return payload;
+  }
+
+  // Fallback to NextAuth session (covers users who logged in via NextAuth)
+  const session = await auth();
+  if (session?.user?.id) {
+    return {
+      userId: session.user.id,
+      email: session.user.email || "",
+      role: (session.user as { role?: string }).role || "customer",
+    };
+  }
+
+  return null;
 }
 
 export async function getFullUser() {

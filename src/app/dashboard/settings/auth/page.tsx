@@ -37,6 +37,7 @@ export default function SecuritySettingsPage() {
   const [activeTab, setActiveTab] = useState<"password" | "2fa" | "logins" | "sessions" | "oauth">("password");
   const [showCurrentPass, setShowCurrentPass] = useState(false);
   const [showNewPass, setShowNewPass] = useState(false);
+  const [saveMessage, setSaveMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   const [security, setSecurity] = useState<SecurityData>({
     password: { current: "", newPass: "", confirm: "" },
@@ -48,76 +49,110 @@ export default function SecuritySettingsPage() {
 
   useEffect(() => {
     fetch("/api/settings/security")
-      .then((r) => r.json())
-      .then((d) => { if (d.success) setSecurity((prev) => ({ ...prev, ...d.data })); })
+      .then((r) => {
+        if (r.status === 401) { window.location.href = "/login?callbackUrl=/dashboard/settings/auth"; return null; }
+        return r.json();
+      })
+      .then((d) => { if (d?.success) setSecurity((prev) => ({ ...prev, ...d.data })); })
       .catch(() => {});
   }, []);
 
   const handlePasswordChange = async () => {
     if (security.password.newPass !== security.password.confirm) return;
     setSaving(true);
+    setSaveMessage(null);
     try {
       const res = await fetch("/api/settings/security", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ type: "password", current: security.password.current, newPass: security.password.newPass }),
       });
+      if (res.status === 401) { window.location.href = "/login?callbackUrl=/dashboard/settings/auth"; return; }
       const data = await res.json();
-      if (data.success) {
+      if (res.ok && data.success) {
         setSecurity((prev) => ({ ...prev, password: { current: "", newPass: "", confirm: "" } }));
+        setSaveMessage({ type: "success", text: "Password updated successfully" });
+      } else {
+        setSaveMessage({ type: "error", text: data.error || "Failed to update password" });
       }
-    } catch (e) { console.error("Password change error:", e); }
-    setTimeout(() => setSaving(false), 800);
+    } catch {
+      setSaveMessage({ type: "error", text: "Network error. Please try again." });
+    }
+    setSaving(false);
   };
 
   const handleToggle2FA = async () => {
     setSaving(true);
+    setSaveMessage(null);
     try {
       const res = await fetch("/api/settings/security", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ type: "2fa", enabled: !security.twoFactorEnabled }),
       });
+      if (res.status === 401) { window.location.href = "/login?callbackUrl=/dashboard/settings/auth"; return; }
       const data = await res.json();
-      if (data.success) {
+      if (res.ok && data.success) {
         setSecurity((prev) => ({ ...prev, twoFactorEnabled: !prev.twoFactorEnabled }));
+        setSaveMessage({ type: "success", text: "2FA settings updated" });
+      } else {
+        setSaveMessage({ type: "error", text: data.error || "Failed to update 2FA" });
       }
-    } catch (e) { console.error("2FA toggle error:", e); }
-    setTimeout(() => setSaving(false), 800);
+    } catch {
+      setSaveMessage({ type: "error", text: "Network error. Please try again." });
+    }
+    setSaving(false);
   };
 
   const handleToggleOAuth = async (provider: string) => {
     setSaving(true);
+    setSaveMessage(null);
     try {
       const res = await fetch("/api/settings/security", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ type: "oauth", provider }),
       });
+      if (res.status === 401) { window.location.href = "/login?callbackUrl=/dashboard/settings/auth"; return; }
       const data = await res.json();
-      if (data.success) {
+      if (res.ok && data.success) {
         setSecurity((prev) => ({
           ...prev,
           linkedAccounts: prev.linkedAccounts.map((a) =>
             a.provider === provider ? { ...a, connected: !a.connected } : a
           ),
         }));
+        setSaveMessage({ type: "success", text: `OAuth ${provider} updated` });
+      } else {
+        setSaveMessage({ type: "error", text: data.error || "Failed to update OAuth" });
       }
-    } catch (e) { console.error("OAuth toggle error:", e); }
-    setTimeout(() => setSaving(false), 800);
+    } catch {
+      setSaveMessage({ type: "error", text: "Network error. Please try again." });
+    }
+    setSaving(false);
   };
 
   const handleRevokeSession = async (sessionId: string) => {
     setSaving(true);
+    setSaveMessage(null);
     try {
-      await fetch("/api/settings/security", {
+      const res = await fetch("/api/settings/security", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ type: "revoke-session", sessionId }),
       });
-      setSecurity((prev) => ({ ...prev, sessions: prev.sessions.filter((s) => s.id !== sessionId) }));
-    } catch {}
-    setTimeout(() => setSaving(false), 800);
+      if (res.status === 401) { window.location.href = "/login?callbackUrl=/dashboard/settings/auth"; return; }
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setSecurity((prev) => ({ ...prev, sessions: prev.sessions.filter((s) => s.id !== sessionId) }));
+        setSaveMessage({ type: "success", text: "Session revoked" });
+      } else {
+        setSaveMessage({ type: "error", text: data.error || "Failed to revoke session" });
+      }
+    } catch {
+      setSaveMessage({ type: "error", text: "Network error. Please try again." });
+    }
+    setSaving(false);
   };
 
   const providerLabels: Record<string, string> = {
@@ -137,6 +172,12 @@ export default function SecuritySettingsPage() {
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold">Security Settings</h2>
+
+      {saveMessage && (
+        <div className={`p-3 rounded-lg text-sm ${saveMessage.type === "success" ? "bg-green-50 text-green-700 border border-green-200" : "bg-red-50 text-red-700 border border-red-200"}`}>
+          {saveMessage.text}
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="flex gap-1 border-b overflow-x-auto">

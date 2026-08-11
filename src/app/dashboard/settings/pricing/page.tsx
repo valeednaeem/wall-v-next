@@ -87,6 +87,7 @@ export default function PricingPage() {
   const fetchPrices = useCallback(async () => {
     try {
       const res = await fetch("/api/settings/prices");
+      if (res.status === 401) { window.location.href = "/login?callbackUrl=/dashboard/settings/pricing"; return; }
       const data = await res.json();
       setPrices(data.prices || []);
     } catch {

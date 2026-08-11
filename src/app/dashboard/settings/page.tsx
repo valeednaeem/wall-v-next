@@ -82,6 +82,7 @@ export default function GeneralSettingsPage() {
   const [activeTab, setActiveTab] = useState<"site" | "seo" | "api" | "social" | "ads" | "voice">("site");
   const [saving, setSaving] = useState(false);
   const [showSecrets, setShowSecrets] = useState<Record<string, boolean>>({});
+  const [saveMessage, setSaveMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   const [site, setSite] = useState<SiteSettings>({
     siteName: "Wall-V",
@@ -204,9 +205,12 @@ BEHAVIOR:
 
   useEffect(() => {
     fetch("/api/settings/general")
-      .then((r) => r.json())
+      .then((r) => {
+        if (r.status === 401) { window.location.href = "/login?callbackUrl=/dashboard/settings"; return null; }
+        return r.json();
+      })
       .then((d) => {
-        if (d.success && d.data) {
+        if (d?.success && d.data) {
           if (d.data.site) setSite((prev) => ({ ...prev, ...d.data.site }));
           if (d.data.seo) setSeo((prev) => ({ ...prev, ...d.data.seo }));
           if (d.data.apiKeys) setApiKeys((prev) => ({ ...prev, ...d.data.apiKeys }));
@@ -224,16 +228,24 @@ BEHAVIOR:
 
   const handleSave = async () => {
     setSaving(true);
+    setSaveMessage(null);
     try {
       const res = await fetch("/api/settings/general", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ site, seo, apiKeys, social, ads, voice }),
       });
+      if (res.status === 401) { window.location.href = "/login?callbackUrl=/dashboard/settings"; return; }
       const data = await res.json();
-      if (!data.success) console.error("Save failed:", data.error);
-    } catch (e) { console.error("Save error:", e); }
-    setTimeout(() => setSaving(false), 800);
+      if (res.ok && data.success) {
+        setSaveMessage({ type: "success", text: "Settings saved successfully" });
+      } else {
+        setSaveMessage({ type: "error", text: data.error || "Failed to save settings" });
+      }
+    } catch {
+      setSaveMessage({ type: "error", text: "Network error. Please try again." });
+    }
+    setSaving(false);
   };
 
   const tabs = [
@@ -356,7 +368,12 @@ BEHAVIOR:
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 border-b">
+      {saveMessage && (
+        <div className={`p-3 rounded-lg text-sm ${saveMessage.type === "success" ? "bg-green-50 text-green-700 border border-green-200" : "bg-red-50 text-red-700 border border-red-200"}`}>
+          {saveMessage.text}
+        </div>
+      )}
+      <div className="flex gap-1 border-b overflow-x-auto">
         {tabs.map((tab) => (
           <button
             key={tab.id}
