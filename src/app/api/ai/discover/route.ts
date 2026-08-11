@@ -189,6 +189,74 @@ export async function POST(request: Request) {
       console.error("[Discover] Conversation tracking failed:", trackErr);
     }
 
+    // ── Production Workflow: when user confirms the brief, create the project ──
+    if (newState.stage === "create-inquiry") {
+      try {
+        const { runProductionWorkflow } = await import("@/lib/production-workflow");
+        const brief = newState.brief;
+        const contactEmail = (brief as unknown as Record<string, unknown>)._contactEmail as string | undefined;
+        const contactPhone = (brief as unknown as Record<string, unknown>)._contactPhone as string | undefined;
+
+        const result = await runProductionWorkflow({
+          projectType: brief.projectType || "website",
+          projectName: brief.title || `${brief.projectType || "project"}`,
+          clientName: brief.title?.replace("'s Project", "") || "Web Visitor",
+          clientEmail: contactEmail || "",
+          clientPhone: contactPhone || "",
+          features: brief.features,
+          budget: brief.estimatedBudget || undefined,
+          timeline: brief.desiredTimeline || undefined,
+          designStyle: brief.designPreferences || undefined,
+          language,
+          objective: brief.objective,
+          industry: brief.businessContext.industry || undefined,
+          targetAudience: brief.targetAudience || undefined,
+          integrations: brief.integrations,
+          authRequired: brief.projectType === "web-application" || brief.projectType === "saas",
+          dbRequired: brief.projectType === "web-application" || brief.projectType === "saas" || brief.projectType === "ecommerce",
+          adminDashboard: brief.projectType === "web-application" || brief.projectType === "saas" || brief.projectType === "ecommerce",
+          clientDashboard: brief.projectType === "saas",
+          apiRequired: brief.projectType === "web-application" || brief.projectType === "saas",
+          seoRequired: brief.seoRequired || brief.projectType === "website" || brief.projectType === "ecommerce",
+          mobileRequired: brief.mobileAppRequired,
+        }, { skipPreview: false, skipDemo: false });
+
+        // Mark conversation as project-created
+        newState.stage = "completed";
+        try {
+          await Conversation.findOneAndUpdate(
+            { sessionId: sid },
+            { $set: { discoveryState: newState as unknown as Record<string, unknown> } }
+          );
+        } catch { /* non-critical */ }
+
+        return NextResponse.json({
+          success: true,
+          data: {
+            message: `I've created your project and analyzed the costs. Here's what I found:\n\n**Project:** ${result.projectName}\n**Type:** ${result.projectType}\n\n**Cost Breakdown:**\n- Development: $${result.costAnalysis.developmentCost.subtotal.toLocaleString()}\n- Third-party: $${result.costAnalysis.thirdPartyCosts.subtotal.toLocaleString()}\n- One-time: $${result.costAnalysis.oneTimeCosts.subtotal.toLocaleString()}\n\n**Budget Status:** ${result.budgetComparison.status === "within-budget" ? "✅ Within budget" : result.budgetComparison.status === "significantly-above" ? "⚠️ Above budget" : "💰 Under budget"}${result.budgetComparison.difference !== null ? ` (${result.budgetComparison.difference > 0 ? "+" : ""}$${result.budgetComparison.difference.toLocaleString()})` : ""}\n\n**Deliverables:** ${result.deliverables.map((d) => d.type).join(", ")}\n\n**First Milestone:** ${result.firstMilestone.name}\n- ${result.firstMilestone.description}\n\n${result.checkoutUrl ? `**[Proceed to Checkout](${result.checkoutUrl})**` : ""}\n${result.previewUrl ? `\n**[View Preview](${result.previewUrl})**` : ""}\n\nOur team will review this and get back to you shortly!`,
+            suggestions: ["View my project", "Start a new project", "Contact support"],
+            language,
+            sessionId: sid,
+            conversationState: newState,
+            stage: "completed",
+            action: "project_created",
+            projectId: result.projectId,
+            projectName: result.projectName,
+            checkoutUrl: result.checkoutUrl,
+            previewUrl: result.previewUrl,
+            costAnalysis: result.costAnalysis,
+            budgetComparison: result.budgetComparison,
+            deliverables: result.deliverables,
+            firstMilestone: result.firstMilestone,
+            brief: newState.brief,
+          },
+        });
+      } catch (workflowError) {
+        console.error("[Discover] Production workflow failed:", workflowError);
+        // Fall through to normal response if workflow fails
+      }
+    }
+
     return NextResponse.json({
       success: true,
       data: {

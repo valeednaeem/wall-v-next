@@ -29,6 +29,7 @@ const sidebarItems: SidebarItem[] = [
     { label: "New Post", href: "/dashboard/blog/new" },
   ]},
   { label: "Projects", href: "/dashboard/projects", icon: <FolderKanban className="h-4 w-4" /> },
+  { label: "Production", href: "/dashboard/production", icon: <Package className="h-4 w-4" /> },
   { label: "AI Conversations", href: "/dashboard/ai-conversations", icon: <MessageSquare className="h-4 w-4" /> },
   { label: "Voice Agent Calls", href: "/dashboard/voice-agent-conversations", icon: <Phone className="h-4 w-4" /> },
   { label: "CRM", href: "/dashboard/crm", icon: <Users className="h-4 w-4" />, children: [

@@ -150,6 +150,14 @@ export function AIChatInterface({ className }: { className?: string }) {
             suggestions: data.data.suggestions,
           }]);
           setConversationState(data.data.conversationState);
+          // Capture project data if production workflow created a project
+          if (data.data.action === "project_created" && data.data.projectId) {
+            setLastProject({
+              id: data.data.projectId,
+              previewUrl: data.data.previewUrl || `/preview/${data.data.projectId}`,
+              checkoutUrl: data.data.checkoutUrl || `/checkout/${data.data.projectId}`,
+            });
+          }
         } else {
           setMessages([...updatedMessages, { role: "assistant", content: "Sorry, I encountered an error. Please try again." }]);
         }

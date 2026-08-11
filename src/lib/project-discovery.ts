@@ -999,6 +999,17 @@ export function generateNextResponse(state: ConversationState): DiscoveryRespons
     };
   }
 
+  // User confirmed — production workflow will be triggered by the API route
+  if (state.stage === "create-inquiry") {
+    return {
+      message: "Perfect! I'm creating your project now and analyzing the costs. This will only take a moment...",
+      stage: state.stage,
+      brief: state.brief,
+      action: "create_inquiry",
+      suggestions: [],
+    };
+  }
+
   // Get next question
   const nextQuestionField = getNextQuestion(state.brief, state.askedQuestions);
 
