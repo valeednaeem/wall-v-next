@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import CookieCategory from "@/models/cookie-category";
 import { auth } from "@/lib/auth";
+import { pickFields } from "@/lib/pick-fields";
+
+const CATEGORY_FIELDS = ["name", "description", "isRequired", "defaultEnabled", "sortOrder", "isActive"];
 
 export async function PUT(
   request: Request,
@@ -21,8 +24,9 @@ export async function PUT(
     await connectToDatabase();
     const { id } = await params;
     const body = await request.json();
+    const categoryData = pickFields(body, CATEGORY_FIELDS);
 
-    const updated = await CookieCategory.findByIdAndUpdate(id, body, { new: true });
+    const updated = await CookieCategory.findByIdAndUpdate(id, categoryData, { new: true });
     if (!updated) {
       return NextResponse.json({ error: "Category not found" }, { status: 404 });
     }

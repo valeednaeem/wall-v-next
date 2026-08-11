@@ -4,7 +4,7 @@ import RefundRule from "@/models/refund-rule";
 import { auth } from "@/lib/auth";
 import { pickFields } from "@/lib/pick-fields";
 
-const REFUND_RULE_FIELDS = ["name", "description", "serviceType", "conditions", "refundWindowDays", "refundPercentage", "refundMethod", "processingDays", "excludedItems", "notes", "isEligible", "requiresApproval", "isActive"];
+const REFUND_RULE_FIELDS = ["name", "description", "serviceType", "conditions", "refundWindowDays", "refundPercentage", "refundMethod", "processingDays", "excludedItems", "notes", "isEligible", "requiresApproval", "isActive", "sortOrder"];
 
 export async function PUT(
   request: Request,

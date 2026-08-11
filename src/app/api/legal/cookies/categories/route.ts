@@ -2,7 +2,10 @@ import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import CookieCategory from "@/models/cookie-category";
 import { auth } from "@/lib/auth";
+import { pickFields } from "@/lib/pick-fields";
 import slugify from "slugify";
+
+const CATEGORY_FIELDS = ["name", "description", "isRequired", "defaultEnabled", "sortOrder", "isActive"];
 
 export async function GET() {
   try {
@@ -33,7 +36,8 @@ export async function POST(request: Request) {
     const body = await request.json();
 
     const slug = slugify(body.name, { lower: true, strict: true, trim: true });
-    const category = await CookieCategory.create({ ...body, slug });
+    const categoryData = pickFields(body, CATEGORY_FIELDS);
+    const category = await CookieCategory.create({ ...categoryData, slug });
 
     return NextResponse.json({ success: true, data: category }, { status: 201 });
   } catch (error) {

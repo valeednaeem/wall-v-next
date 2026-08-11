@@ -10,11 +10,17 @@ import {
   Menu, X, LogOut, User, CreditCard, Shield, Search, Bell, MessageSquare, Phone, AlertTriangle, Eye
 } from "lucide-react";
 
+interface SidebarChild {
+  label: string;
+  href: string;
+  roles?: string[];
+}
+
 interface SidebarItem {
   label: string;
   href: string;
   icon: React.ReactNode;
-  children?: { label: string; href: string }[];
+  children?: SidebarChild[];
   roles?: string[];
 }
 

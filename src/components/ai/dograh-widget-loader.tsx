@@ -22,7 +22,7 @@ export function DograhWidgetLoader() {
         // Fallback to env var
       }
 
-      setWidgetUrl(url);
+      setWidgetUrl(url ?? null);
     }
 
     loadWidgetUrl();

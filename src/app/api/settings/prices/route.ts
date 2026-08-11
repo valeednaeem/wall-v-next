@@ -29,8 +29,11 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const user = await getAuthUser();
-    if (!user || !["super-admin", "admin"].includes(user.role)) {
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (!["super-admin", "admin"].includes(user.role)) {
+      return NextResponse.json({ error: "Forbidden: insufficient permissions" }, { status: 403 });
     }
 
     await connectToDatabase();
@@ -53,8 +56,11 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   try {
     const user = await getAuthUser();
-    if (!user || !["super-admin", "admin"].includes(user.role)) {
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (!["super-admin", "admin"].includes(user.role)) {
+      return NextResponse.json({ error: "Forbidden: insufficient permissions" }, { status: 403 });
     }
 
     await connectToDatabase();
@@ -80,8 +86,11 @@ export async function PUT(request: Request) {
 export async function DELETE(request: Request) {
   try {
     const user = await getAuthUser();
-    if (!user || !["super-admin", "admin"].includes(user.role)) {
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (!["super-admin", "admin"].includes(user.role)) {
+      return NextResponse.json({ error: "Forbidden: insufficient permissions" }, { status: 403 });
     }
 
     await connectToDatabase();
