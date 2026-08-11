@@ -37,6 +37,7 @@ export default function ProfileSettingsPage() {
   const { data: session } = useSession();
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<"profile" | "portfolio">("profile");
+  const [saveMessage, setSaveMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   const [profile, setProfile] = useState<ProfileData>({
     name: "",
@@ -67,7 +68,7 @@ export default function ProfileSettingsPage() {
       .then((r) => r.json())
       .then((d) => {
         if (d.success) {
-          setProfile((prev) => ({ ...prev, ...d.data.profile }));
+          setProfile(d.data.profile);
           setPortfolio(d.data.portfolio || []);
         }
       })
@@ -76,6 +77,7 @@ export default function ProfileSettingsPage() {
 
   const handleSaveProfile = async () => {
     setSaving(true);
+    setSaveMessage(null);
     try {
       const res = await fetch("/api/settings/profile", {
         method: "PUT",
@@ -83,13 +85,21 @@ export default function ProfileSettingsPage() {
         body: JSON.stringify({ profile }),
       });
       const data = await res.json();
-      if (!data.success) console.error("Profile save failed:", data.error);
-    } catch (e) { console.error("Profile save error:", e); }
-    setTimeout(() => setSaving(false), 800);
+      if (res.ok && data.success) {
+        if (data.data?.profile) setProfile(data.data.profile);
+        setSaveMessage({ type: "success", text: "Profile saved successfully" });
+      } else {
+        setSaveMessage({ type: "error", text: data.error || "Failed to save profile" });
+      }
+    } catch {
+      setSaveMessage({ type: "error", text: "Network error. Please try again." });
+    }
+    setSaving(false);
   };
 
   const handleSavePortfolio = async () => {
     setSaving(true);
+    setSaveMessage(null);
     try {
       const res = await fetch("/api/settings/profile", {
         method: "PUT",
@@ -97,9 +107,15 @@ export default function ProfileSettingsPage() {
         body: JSON.stringify({ portfolio }),
       });
       const data = await res.json();
-      if (!data.success) console.error("Portfolio save failed:", data.error);
-    } catch (e) { console.error("Portfolio save error:", e); }
-    setTimeout(() => setSaving(false), 800);
+      if (res.ok && data.success) {
+        setSaveMessage({ type: "success", text: "Portfolio saved successfully" });
+      } else {
+        setSaveMessage({ type: "error", text: data.error || "Failed to save portfolio" });
+      }
+    } catch {
+      setSaveMessage({ type: "error", text: "Network error. Please try again." });
+    }
+    setSaving(false);
   };
 
   const addPortfolioItem = () => {
@@ -151,6 +167,11 @@ export default function ProfileSettingsPage() {
       </div>
 
       {/* Tabs */}
+      {saveMessage && (
+        <div className={`p-3 rounded-lg text-sm ${saveMessage.type === "success" ? "bg-green-50 text-green-700 border border-green-200" : "bg-red-50 text-red-700 border border-red-200"}`}>
+          {saveMessage.text}
+        </div>
+      )}
       <div className="flex gap-1 border-b">
         <button
           onClick={() => setActiveTab("profile")}
