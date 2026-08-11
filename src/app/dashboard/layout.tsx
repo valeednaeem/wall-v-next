@@ -15,52 +15,53 @@ interface SidebarItem {
   href: string;
   icon: React.ReactNode;
   children?: { label: string; href: string }[];
+  roles?: string[];
 }
 
 const sidebarItems: SidebarItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: <LayoutDashboard className="h-4 w-4" /> },
-  { label: "E-Commerce", href: "/dashboard/ecommerce/products", icon: <ShoppingBag className="h-4 w-4" />, children: [
+  { label: "E-Commerce", href: "/dashboard/ecommerce/products", icon: <ShoppingBag className="h-4 w-4" />, roles: ["super-admin", "admin", "manager", "staff"], children: [
     { label: "Products", href: "/dashboard/ecommerce/products" },
     { label: "Categories", href: "/dashboard/ecommerce/products/categories" },
     { label: "Orders", href: "/dashboard/orders" },
   ]},
-  { label: "Blog", href: "/dashboard/blog", icon: <FileText className="h-4 w-4" />, children: [
+  { label: "Blog", href: "/dashboard/blog", icon: <FileText className="h-4 w-4" />, roles: ["super-admin", "admin", "manager"], children: [
     { label: "All Posts", href: "/dashboard/blog" },
     { label: "New Post", href: "/dashboard/blog/new" },
   ]},
   { label: "Projects", href: "/dashboard/projects", icon: <FolderKanban className="h-4 w-4" /> },
-  { label: "Production", href: "/dashboard/production", icon: <Package className="h-4 w-4" /> },
-  { label: "AI Conversations", href: "/dashboard/ai-conversations", icon: <MessageSquare className="h-4 w-4" /> },
-  { label: "Voice Agent Calls", href: "/dashboard/voice-agent-conversations", icon: <Phone className="h-4 w-4" /> },
-  { label: "CRM", href: "/dashboard/crm", icon: <Users className="h-4 w-4" />, children: [
+  { label: "Production", href: "/dashboard/production", icon: <Package className="h-4 w-4" />, roles: ["super-admin", "admin", "manager"] },
+  { label: "AI Conversations", href: "/dashboard/ai-conversations", icon: <MessageSquare className="h-4 w-4" />, roles: ["super-admin", "admin", "manager"] },
+  { label: "Voice Agent Calls", href: "/dashboard/voice-agent-conversations", icon: <Phone className="h-4 w-4" />, roles: ["super-admin", "admin", "manager"] },
+  { label: "CRM", href: "/dashboard/crm", icon: <Users className="h-4 w-4" />, roles: ["super-admin", "admin", "manager", "staff"], children: [
     { label: "Overview", href: "/dashboard/crm" },
     { label: "Leads", href: "/dashboard/crm/leads" },
     { label: "Clients", href: "/dashboard/crm/clients" },
     { label: "Inquiries", href: "/dashboard/crm/inquiries" },
   ]},
   { label: "Invoices", href: "/dashboard/invoices", icon: <Receipt className="h-4 w-4" /> },
-  { label: "Hosting", href: "/dashboard/hosting", icon: <Cloud className="h-4 w-4" />, children: [
+  { label: "Hosting", href: "/dashboard/hosting", icon: <Cloud className="h-4 w-4" />, roles: ["super-admin", "admin", "manager"], children: [
     { label: "Hosting Plans", href: "/dashboard/hosting" },
     { label: "Hosting Offers", href: "/dashboard/hosting/offers" },
   ]},
-  { label: "Domains", href: "/dashboard/domains", icon: <Globe className="h-4 w-4" />, children: [
+  { label: "Domains", href: "/dashboard/domains", icon: <Globe className="h-4 w-4" />, roles: ["super-admin", "admin", "manager"], children: [
     { label: "Domain TLDs", href: "/dashboard/domains" },
     { label: "Domain Offers", href: "/dashboard/domains/offers" },
   ]},
   { label: "Support", href: "/dashboard/support", icon: <Headphones className="h-4 w-4" /> },
-  { label: "Error Logs", href: "/dashboard/errors", icon: <AlertTriangle className="h-4 w-4" /> },
-  { label: "Previews", href: "/dashboard/previews", icon: <Eye className="h-4 w-4" /> },
-  { label: "Users", href: "/dashboard/users", icon: <Users className="h-4 w-4" />, children: [
+  { label: "Error Logs", href: "/dashboard/errors", icon: <AlertTriangle className="h-4 w-4" />, roles: ["super-admin", "admin"] },
+  { label: "Previews", href: "/dashboard/previews", icon: <Eye className="h-4 w-4" />, roles: ["super-admin", "admin", "manager"] },
+  { label: "Users", href: "/dashboard/users", icon: <Users className="h-4 w-4" />, roles: ["super-admin", "admin"], children: [
     { label: "All Users", href: "/dashboard/users" },
     { label: "Roles", href: "/dashboard/users/roles" },
   ]},
   { label: "Settings", href: "/dashboard/settings", icon: <Settings className="h-4 w-4" />, children: [
-    { label: "General", href: "/dashboard/settings" },
-    { label: "Pricing", href: "/dashboard/settings/pricing" },
+    { label: "General", href: "/dashboard/settings", roles: ["super-admin", "admin"] },
+    { label: "Pricing", href: "/dashboard/settings/pricing", roles: ["super-admin", "admin"] },
     { label: "Profile", href: "/dashboard/settings/profile" },
     { label: "Security", href: "/dashboard/settings/auth" },
-    { label: "Payment", href: "/dashboard/settings/payment" },
-    { label: "Legal & Compliance", href: "/dashboard/settings/legal" },
+    { label: "Payment", href: "/dashboard/settings/payment", roles: ["super-admin", "admin"] },
+    { label: "Legal & Compliance", href: "/dashboard/settings/legal", roles: ["super-admin", "admin"] },
   ]},
 ];
 
@@ -74,9 +75,38 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const userMenuRef = useRef<HTMLDivElement>(null);
 
   const user = session?.user;
+  const userRole = (user as { role?: string })?.role || "customer";
   const userName = user?.name || "User";
   const userEmail = user?.email || "";
   const userInitial = userName.charAt(0).toUpperCase();
+
+  const ADMIN_ROLES = ["super-admin", "admin"];
+  const MANAGER_ROLES = ["super-admin", "admin", "manager"];
+  const STAFF_ROLES = ["super-admin", "admin", "manager", "staff"];
+
+  function hasAccess(item: SidebarItem): boolean {
+    if (!item.roles) return true;
+    return item.roles.includes(userRole);
+  }
+
+  function hasChildAccess(item: SidebarItem): boolean {
+    if (!item.children) return true;
+    return item.children.some((child) => !child.roles || child.roles.includes(userRole));
+  }
+
+  const filteredSidebarItems = sidebarItems.filter((item) => {
+    if (!hasAccess(item)) return false;
+    if (item.children) {
+      const filteredChildren = item.children.filter((child) => !child.roles || child.roles.includes(userRole));
+      if (filteredChildren.length === 0) return false;
+    }
+    return true;
+  }).map((item) => {
+    if (item.children) {
+      return { ...item, children: item.children.filter((child) => !child.roles || child.roles.includes(userRole)) };
+    }
+    return item;
+  });
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -108,7 +138,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto p-3 space-y-0.5">
-        {sidebarItems.map((item) => (
+        {filteredSidebarItems.map((item) => (
           <div key={item.label}>
             {item.children ? (
               <>

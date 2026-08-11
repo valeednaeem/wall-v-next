@@ -24,6 +24,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const userRole = (session.user as { role?: string }).role;
+    if (!["super-admin", "admin"].includes(userRole || "")) {
+      return NextResponse.json({ error: "Forbidden: insufficient permissions" }, { status: 403 });
+    }
+
     await connectToDatabase();
     const body = await request.json();
 

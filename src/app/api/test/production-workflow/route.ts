@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { runProductionWorkflow, type ProductionRequirements } from "@/lib/production-workflow";
 import { logError } from "@/lib/error-logger";
+import { getAuthUser } from "@/lib/auth";
 
 const TEST_SCENARIOS: Record<string, ProductionRequirements> = {
   "simple-website": {
@@ -106,6 +107,11 @@ const TEST_SCENARIOS: Record<string, ProductionRequirements> = {
 };
 
 export async function GET(request: Request) {
+  const user = await getAuthUser();
+  if (!user || !["super-admin", "admin"].includes(user.role)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const url = new URL(request.url);
   const scenario = url.searchParams.get("scenario") || "simple-website";
   const skipPreview = url.searchParams.get("skipPreview") === "true";

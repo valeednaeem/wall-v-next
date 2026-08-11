@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import Preview, { createPreviewToken } from "@/models/preview";
 import Project from "@/models/project";
+import Client from "@/models/client";
 import { getAuthUser } from "@/lib/auth";
 import { logError } from "@/lib/error-logger";
 
@@ -10,6 +11,16 @@ const DEFAULT_MAX_ACCESSES = 10;
 
 export async function POST(request: Request) {
   try {
+    const user = await getAuthUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const adminRoles = ["super-admin", "admin", "manager"];
+    if (!adminRoles.includes(user.role)) {
+      return NextResponse.json({ error: "Forbidden: insufficient permissions" }, { status: 403 });
+    }
+
     const body = await request.json();
     const { projectId, milestoneIndex, expiresInMinutes, maxAccesses } = body;
 

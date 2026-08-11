@@ -34,6 +34,11 @@ export async function PUT(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const userRole = (session.user as { role?: string }).role;
+    if (!["super-admin", "admin"].includes(userRole || "")) {
+      return NextResponse.json({ error: "Forbidden: insufficient permissions" }, { status: 403 });
+    }
+
     await connectToDatabase();
     const { id } = await params;
     const body = await request.json();
@@ -59,6 +64,11 @@ export async function DELETE(
     const session = await auth();
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const userRole = (session.user as { role?: string }).role;
+    if (!["super-admin", "admin"].includes(userRole || "")) {
+      return NextResponse.json({ error: "Forbidden: insufficient permissions" }, { status: 403 });
     }
 
     await connectToDatabase();

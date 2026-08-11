@@ -13,6 +13,10 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    if (!["super-admin", "admin"].includes(user.role)) {
+      return NextResponse.json({ error: "Forbidden: insufficient permissions" }, { status: 403 });
+    }
+
     await connectToDatabase();
     const prices = await ServicePrice.find({}).sort({ displayOrder: 1, category: 1 }).lean();
     return NextResponse.json({ prices });

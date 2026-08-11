@@ -3,9 +3,15 @@ import { runProductionWorkflow, type ProductionRequirements } from "@/lib/produc
 import { sendEmail, projectCreatedEmail, adminNewProjectEmail } from "@/services/email";
 import { notifyAdmins } from "@/lib/notify";
 import { logError } from "@/lib/error-logger";
+import { getAuthUser } from "@/lib/auth";
 
 export async function POST(request: Request) {
   try {
+    const user = await getAuthUser();
+    if (!user || !["super-admin", "admin", "manager"].includes(user.role)) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const body = await request.json();
 
     const {

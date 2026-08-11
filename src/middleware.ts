@@ -3,6 +3,13 @@ import type { NextRequest } from "next/server";
 
 const BACKEND_URL = process.env.BACKEND_URL;
 
+function hasValidSessionCookie(request: NextRequest): boolean {
+  const sessionToken = request.cookies.get("next-auth.session-token")?.value
+    || request.cookies.get("__Secure-next-auth.session-token")?.value;
+  const customToken = request.cookies.get("token")?.value;
+  return !!(sessionToken || customToken);
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -46,10 +53,19 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  // Protect /dashboard/* routes - require authentication
+  if (pathname.startsWith("/dashboard")) {
+    if (!hasValidSessionCookie(request)) {
+      const loginUrl = new URL("/login", request.url);
+      loginUrl.searchParams.set("callbackUrl", pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+  }
+
   // All other routes pass through to Next.js handlers
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/api/backend/:path*"],
+  matcher: ["/api/backend/:path*", "/dashboard/:path*"],
 };

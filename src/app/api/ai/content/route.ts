@@ -9,6 +9,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    if (!["super-admin", "admin", "manager"].includes(authUser.role)) {
+      return NextResponse.json({ error: "Forbidden: insufficient permissions" }, { status: 403 });
+    }
+
     const body = await request.json();
     const { type, prompt, features } = body;
 

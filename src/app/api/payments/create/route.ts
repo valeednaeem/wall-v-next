@@ -30,6 +30,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
+    // Ownership check: non-admin users can only create payments for their own projects
+    const adminRoles = ["super-admin", "admin", "manager"];
+    if (!adminRoles.includes(user.role)) {
+      const clientEmail = project.client?.email;
+      if (!clientEmail || clientEmail !== user.email) {
+        return NextResponse.json({ error: "Project not found" }, { status: 404 });
+      }
+    }
+
     // Generate invoice number
     const invoiceCount = await Invoice.countDocuments();
     const invoiceNumber = `INV-${String(invoiceCount + 1).padStart(5, "0")}`;

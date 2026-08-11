@@ -78,6 +78,11 @@ export async function PUT(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const adminRoles = ["super-admin", "admin", "manager"];
+    if (!adminRoles.includes(user.role)) {
+      return NextResponse.json({ error: "Forbidden: insufficient permissions" }, { status: 403 });
+    }
+
     const csrfToken = request.headers.get(CSRF_HEADER_NAME);
     if (!csrfToken || !verifyCsrfToken(csrfToken)) {
       return NextResponse.json({ error: "Invalid CSRF token" }, { status: 403 });
@@ -88,6 +93,20 @@ export async function PUT(
     id = resolved.id;
     const body = await request.json();
     const projectData = pickFields(body, PROJECT_UPDATE_FIELDS);
+
+    const existingProject = await Project.findById(id).lean();
+    if (!existingProject) {
+      return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    }
+
+    // Ownership check for non-admin users
+    if (user.role !== "super-admin" && user.role !== "admin") {
+      const resolvedClient = await resolveClient(existingProject.client);
+      const clientEmail = resolvedClient?.email || (typeof existingProject.client === "object" && existingProject.client !== null ? (existingProject.client as { email?: string }).email : null);
+      if (!clientEmail || clientEmail !== user.email) {
+        return NextResponse.json({ error: "Project not found" }, { status: 404 });
+      }
+    }
 
     const project = await Project.findByIdAndUpdate(id, projectData, { new: true }).lean();
     if (!project) {
