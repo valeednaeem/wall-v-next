@@ -8,6 +8,26 @@ export interface IUser extends Document {
   avatar?: string;
   phone?: string;
   role: string;
+  bio?: string;
+  jobTitle?: string;
+  company?: string;
+  location?: string;
+  website?: string;
+  socialLinks?: {
+    linkedin?: string;
+    twitter?: string;
+    github?: string;
+    dribbble?: string;
+  };
+  portfolio?: {
+    id: string;
+    title: string;
+    description: string;
+    imageUrl: string;
+    projectUrl: string;
+    tags: string[];
+    featured: boolean;
+  }[];
   emailVerified?: Date;
   isEmailVerified: boolean;
   isActive: boolean;
@@ -55,6 +75,26 @@ const UserSchema = new Schema<IUser>(
     slug: { type: String, unique: true, lowercase: true, sparse: true },
     avatar: String,
     phone: String,
+    bio: { type: String, maxlength: 500 },
+    jobTitle: String,
+    company: String,
+    location: String,
+    website: String,
+    socialLinks: {
+      linkedin: String,
+      twitter: String,
+      github: String,
+      dribbble: String,
+    },
+    portfolio: [{
+      id: String,
+      title: String,
+      description: String,
+      imageUrl: String,
+      projectUrl: String,
+      tags: [String],
+      featured: { type: Boolean, default: false },
+    }],
     role: { type: String, default: "customer", enum: ["super-admin", "admin", "manager", "staff", "customer"] },
     emailVerified: Date,
     isEmailVerified: { type: Boolean, default: false },
