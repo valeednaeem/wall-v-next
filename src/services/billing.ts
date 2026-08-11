@@ -81,8 +81,8 @@ export function getPaymentProvider(provider?: string): PaymentProvider {
       );
     case "2checkout":
       return new TwoCheckoutProvider(
-        process.env.CHECKOUT_MERCHANT_CODE || "",
-        process.env.CHECKOUT_SECRET_KEY || ""
+        process.env.TWOCHECKOUT_MERCHANT_CODE || "",
+        process.env.TWOCHECKOUT_SECRET_KEY || ""
       );
     case "stripe":
     default:

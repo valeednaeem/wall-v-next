@@ -1,15 +1,37 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 export function DograhWidgetLoader() {
+  const [widgetUrl, setWidgetUrl] = useState<string | null>(null);
+
   useEffect(() => {
-    const widgetUrl = process.env.NEXT_PUBLIC_DOGRAH_WIDGET_URL;
-    console.log("[Dograh] Loader running — URL:", widgetUrl);
-    if (!widgetUrl) {
-      console.warn("[Dograh] NEXT_PUBLIC_DOGRAH_WIDGET_URL not set");
-      return;
+    async function loadWidgetUrl() {
+      let url = process.env.NEXT_PUBLIC_DOGRAH_WIDGET_URL;
+
+      try {
+        const res = await fetch("/api/settings/public");
+        if (res.ok) {
+          const data = await res.json();
+          const dbUrl = data?.data?.voice?.widgetUrl;
+          if (dbUrl) {
+            url = dbUrl;
+          }
+        }
+      } catch {
+        // Fallback to env var
+      }
+
+      setWidgetUrl(url);
     }
+
+    loadWidgetUrl();
+  }, []);
+
+  useEffect(() => {
+    if (!widgetUrl) return;
+
+    console.log("[Dograh] Loader running — URL:", widgetUrl);
 
     const d = document;
     const s = "script";
@@ -29,7 +51,7 @@ export function DograhWidgetLoader() {
     js.onerror = () => console.error("[Dograh] Widget script failed to load:", widgetUrl);
     fjs.parentNode?.insertBefore(js, fjs);
     console.log("[Dograh] Widget script tag injected");
-  }, []);
+  }, [widgetUrl]);
 
   return null;
 }

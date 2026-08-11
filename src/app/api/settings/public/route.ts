@@ -16,9 +16,36 @@ export async function GET() {
     return NextResponse.json({
       success: true,
       data: {
-        siteName: grouped.site?.siteName || "Wall-V",
-        logo: grouped.site?.logo || "",
-        favicon: grouped.site?.favicon || "",
+        site: {
+          siteName: grouped.site?.siteName || "Wall-V",
+          logo: grouped.site?.logo || "",
+          favicon: grouped.site?.favicon || "",
+          tagline: grouped.site?.tagline || "",
+        },
+        seo: {
+          metaTitle: grouped.seo?.metaTitle || "",
+          metaDescription: grouped.seo?.metaDescription || "",
+          keywords: grouped.seo?.keywords || [],
+          ogImage: grouped.seo?.ogImage || "",
+        },
+        social: {
+          facebook: grouped.socialMedia?.facebook || "",
+          twitter: grouped.socialMedia?.twitter || "",
+          instagram: grouped.socialMedia?.instagram || "",
+          linkedin: grouped.socialMedia?.linkedin || "",
+          youtube: grouped.socialMedia?.youtube || "",
+          github: grouped.socialMedia?.github || "",
+        },
+        voice: {
+          enabled: grouped.voice?.enabled ?? true,
+          widgetUrl: grouped.voice?.widgetUrl || process.env.NEXT_PUBLIC_DOGRAH_WIDGET_URL || "",
+          apiUrl: grouped.voice?.apiUrl || process.env.DOGRAH_API_URL || "",
+        },
+        contact: {
+          email: grouped.contact?.email || "",
+          phone: grouped.contact?.phone || "",
+          address: grouped.contact?.address || "",
+        },
       },
     });
   } catch (error) {
