@@ -294,7 +294,7 @@ async function createOrUpdateProject(
     message: generateProjectDescription(reqs),
     source: "ai-chatbot",
     status: "new",
-    type: "project",
+    type: "sales",
     leadId: lead?._id,
     clientId: client._id,
   });

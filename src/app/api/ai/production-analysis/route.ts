@@ -25,6 +25,7 @@ export async function POST(request: Request) {
       data: result,
     });
   } catch (error) {
+    console.error("[ProductionAnalysis] ERROR:", error);
     await logError({
       level: "error",
       message: "Production analysis failed",
@@ -32,7 +33,7 @@ export async function POST(request: Request) {
       stack: error instanceof Error ? error.stack : undefined,
     });
     return NextResponse.json(
-      { error: "Failed to run production analysis" },
+      { error: "Failed to run production analysis", detail: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     );
   }
