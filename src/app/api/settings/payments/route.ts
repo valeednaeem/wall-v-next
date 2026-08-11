@@ -2,16 +2,17 @@ import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import Billing from "@/models/billing";
 import SiteSettings from "@/models/site-settings";
-import { getAuthUserFromCookie } from "@/lib/auth-cookie";
+import { auth } from "@/lib/auth";
 
 export async function GET() {
   try {
-    const authUser = await getAuthUserFromCookie();
-    if (!authUser) {
+    const session = await auth();
+    if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if (!["super-admin", "admin"].includes(authUser.role)) {
+    const userRole = (session.user as { role?: string }).role;
+    if (!["super-admin", "admin"].includes(userRole || "")) {
       return NextResponse.json({ error: "Forbidden: insufficient permissions" }, { status: 403 });
     }
 

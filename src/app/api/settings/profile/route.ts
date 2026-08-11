@@ -1,17 +1,17 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import User from "@/models/user";
-import { getAuthUserFromCookie } from "@/lib/auth-cookie";
+import { auth } from "@/lib/auth";
 
 export async function GET() {
   try {
-    const authUser = await getAuthUserFromCookie();
-    if (!authUser) {
+    const session = await auth();
+    if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     await connectToDatabase();
-    const user = await User.findById(authUser.userId).select("-password").lean();
+    const user = await User.findById(session.user.id).select("-password").lean();
 
     return NextResponse.json({
       success: true,
@@ -28,8 +28,8 @@ export async function GET() {
 
 export async function PUT(request: Request) {
   try {
-    const authUser = await getAuthUserFromCookie();
-    if (!authUser) {
+    const session = await auth();
+    if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -42,11 +42,11 @@ export async function PUT(request: Request) {
       allowedFields.forEach((field) => {
         if (body.profile[field] !== undefined) updates[field] = body.profile[field];
       });
-      await User.findByIdAndUpdate(authUser.userId, { $set: updates }, { new: true });
+      await User.findByIdAndUpdate(session.user.id, { $set: updates }, { new: true });
     }
 
     if (body.portfolio !== undefined) {
-      await User.findByIdAndUpdate(authUser.userId, { $set: { portfolio: body.portfolio } }, { new: true });
+      await User.findByIdAndUpdate(session.user.id, { $set: { portfolio: body.portfolio } }, { new: true });
     }
 
     return NextResponse.json({ success: true });

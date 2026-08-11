@@ -2,18 +2,17 @@ import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import User from "@/models/user";
 import bcrypt from "bcryptjs";
-import { getAuthUserFromCookie } from "@/lib/auth-cookie";
-import { verifyCsrfToken, CSRF_HEADER_NAME } from "@/lib/csrf";
+import { auth } from "@/lib/auth";
 
 export async function GET() {
   try {
-    const authUser = await getAuthUserFromCookie();
-    if (!authUser) {
+    const session = await auth();
+    if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     await connectToDatabase();
-    const user = await User.findById(authUser.userId)
+    const user = await User.findById(session.user.id)
       .select("loginHistory activeSessions")
       .lean();
 
@@ -32,14 +31,9 @@ export async function GET() {
 
 export async function PUT(request: Request) {
   try {
-    const authUser = await getAuthUserFromCookie();
-    if (!authUser) {
+    const session = await auth();
+    if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const csrfToken = request.headers.get(CSRF_HEADER_NAME);
-    if (!csrfToken || !verifyCsrfToken(csrfToken)) {
-      return NextResponse.json({ error: "Invalid CSRF token" }, { status: 403 });
     }
 
     const body = await request.json();
@@ -50,7 +44,7 @@ export async function PUT(request: Request) {
         if (!body.current || !body.newPass) {
           return NextResponse.json({ error: "Current and new password required" }, { status: 400 });
         }
-        const user = await User.findById(authUser.userId).select("+password");
+        const user = await User.findById(session.user.id).select("+password");
         if (!user) {
           return NextResponse.json({ error: "User not found" }, { status: 404 });
         }
@@ -59,7 +53,7 @@ export async function PUT(request: Request) {
           return NextResponse.json({ error: "Current password is incorrect" }, { status: 400 });
         }
         const hashed = await bcrypt.hash(body.newPass, 12);
-        await User.findByIdAndUpdate(authUser.userId, { $set: { password: hashed } });
+        await User.findByIdAndUpdate(session.user.id, { $set: { password: hashed } });
         return NextResponse.json({ success: true, message: "Password updated" });
       }
 
@@ -68,8 +62,7 @@ export async function PUT(request: Request) {
       }
 
       case "oauth": {
-        // Toggle linked account
-        const user = await User.findById(authUser.userId).lean();
+        const user = await User.findById(session.user.id).lean();
         const linked = (user as Record<string, unknown>)?.linkedAccounts as { provider: string; connected: boolean }[] || [];
         const existing = linked.find((l) => l.provider === body.provider);
         if (existing) {
@@ -77,7 +70,7 @@ export async function PUT(request: Request) {
         } else {
           linked.push({ provider: body.provider, connected: true });
         }
-        await User.findByIdAndUpdate(authUser.userId, { $set: { linkedAccounts: linked } });
+        await User.findByIdAndUpdate(session.user.id, { $set: { linkedAccounts: linked } });
         return NextResponse.json({ success: true, message: `OAuth ${body.provider} toggled` });
       }
 
@@ -85,7 +78,7 @@ export async function PUT(request: Request) {
         if (!body.sessionId) {
           return NextResponse.json({ error: "Session ID required" }, { status: 400 });
         }
-        await User.findByIdAndUpdate(authUser.userId, {
+        await User.findByIdAndUpdate(session.user.id, {
           $pull: { activeSessions: { id: body.sessionId } },
         });
         return NextResponse.json({ success: true, message: "Session revoked" });
