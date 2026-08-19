@@ -9,12 +9,20 @@ import Client from "@/models/client";
 import Lead from "@/models/lead";
 import Order from "@/models/order";
 import { getAuthUser } from "@/lib/auth";
+import { requirePermission } from "@/lib/api-middleware";
 
 export async function GET() {
   try {
     const user = await getAuthUser();
-    if (!user || !["super-admin", "admin", "manager"].includes(user.role)) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    if (!user) {
+      return NextResponse.json(
+        { success: false, error: "UNAUTHORIZED", message: "Authentication required." },
+        { status: 401 }
+      );
+    }
+    const permissionError = await requirePermission(user, "analytics:view");
+    if (permissionError) {
+      return permissionError;
     }
 
     await connectToDatabase();

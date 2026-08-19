@@ -78,7 +78,8 @@ export default function ProfileSettingsPage() {
       .catch(() => {});
   }, [session]);
 
-  const handleSaveProfile = async () => {
+  const handleSaveProfile = async (event?: React.FormEvent<HTMLFormElement>) => {
+    event?.preventDefault();
     setSaving(true);
     setSaveMessage(null);
     try {
@@ -162,7 +163,9 @@ export default function ProfileSettingsPage() {
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">Profile Settings</h2>
         <button
-          onClick={activeTab === "profile" ? handleSaveProfile : handleSavePortfolio}
+          type={activeTab === "profile" ? "submit" : "button"}
+          form={activeTab === "profile" ? "profile-settings-form" : undefined}
+          onClick={activeTab === "portfolio" ? handleSavePortfolio : undefined}
           disabled={saving}
           className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-50"
         >
@@ -198,7 +201,7 @@ export default function ProfileSettingsPage() {
 
       {/* Profile Tab */}
       {activeTab === "profile" && (
-        <div className="space-y-6">
+        <form id="profile-settings-form" onSubmit={handleSaveProfile} className="space-y-6">
           {/* Avatar */}
           <div className="rounded-lg border p-6">
             <h3 className="font-semibold mb-4">Profile Photo</h3>
@@ -280,7 +283,7 @@ export default function ProfileSettingsPage() {
               ))}
             </div>
           </div>
-        </div>
+        </form>
       )}
 
       {/* Portfolio Tab */}

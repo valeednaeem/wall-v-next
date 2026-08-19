@@ -7,7 +7,8 @@ import { useSession, signOut } from "next-auth/react";
 import {
   LayoutDashboard, Package, FileText, FolderKanban, Users, Receipt,
   Cloud, Globe, Headphones, Settings, ShoppingBag, Tags, ChevronRight,
-  Menu, X, LogOut, User, CreditCard, Shield, Search, Bell, MessageSquare, Phone, AlertTriangle, Eye
+  Menu, X, LogOut, User, CreditCard, Shield, Search, Bell, MessageSquare, Phone, AlertTriangle, Eye,
+  BarChart3, Globe2, SearchCheck, Store, Target, Share2, LineChart, Zap
 } from "lucide-react";
 
 interface SidebarChild {
@@ -44,6 +45,14 @@ const sidebarItems: SidebarItem[] = [
     { label: "Leads", href: "/dashboard/crm/leads" },
     { label: "Clients", href: "/dashboard/crm/clients" },
     { label: "Inquiries", href: "/dashboard/crm/inquiries" },
+  ]},
+  { label: "Marketing", href: "/dashboard/marketing", icon: <BarChart3 className="h-4 w-4" />, roles: ["super-admin", "admin", "manager"], children: [
+    { label: "Overview", href: "/dashboard/marketing" },
+    { label: "Google Services", href: "/dashboard/marketing/google" },
+    { label: "SEO", href: "/dashboard/marketing/seo" },
+    { label: "Tracking", href: "/dashboard/marketing/tracking" },
+    { label: "Social Sharing", href: "/dashboard/marketing/social" },
+    { label: "Diagnostics", href: "/dashboard/marketing/diagnostics" },
   ]},
   { label: "Invoices", href: "/dashboard/invoices", icon: <Receipt className="h-4 w-4" /> },
   { label: "Hosting", href: "/dashboard/hosting", icon: <Cloud className="h-4 w-4" />, roles: ["super-admin", "admin", "manager"], children: [
@@ -214,7 +223,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               </Link>
               <hr className="my-1" />
               <button
-                onClick={() => { signOut({ callbackUrl: "/" }); setUserMenuOpen(false); }}
+                onClick={() => {
+                  // Clear custom JWT cookie before signing out via NextAuth
+                  document.cookie = "token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+                  signOut({ callbackUrl: "/" });
+                  setUserMenuOpen(false);
+                }}
                 className="flex w-full items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-destructive/10"
               >
                 <LogOut className="h-4 w-4" /> Sign Out

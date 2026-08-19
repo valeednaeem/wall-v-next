@@ -3,16 +3,7 @@ import { auth } from "./auth";
 
 export async function getAuthUserFromCookie(): Promise<JWTPayload | null> {
   try {
-    // First try the custom JWT token cookie
-    const { cookies } = await import("next/headers");
-    const cookieStore = await cookies();
-    const token = cookieStore.get("token")?.value;
-    if (token) {
-      const payload = verifyToken(token);
-      if (payload) return payload;
-    }
-
-    // Fallback to NextAuth session
+    // Auth.js is the canonical dashboard session.
     const session = await auth();
     if (session?.user?.id) {
       return {
@@ -20,6 +11,14 @@ export async function getAuthUserFromCookie(): Promise<JWTPayload | null> {
         email: session.user.email || "",
         role: (session.user as { role?: string }).role || "customer",
       };
+    }
+
+    const { cookies } = await import("next/headers");
+    const cookieStore = await cookies();
+    const legacyToken = cookieStore.get("token")?.value;
+    if (legacyToken) {
+      const payload = verifyToken(legacyToken);
+      if (payload) return payload;
     }
 
     return null;

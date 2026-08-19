@@ -2,6 +2,36 @@ import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import User from "@/models/user";
 import { auth } from "@/lib/auth";
+import { z } from "zod";
+
+const profileUpdateSchema = z.object({
+  profile: z.object({
+    name: z.string().trim().min(2).max(120).optional(),
+    phone: z.string().trim().max(40).optional(),
+    avatar: z.string().url().max(2_000_000).or(z.literal("")).optional(),
+    bio: z.string().trim().max(500).optional(),
+    jobTitle: z.string().trim().max(120).optional(),
+    company: z.string().trim().max(160).optional(),
+    location: z.string().trim().max(160).optional(),
+    website: z.string().url().max(2048).or(z.literal("")).optional(),
+    socialLinks: z.object({
+      linkedin: z.string().url().max(2048).or(z.literal("")),
+      twitter: z.string().url().max(2048).or(z.literal("")),
+      github: z.string().url().max(2048).or(z.literal("")),
+      dribbble: z.string().url().max(2048).or(z.literal("")),
+    }).optional(),
+  }).strict(),
+}).or(z.object({
+  portfolio: z.array(z.object({
+    id: z.string().min(1).max(100),
+    title: z.string().trim().max(200),
+    description: z.string().max(20_000),
+    imageUrl: z.string().url().max(2048).or(z.literal("")),
+    projectUrl: z.string().url().max(2048).or(z.literal("")),
+    tags: z.array(z.string().trim().min(1).max(50)).max(20),
+    featured: z.boolean(),
+  })).max(50),
+}).strict());
 
 function filterProfileFields(user: Record<string, unknown>) {
   return {
@@ -56,15 +86,20 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await request.json();
+    const parsed = profileUpdateSchema.safeParse(await request.json());
+    if (!parsed.success) {
+      return NextResponse.json(
+        { success: false, error: "VALIDATION_ERROR", message: "Please correct the highlighted profile fields." },
+        { status: 400 }
+      );
+    }
+    const body = parsed.data;
     await connectToDatabase();
 
-    if (body.profile) {
-      const allowedFields = ["name", "phone", "avatar", "bio", "jobTitle", "company", "location", "website", "socialLinks"];
-      const updates: Record<string, unknown> = {};
-      allowedFields.forEach((field) => {
-        if (body.profile[field] !== undefined) updates[field] = body.profile[field];
-      });
+    if ("profile" in body) {
+      const updates = Object.fromEntries(
+        Object.entries(body.profile).filter(([, value]) => value !== undefined)
+      );
 
       const updated = await User.findByIdAndUpdate(session.user.id, { $set: updates }, { new: true }).select("-password").lean();
       if (!updated) {
@@ -76,7 +111,7 @@ export async function PUT(request: Request) {
       return NextResponse.json({ success: true, data: { profile } });
     }
 
-    if (body.portfolio !== undefined) {
+    if ("portfolio" in body) {
       await User.findByIdAndUpdate(session.user.id, { $set: { portfolio: body.portfolio } }, { new: true });
       return NextResponse.json({ success: true });
     }

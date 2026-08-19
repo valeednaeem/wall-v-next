@@ -110,6 +110,8 @@ export function CookieConsent() {
     setConsentCookie(preferences);
     setVisible(false);
     setShowSettings(false);
+    // Dispatch custom event for other components to listen
+    window.dispatchEvent(new CustomEvent("cookie-consent-change", { detail: preferences }));
   };
 
   if (loading || !visible) return null;

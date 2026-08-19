@@ -644,7 +644,7 @@ BEHAVIOR:
                   <p className="font-medium">Setup Instructions</p>
                   <ol className="mt-2 space-y-1 list-decimal list-inside text-xs">
                     <li>Deploy Dograh via Docker: <code className="bg-blue-100 px-1 rounded">docker compose -f docker-compose.sip.yaml up -d</code></li>
-                    <li>Create an agent at <code className="bg-blue-100 px-1 rounded">localhost:3010/workflow</code></li>
+                    <li>Create an agent at <code className="bg-blue-100 px-1 rounded">your-dograh-instance.com/workflow</code></li>
                     <li>Configure the widget in Agent Settings → Add to Website</li>
                     <li>Paste the widget script URL below</li>
                   </ol>
@@ -696,7 +696,7 @@ BEHAVIOR:
                 <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-800">
                   <p className="font-medium">How to apply this prompt</p>
                   <ol className="mt-2 space-y-1 list-decimal list-inside text-xs">
-                    <li>Open your Dograh dashboard at <code className="bg-amber-100 px-1 rounded">localhost:3010/workflow</code></li>
+                    <li>Open your Dograh dashboard at <code className="bg-amber-100 px-1 rounded">your-dograh-instance.com/workflow</code></li>
                     <li>Select your agent and click the Agent node in the graph</li>
                     <li>Paste the prompt above into the node&apos;s system prompt field</li>
                     <li>Save and test with a Web Call</li>
@@ -705,7 +705,7 @@ BEHAVIOR:
 
                 <div>
                   <label className="text-sm font-medium">Allowed Domains</label>
-                  <input type="text" value={voice.allowedDomains.join(", ")} onChange={(e) => setVoice({ ...voice, allowedDomains: e.target.value.split(",").map((d) => d.trim()).filter(Boolean) })} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" placeholder="wall-v.com, localhost" />
+                  <input type="text" value={voice.allowedDomains.join(", ")} onChange={(e) => setVoice({ ...voice, allowedDomains: e.target.value.split(",").map((d) => d.trim()).filter(Boolean) })} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" placeholder="wall-v.com, your-domain.com" />
                   <p className="text-xs text-muted-foreground mt-1">Comma-separated. Leave empty to allow all domains.</p>
                 </div>
 

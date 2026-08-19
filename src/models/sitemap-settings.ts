@@ -16,7 +16,7 @@ export interface ISitemapSettings extends Document {
     url: string;
     priority: number;
     changeFreq: string;
-    lastMod?: Date;
+    lastMod?: string;
     isActive: boolean;
   }>;
   excludePatterns: string[];
@@ -41,13 +41,13 @@ const SitemapSettingsSchema = new Schema<ISitemapSettings>(
     customUrls: [
       {
         url: String,
-        priority: Number,
-        changeFreq: String,
-        lastMod: Date,
+        priority: { type: Number, default: 0.5 },
+        changeFreq: { type: String, default: "monthly" },
+        lastMod: String,
         isActive: { type: Boolean, default: true },
       },
     ],
-    excludePatterns: [{ type: String }],
+    excludePatterns: [String],
     lastGenerated: Date,
   },
   { timestamps: true }

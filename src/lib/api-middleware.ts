@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthUser, getFullUser } from "./auth";
 import { getAuthUserFromCookie } from "./auth-cookie";
 import type { JWTPayload } from "./jwt";
+import Role from "@/models/role";
+import { connectToDatabase } from "@/lib/mongodb";
 
 export interface AuthContext {
   user: JWTPayload;
@@ -11,7 +13,10 @@ export interface AuthContext {
 export type ApiResponse = NextResponse;
 
 function jsonError(message: string, status: number): NextResponse {
-  return NextResponse.json({ error: message }, { status });
+  return NextResponse.json(
+    { success: false, error: status === 401 ? "UNAUTHORIZED" : "FORBIDDEN", message },
+    { status }
+  );
 }
 
 export async function requireAuth(
@@ -47,6 +52,19 @@ export function requireRole(
 ): NextResponse | null {
   if (!allowedRoles.includes(user.role)) {
     return jsonError("Forbidden: insufficient permissions", 403);
+  }
+  return null;
+}
+
+export async function requirePermission(
+  user: JWTPayload,
+  permission: string
+): Promise<NextResponse | null> {
+  await connectToDatabase();
+  const role = await Role.findOne({ slug: user.role }).select("permissions").lean();
+  const permissions = role?.permissions || (user.role === "super-admin" ? ["*"] : []);
+  if (!permissions.includes("*") && !permissions.includes(permission)) {
+    return jsonError("You do not have permission to perform this action.", 403);
   }
   return null;
 }

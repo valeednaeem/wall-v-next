@@ -1,0 +1,206 @@
+
+> wall-v@1.0.0 dev
+> next dev
+
+   ▲ Next.js 15.5.20
+   - Local:        http://localhost:3000
+   - Network:      http://172.25.192.1:3000
+   - Environments: .env.local, .env
+
+ ✓ Starting...
+ ✓ Ready in 14.7s
+ ○ Compiling / ...
+ ✓ Compiled / in 14.4s (733 modules)
+ ⚠ metadataBase property in metadata export is not set for resolving social open graph or twitter images, using "http://localhost:3000". See https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadatabase
+ GET / 200 in 2308ms
+ ○ Compiling /api/ai/production-analysis ...
+ ✓ Compiled /api/ai/production-analysis in 5.3s (782 modules)
+(node:3456) [MONGOOSE] Warning: mongoose: Duplicate schema index on {"slug":1} for model "Project". This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3456) [MONGOOSE] Warning: mongoose: Duplicate schema index on {"demoId":1} for model "Project". This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
+(node:3456) [MONGOOSE] Warning: mongoose: Duplicate schema index on {"expiresAt":1} for model "Preview". This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
+(node:3456) [MONGOOSE] Warning: mongoose: Duplicate schema index on {"serviceKey":1} for model "ServicePrice". This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
+ POST /api/ai/production-analysis 500 in 14074ms
+ ○ Compiling /api/ai/chat ...
+ ✓ Compiled /api/ai/chat in 3.1s (424 modules)
+ POST /api/ai/chat 200 in 6330ms
+ ✓ Compiled /api/ai/production-analysis in 261ms (122 modules)
+ POST /api/ai/production-analysis 500 in 1701ms
+ ✓ Compiled in 4s (421 modules)
+[ProductionAnalysis] ERROR: ValidationError: Inquiry validation failed: type: `project` is not a valid enum value for path `type`.
+    at model.validate (C:\xampp\htdocs\nextApp\node_modules\mongoose\lib\document.js:2864:36)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async model.$__save (C:\xampp\htdocs\nextApp\node_modules\mongoose\lib\model.js:399:7)
+    at async maybeTracedSave (C:\xampp\htdocs\nextApp\node_modules\mongoose\lib\model.js:675:7)
+    at async model.create (C:\xampp\htdocs\nextApp\node_modules\mongoose\lib\model.js:2763:5)
+    at async createOrUpdateProject (webpack-internal:///(rsc)/./src/lib/production-workflow.ts:177:21)
+    at async runProductionWorkflow (webpack-internal:///(rsc)/./src/lib/production-workflow.ts:31:21)
+    at async POST (webpack-internal:///(rsc)/./src/app/api/ai/production-analysis/route.ts:22:24)
+    at async AppRouteRouteModule.do (C:\xampp\htdocs\nextApp\node_modules\next\dist\compiled\next-server\app-route.runtime.dev.js:5:38696)
+    at async AppRouteRouteModule.handle (C:\xampp\htdocs\nextApp\node_modules\next\dist\compiled\next-server\app-route.runtime.dev.js:5:45978)
+    at async responseGenerator (webpack-internal:///(rsc)/./node_modules/next/dist/build/webpack/loaders/next-app-loader/index.js?name=app%2Fapi%2Fai%2Fproduction-analysis%2Froute&page=%2Fapi%2Fai%2Fproduction-analysis%2Froute&appPaths=&pagePath=private-next-app-dir%2Fapi%2Fai%2Fproduction-analysis%2Froute.ts&appDir=C%3A%5Cxampp%5Chtdocs%5CnextApp%5Csrc%5Capp&pageExtensions=tsx&pageExtensions=ts&pageExtensions=jsx&pageExtensions=js&rootDir=C%3A%5Cxampp%5Chtdocs%5CnextApp&isDev=true&tsconfigPath=tsconfig.json&basePath=&assetPrefix=&nextConfigOutput=&preferredRegion=&middlewareConfig=e30%3D&isGlobalNotFoundEnabled=!:203:38)
+    at async AppRouteRouteModule.handleResponse (C:\xampp\htdocs\nextApp\node_modules\next\dist\compiled\next-server\app-route.runtime.dev.js:1:195304)
+    at async handleResponse (webpack-internal:///(rsc)/./node_modules/next/dist/build/webpack/loaders/next-app-loader/index.js?name=app%2Fapi%2Fai%2Fproduction-analysis%2Froute&page=%2Fapi%2Fai%2Fproduction-analysis%2Froute&appPaths=&pagePath=private-next-app-dir%2Fapi%2Fai%2Fproduction-analysis%2Froute.ts&appDir=C%3A%5Cxampp%5Chtdocs%5CnextApp%5Csrc%5Capp&pageExtensions=tsx&pageExtensions=ts&pageExtensions=jsx&pageExtensions=js&rootDir=C%3A%5Cxampp%5Chtdocs%5CnextApp&isDev=true&tsconfigPath=tsconfig.json&basePath=&assetPrefix=&nextConfigOutput=&preferredRegion=&middlewareConfig=e30%3D&isGlobalNotFoundEnabled=!:265:32)
+    at async handler (webpack-internal:///(rsc)/./node_modules/next/dist/build/webpack/loaders/next-app-loader/index.js?name=app%2Fapi%2Fai%2Fproduction-analysis%2Froute&page=%2Fapi%2Fai%2Fproduction-analysis%2Froute&appPaths=&pagePath=private-next-app-dir%2Fapi%2Fai%2Fproduction-analysis%2Froute.ts&appDir=C%3A%5Cxampp%5Chtdocs%5CnextApp%5Csrc%5Capp&pageExtensions=tsx&pageExtensions=ts&pageExtensions=jsx&pageExtensions=js&rootDir=C%3A%5Cxampp%5Chtdocs%5CnextApp&isDev=true&tsconfigPath=tsconfig.json&basePath=&assetPrefix=&nextConfigOutput=&preferredRegion=&middlewareConfig=e30%3D&isGlobalNotFoundEnabled=!:317:13)
+    at async DevServer.renderToResponseWithComponentsImpl (C:\xampp\htdocs\nextApp\node_modules\next\dist\server\base-server.js:1430:9)
+    at async DevServer.renderPageComponent (C:\xampp\htdocs\nextApp\node_modules\next\dist\server\base-server.js:1482:24)
+    at async DevServer.renderToResponseImpl (C:\xampp\htdocs\nextApp\node_modules\next\dist\server\base-server.js:1522:32)
+    at async DevServer.pipeImpl (C:\xampp\htdocs\nextApp\node_modules\next\dist\server\base-server.js:1026:25)
+    at async NextNodeServer.handleCatchallRenderRequest (C:\xampp\htdocs\nextApp\node_modules\next\dist\server\next-server.js:394:17)
+    at async DevServer.handleRequestImpl (C:\xampp\htdocs\nextApp\node_modules\next\dist\server\base-server.js:917:17)
+    at async C:\xampp\htdocs\nextApp\node_modules\next\dist\server\dev\next-dev-server.js:400:20
+    at async Span.traceAsyncFn (C:\xampp\htdocs\nextApp\node_modules\next\dist\trace\trace.js:157:20)
+    at async DevServer.handleRequest (C:\xampp\htdocs\nextApp\node_modules\next\dist\server\dev\next-dev-server.js:396:24)
+    at async invokeRender (C:\xampp\htdocs\nextApp\node_modules\next\dist\server\lib\router-server.js:240:21)
+    at async handleRequest (C:\xampp\htdocs\nextApp\node_modules\next\dist\server\lib\router-server.js:437:24)
+    at async requestHandlerImpl (C:\xampp\htdocs\nextApp\node_modules\next\dist\server\lib\router-server.js:485:13)
+    at async Server.requestListener (C:\xampp\htdocs\nextApp\node_modules\next\dist\server\lib\start-server.js:226:13) {
+  errors: {
+    type: [ValidatorError: `project` is not a valid enum value for path `type`.] {
+      properties: {
+        validator: [Function (anonymous)],
+        message: '`project` is not a valid enum value for path `type`.',
+        type: 'enum',
+        enumValues: [ 'contact', 'support', 'sales', 'partnership', 'other' ],
+        path: 'type',
+        fullPath: undefined,
+        value: 'project',
+        length: 7
+      },
+      kind: 'enum',
+      path: 'type',
+      value: 'project',
+      reason: undefined,
+      formatMessage: [Function: formatMessage]
+    }
+  },
+  _message: 'Inquiry validation failed'
+}
+ POST /api/ai/production-analysis 500 in 677ms
+ ✓ Compiled in 12.3s (304 modules)
+ ○ Compiling /api/ai/production-analysis ...
+ ✓ Compiled /api/ai/production-analysis in 630ms (117 modules)
+ POST /api/ai/production-analysis 200 in 2451ms
+[ProductionAnalysis] ERROR: MongoServerError: E11000 duplicate key error collection: wallvnext.projects index: project_number_1 dup key: { project_number: null }
+    at async createOrUpdateProject (src\lib\production-workflow.ts:303:19)
+    at async runProductionWorkflow (src\lib\production-workflow.ts:125:19)
+    at async POST (src\app\api\ai\production-analysis\route.ts:17:20)
+  301 |
+  302 |   // Create project with default milestones
+> 303 |   const project = await Project.create({
+      |                   ^
+  304 |     name: projectName,
+  305 |     slug,
+  306 |     title: projectName, {
+  errorLabelSet: Set(0) {},
+  errorResponse: [Object],
+  index: 0,
+  code: 11000,
+  keyPattern: [Object],
+  keyValue: [Object]
+}
+ POST /api/ai/production-analysis 500 in 1263ms
+ POST /api/ai/production-analysis 200 in 618ms
+ POST /api/ai/production-analysis 200 in 270ms
+ ○ Compiling /preview/[token] ...
+ ✓ Compiled /checkout/[id] in 44.4s (794 modules)
+ ⚠ metadataBase property in metadata export is not set for resolving social open graph or twitter images, using "http://localhost:3000". See https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadatabase
+ GET /preview/43d59b5c44f02208cd25de11e5d6aad2b7f3f78f282c70d2b590feee1dad5df2 200 in 575ms
+ GET /checkout/6a7acc88fcc3cfab907e4189 200 in 707ms
+ ○ Compiling /my-projects ...
+ ✓ Compiled /my-projects in 3.6s (775 modules)
+ ⚠ metadataBase property in metadata export is not set for resolving social open graph or twitter images, using "http://localhost:3000". See https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadatabase
+ GET /my-projects 200 in 14124ms
+ ○ Compiling /dashboard/projects ...
+ ✓ Compiled /dashboard/projects in 3s (830 modules)
+ ⚠ metadataBase property in metadata export is not set for resolving social open graph or twitter images, using "http://localhost:3000". See https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadatabase
+ GET /dashboard/projects 200 in 5207ms
+ ○ Compiling /dashboard/production ...
+ ✓ Compiled /dashboard/production in 3.5s (845 modules)
+ ⚠ metadataBase property in metadata export is not set for resolving social open graph or twitter images, using "http://localhost:3000". See https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadatabase
+ GET /dashboard/production 200 in 4690ms
+ ○ Compiling /api/projects ...
+ ✓ Compiled /api/projects in 40.9s (1065 modules)
+(node:3456) [MONGOOSE] Warning: mongoose: Duplicate schema index on {"email":1} for model "User". This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
+(node:3456) [MONGOOSE] Warning: mongoose: Duplicate schema index on {"slug":1} for model "User". This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
+ GET /api/projects?limit=5 401 in 432ms
+   Reload env: .env.local
+ ✓ Compiled in 3.4s (350 modules)
+ ✓ Compiled in 30.1s (350 modules)
+ ✓ Compiled in 2.4s (350 modules)
+ ✓ Compiled in 3.2s (350 modules)
+ ✓ Compiled in 1479ms (350 modules)
+ ✓ Compiled in 1579ms (350 modules)
+ ✓ Compiled in 1707ms (350 modules)
+ ✓ Compiled in 1126ms (350 modules)
+ ✓ Compiled in 1173ms (350 modules)
+ ✓ Compiled in 1410ms (350 modules)
+ ✓ Compiled in 1677ms (350 modules)
+ ✓ Compiled in 1456ms (350 modules)
+ ✓ Compiled in 1057ms (350 modules)
+ ✓ Compiled in 1056ms (350 modules)
+ ✓ Compiled in 1059ms (350 modules)
+ ✓ Compiled in 2s (350 modules)
+ ✓ Compiled in 1334ms (350 modules)
+ ✓ Compiled in 1174ms (350 modules)
+ ✓ Compiled in 1026ms (350 modules)
+ ✓ Compiled in 950ms (350 modules)
+ ✓ Compiled in 1018ms (350 modules)
+ ✓ Compiled in 1314ms (350 modules)
+ ✓ Compiled in 1045ms (350 modules)
+ ✓ Compiled in 1106ms (350 modules)
+ ✓ Compiled in 1640ms (350 modules)
+ ✓ Compiled in 962ms (350 modules)
+ ✓ Compiled in 888ms (350 modules)
+ ✓ Compiled in 901ms (350 modules)
+ ✓ Compiled in 1894ms (350 modules)
+ ✓ Compiled in 1358ms (350 modules)
+ ✓ Compiled in 5.7s (350 modules)
+ ✓ Compiled in 1967ms (350 modules)
+ ✓ Compiled in 1931ms (350 modules)
+ ✓ Compiled in 12.1s (350 modules)
+ ✓ Compiled in 7.9s (350 modules)
+ ✓ Compiled in 6.3s (350 modules)
+ ✓ Compiled in 17.4s (350 modules)
+ ✓ Compiled in 5.6s (350 modules)
+ ✓ Compiled in 27.1s (350 modules)
+ ✓ Compiled in 6.9s (350 modules)
+ ✓ Compiled in 9.1s (350 modules)
+ ✓ Compiled in 1726ms (350 modules)
+ ✓ Compiled in 1660ms (350 modules)
+ ✓ Compiled in 1768ms (350 modules)
+ ✓ Compiled in 1341ms (350 modules)
+ ✓ Compiled in 4.7s (350 modules)
+   Reload env: .env.local
+ ✓ Compiled in 1158ms (350 modules)
+ ✓ Compiled in 2.8s (350 modules)
+ ✓ Compiled in 7.9s (350 modules)
+ ✓ Compiled in 3.2s (350 modules)
+ ✓ Compiled in 1171ms (350 modules)
+ ✓ Compiled in 2.6s (350 modules)
+ ✓ Compiled in 3.2s (350 modules)
+ ✓ Compiled in 19.5s (350 modules)
+ ✓ Compiled in 2.6s (350 modules)
+ ✓ Compiled in 2.6s (350 modules)
+ ✓ Compiled in 1141ms (350 modules)
+ ✓ Compiled in 44s (350 modules)
+ ✓ Compiled in 27.9s (350 modules)
+ ✓ Compiled in 2.8s (350 modules)
+ ✓ Compiled in 200.3s (350 modules)
+ ✓ Compiled in 8.8s (350 modules)
+ ✓ Compiled in 3.6s (350 modules)
+ ✓ Compiled in 4.1s (350 modules)
+ ✓ Compiled in 3s (350 modules)
+ ✓ Compiled in 8.3s (350 modules)
+ ✓ Compiled in 1788ms (350 modules)
+ ✓ Compiled in 2.7s (350 modules)
+ ✓ Compiled in 1515ms (350 modules)
+ ✓ Compiled in 1456ms (350 modules)
+ ✓ Compiled in 1118ms (350 modules)
+ ✓ Compiled in 2s (350 modules)
+ ✓ Compiled in 1512ms (350 modules)
+ ✓ Compiled in 1221ms (350 modules)
+ ✓ Compiled in 3.9s (350 modules)
+ ✓ Compiled in 1402ms (350 modules)
+ ✓ Compiled in 1961ms (350 modules)
+ ✓ Compiled in 1534ms (350 modules)

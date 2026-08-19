@@ -1,0 +1,187 @@
+import { NextResponse } from "next/server";
+import { connectToDatabase } from "@/lib/mongodb";
+import GoogleServiceConfig from "@/models/google-services";
+import { auth } from "@/lib/auth";
+import { requirePermission } from "@/lib/api-middleware";
+
+interface TestResult {
+  success: boolean;
+  status: string;
+  message: string;
+  details?: Record<string, string>;
+  error?: string;
+}
+
+async function testAnalytics(config: Record<string, unknown>): Promise<TestResult> {
+  const measurementId = config.measurementId as string;
+  const apiSecret = config.apiSecret as string;
+
+  if (!measurementId) {
+    return { success: false, status: "config_required", message: "Measurement ID is required" };
+  }
+
+  try {
+    // Test GA4 Measurement Protocol
+    const testUrl = `https://www.google-analytics.com/mp/collect?measurement_id=${measurementId}&api_secret=${apiSecret || "test"}`;
+    const response = await fetch(testUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        client_id: "test_connection",
+        events: [{ name: "test_connection", params: { test: true } }],
+      }),
+    });
+
+    if (response.ok) {
+      return {
+        success: true,
+        status: "connected",
+        message: "Google Analytics connected successfully",
+        details: { measurementId },
+      };
+    } else {
+      const errorText = await response.text();
+      return {
+        success: false,
+        status: "connection_failed",
+        message: `GA4 API error: ${response.status}`,
+        error: errorText,
+      };
+    }
+  } catch (error) {
+    return {
+      success: false,
+      status: "connection_failed",
+      message: "Failed to connect to Google Analytics",
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+}
+
+async function testSearchConsole(config: Record<string, unknown>): Promise<TestResult> {
+  const propertyUrl = config.propertyUrl as string;
+
+  if (!propertyUrl) {
+    return { success: false, status: "config_required", message: "Property URL is required" };
+  }
+
+  // For Search Console, we can't easily test without OAuth
+  // This would require the Search Console API with proper auth
+  return {
+    success: false,
+    status: "auth_required",
+    message: "Search Console requires OAuth authorization. Connect your Google account first.",
+    details: { propertyUrl },
+  };
+}
+
+async function testBusinessProfile(config: Record<string, unknown>): Promise<TestResult> {
+  const accountId = config.accountId as string;
+
+  if (!accountId) {
+    return { success: false, status: "config_required", message: "Business Profile account ID is required" };
+  }
+
+  return {
+    success: false,
+    status: "auth_required",
+    message: "Google Business Profile requires OAuth authorization. Connect your Google account first.",
+    details: { accountId },
+  };
+}
+
+async function testMerchantCenter(config: Record<string, unknown>): Promise<TestResult> {
+  const merchantId = config.merchantId as string;
+
+  if (!merchantId) {
+    return { success: false, status: "config_required", message: "Merchant Center ID is required" };
+  }
+
+  return {
+    success: false,
+    status: "auth_required",
+    message: "Merchant Center requires OAuth authorization and API setup. Connect your Google account first.",
+    details: { merchantId },
+  };
+}
+
+async function testAds(config: Record<string, unknown>): Promise<TestResult> {
+  const customerId = config.customerId as string;
+
+  if (!customerId) {
+    return { success: false, status: "config_required", message: "Google Ads Customer ID is required" };
+  }
+
+  return {
+    success: false,
+    status: "auth_required",
+    message: "Google Ads requires OAuth authorization and developer token. Connect your Google account first.",
+    details: { customerId },
+  };
+}
+
+const TEST_FUNCTIONS: Record<string, (config: Record<string, unknown>) => Promise<TestResult>> = {
+  analytics: testAnalytics,
+  search_console: testSearchConsole,
+  business_profile: testBusinessProfile,
+  merchant_center: testMerchantCenter,
+  ads: testAds,
+};
+
+export async function POST(
+  request: Request,
+  { params }: { params: Promise<{ serviceId: string }> }
+) {
+  try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ success: false, error: "UNAUTHORIZED", message: "Your session has expired. Please sign in again." }, { status: 401 });
+    }
+
+    // Convert NextAuth user to JWTPayload for permission check
+    const jwtUser = {
+      userId: session.user.id,
+      email: session.user.email || null,
+      role: (session.user as { role?: string }).role || "customer",
+      permissions: (session.user as { permissions?: string[] }).permissions || [],
+    };
+
+    const permError = await requirePermission(jwtUser, "google:analytics:manage");
+    if (permError) return permError;
+
+    const { serviceId } = await params;
+    await connectToDatabase();
+
+    const service = await GoogleServiceConfig.findOne({ serviceId });
+    if (!service) {
+      return NextResponse.json({ success: false, error: "Service not found" }, { status: 404 });
+    }
+
+    const testFn = TEST_FUNCTIONS[serviceId];
+    if (!testFn) {
+      return NextResponse.json({ success: false, error: "Unknown service" }, { status: 400 });
+    }
+
+    // Update status to testing
+    await GoogleServiceConfig.findByIdAndUpdate(service._id, {
+      status: "syncing",
+      lastTested: new Date(),
+    });
+
+    const result = await testFn(service.config);
+
+    // Update with test result
+    const newStatus = result.success ? "connected" : result.status;
+    await GoogleServiceConfig.findByIdAndUpdate(service._id, {
+      status: newStatus,
+      lastTested: new Date(),
+      lastError: result.error,
+      details: result.details,
+    });
+
+    return NextResponse.json({ success: result.success, data: result });
+  } catch (error) {
+    console.error("Test connection error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}

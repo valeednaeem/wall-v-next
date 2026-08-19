@@ -12,8 +12,9 @@ function getSecret(): string {
 
 export interface JWTPayload {
   userId: string;
-  email: string;
+  email?: string | null;
   role: string;
+  permissions?: string[];
 }
 
 export function signToken(payload: JWTPayload): string {

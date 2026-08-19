@@ -1,5 +1,14 @@
 import type { NextConfig } from "next";
 
+const isDev = process.env.NODE_ENV === "development";
+
+// Development-only CSP entries
+const devConnectSrc = isDev
+  ? " http://localhost:3010 http://localhost:8000"
+  : "";
+
+const devCorsOrigins = isDev ? " http://localhost:3000" : "";
+
 const securityHeaders = [
   { key: "X-Frame-Options", value: "DENY" },
   { key: "X-Content-Type-Options", value: "nosniff" },
@@ -14,11 +23,11 @@ const securityHeaders = [
     key: "Content-Security-Policy",
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://checkout.stripe.com https://apis.google.com https://accounts.google.com https://dograh.vercel.app https://app.dograh.com",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://checkout.stripe.com https://apis.google.com https://accounts.google.com https://dograh.vercel.app https://app.dograh.com https://www.googletagmanager.com https://www.google-analytics.com",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-      "img-src 'self' data: blob: https: http:",
+      "img-src 'self' data: blob: https: http: https://www.google-analytics.com https://stats.g.doubleclick.net",
       "font-src 'self' https://fonts.gstatic.com",
-      "connect-src 'self' https://api.openai.com https://api.anthropic.com https://dograh.vercel.app https://app.dograh.com https://api.dograh.com wss://api.dograh.com http://localhost:3010 http://localhost:8000",
+      `connect-src 'self' https://api.openai.com https://api.anthropic.com https://dograh.vercel.app https://app.dograh.com https://api.dograh.com wss://api.dograh.com https://www.google-analytics.com https://region1.google-analytics.com https://analytics.google.com${devConnectSrc}`,
       "frame-src 'self' https://js.stripe.com https://checkout.stripe.com https://www.youtube.com",
     ].join("; "),
   },

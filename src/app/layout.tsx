@@ -50,6 +50,9 @@ export const metadata: Metadata = {
     images: ["/og-default.png"],
   },
   robots: { index: true, follow: true },
+  verification: {
+    google: "QORrwz1mvBarCLniVud2TU0ohuh_FRRSCVXp-J-JRGA",
+  },
 };
 
 export const viewport: Viewport = {

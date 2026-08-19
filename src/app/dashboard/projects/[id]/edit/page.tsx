@@ -4,7 +4,10 @@ import { useRouter, useParams } from "next/navigation";
 import { useState, useEffect, useCallback } from "react";
 import {
   ArrowLeft, Save, Loader2, Plus, X, CheckCircle2, Clock,
-  DollarSign, Trash2, GripVertical, Calendar
+  DollarSign, Trash2, GripVertical, Calendar, Eye, FileText,
+  Settings, Layers, Shield, Sparkles, Target, AlertTriangle,
+  GitBranch, Search, Edit2, Download, ExternalLink, ChevronDown,
+  ChevronUp, AlertCircle, CheckCircle, XCircle, Pause, Trash
 } from "lucide-react";
 import Link from "next/link";
 import HtmlEditor from "@/components/editor/html-editor";
@@ -45,7 +48,33 @@ interface Project {
   tags: string[];
   notes?: string;
   demoId?: string;
+  // Additional fields for admin inspection
+  requirements?: Record<string, unknown>;
+  costAnalysis?: Record<string, unknown>;
+  budgetComparison?: Record<string, unknown>;
+  firstMilestone?: Record<string, unknown>;
+  productionSummary?: Record<string, unknown>;
+  workflowStatus?: { stage: string; lastUpdated: string };
+  milestoneVersions?: Array<{
+    version: number;
+    milestoneName: string;
+    milestoneIndex: number;
+    previewUrl: string;
+    demoId: string;
+    generatedAt: string;
+    requirements?: Record<string, unknown>;
+    feedback?: Record<string, unknown>;
+    status: string;
+    generatedBy: string;
+  }>;
+  conversationId?: string;
+  inquiryId?: string;
+  leadId?: string;
+  createdAt: string;
+  updatedAt: string;
 }
+
+type AdminTab = "overview" | "requirements" | "production" | "costs" | "milestones" | "prototypes" | "preview-links" | "checkout" | "errors" | "ai-decisions";
 
 export default function EditProjectPage() {
   const router = useRouter();
@@ -463,6 +492,14 @@ export default function EditProjectPage() {
               Open Checkout
             </Link>
           </div>
+
+          {/* Admin Inspection Tabs */}
+          <div className="rounded-lg border p-4 space-y-4">
+            <h3 className="font-semibold text-sm">Admin Inspection</h3>
+            <div className="space-y-2">
+              <AdminInspectionTabs project={project} />
+            </div>
+          </div>
         </div>
       </div>
 
@@ -547,6 +584,346 @@ export default function EditProjectPage() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// Admin Inspection Tabs Component
+function AdminInspectionTabs({ project }: { project: Project }) {
+  const [activeTab, setActiveTab] = useState<AdminTab>("overview");
+
+  const tabs: { id: AdminTab; label: string; icon: React.ReactNode; count?: number }[] = [
+    { id: "overview", label: "Overview", icon: <FileText className="h-4 w-4" /> },
+    { id: "requirements", label: "Requirements", icon: <Settings className="h-4 w-4" /> },
+    { id: "production", label: "Production", icon: <Sparkles className="h-4 w-4" /> },
+    { id: "costs", label: "Costs", icon: <DollarSign className="h-4 w-4" /> },
+    { id: "milestones", label: "Milestones", icon: <Target className="h-4 w-4" /> },
+    { id: "prototypes", label: "Prototypes", icon: <Eye className="h-4 w-4" /> },
+    { id: "preview-links", label: "Preview Links", icon: <ExternalLink className="h-4 w-4" /> },
+    { id: "checkout", label: "Checkout", icon: <CheckCircle className="h-4 w-4" /> },
+    { id: "errors", label: "Errors", icon: <AlertCircle className="h-4 w-4" /> },
+    { id: "ai-decisions", label: "AI Decisions", icon: <Search className="h-4 w-4" /> },
+  ];
+
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap gap-1">
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`flex items-center gap-1 px-3 py-1.5 rounded text-xs transition-colors ${
+              activeTab === tab.id
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:bg-accent"
+            }`}
+          >
+            {tab.icon}
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="mt-3 p-3 rounded bg-muted/30 max-h-96 overflow-y-auto">
+        {activeTab === "overview" && (
+          <AdminOverviewTab project={project} />
+        )}
+        {activeTab === "requirements" && (
+          <AdminRequirementsTab project={project} />
+        )}
+        {activeTab === "production" && (
+          <AdminProductionTab project={project} />
+        )}
+        {activeTab === "costs" && (
+          <AdminCostsTab project={project} />
+        )}
+        {activeTab === "milestones" && (
+          <AdminMilestonesTab project={project} />
+        )}
+        {activeTab === "prototypes" && (
+          <AdminPrototypesTab project={project} />
+        )}
+        {activeTab === "preview-links" && (
+          <AdminPreviewLinksTab project={project} />
+        )}
+        {activeTab === "checkout" && (
+          <AdminCheckoutTab project={project} />
+        )}
+        {activeTab === "errors" && (
+          <AdminErrorsTab project={project} />
+        )}
+        {activeTab === "ai-decisions" && (
+          <AdminAIDecisionsTab project={project} />
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Tab Components
+function AdminOverviewTab({ project }: { project: Project }) {
+  return (
+    <div className="space-y-3 text-sm">
+      <div className="grid grid-cols-2 gap-2">
+        <div><span className="text-muted-foreground">Project ID:</span> <code className="ml-2">{project._id}</code></div>
+        <div><span className="text-muted-foreground">Name:</span> <span className="ml-2 font-medium">{project.name}</span></div>
+        <div><span className="text-muted-foreground">Status:</span> <span className="ml-2 capitalize">{project.status}</span></div>
+        <div><span className="text-muted-foreground">Priority:</span> <span className="ml-2 capitalize">{project.priority}</span></div>
+        <div><span className="text-muted-foreground">Progress:</span> <span className="ml-2">{project.progress}%</span></div>
+        <div><span className="text-muted-foreground">Budget:</span> <span className="ml-2">${project.budget.toLocaleString()}</span></div>
+        <div><span className="text-muted-foreground">Spent:</span> <span className="ml-2">${project.spent.toLocaleString()}</span></div>
+        <div><span className="text-muted-foreground">Client:</span> <span className="ml-2">{typeof project.client === "object" ? project.client?.name : project.client}</span></div>
+        <div><span className="text-muted-foreground">Created:</span> <span className="ml-2">{new Date(project.createdAt).toLocaleString()}</span></div>
+        <div><span className="text-muted-foreground">Updated:</span> <span className="ml-2">{new Date(project.updatedAt).toLocaleString()}</span></div>
+      </div>
+    </div>
+  );
+}
+
+function AdminRequirementsTab({ project }: { project: Project }) {
+  if (!project.requirements || Object.keys(project.requirements).length === 0) {
+    return <p className="text-sm text-muted-foreground">No structured requirements found.</p>;
+  }
+
+  return (
+    <div className="space-y-3 text-sm">
+      {Object.entries(project.requirements).map(([key, value]) => (
+        <div key={key} className="border-b pb-2">
+          <p className="font-medium capitalize">{key.replace(/([A-Z])/g, " $1")}</p>
+          <pre className="mt-1 text-xs bg-black/5 p-2 rounded overflow-x-auto text-white/90">
+            {JSON.stringify(value, null, 2)}
+          </pre>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function AdminProductionTab({ project }: { project: Project }) {
+  if (!project.productionSummary && !project.firstMilestone) {
+    return <p className="text-sm text-muted-foreground">No production analysis found.</p>;
+  }
+
+  return (
+    <div className="space-y-3 text-sm">
+      {project.productionSummary && (
+        <div className="border-b pb-3">
+          <p className="font-medium">Production Summary</p>
+          <pre className="mt-1 text-xs bg-black/5 p-2 rounded overflow-x-auto text-white/90">
+            {JSON.stringify(project.productionSummary, null, 2)}
+          </pre>
+        </div>
+      )}
+      {project.firstMilestone && (
+        <div>
+          <p className="font-medium">First Milestone</p>
+          <pre className="mt-1 text-xs bg-black/5 p-2 rounded overflow-x-auto text-white/90">
+            {JSON.stringify(project.firstMilestone, null, 2)}
+          </pre>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AdminCostsTab({ project }: { project: Project }) {
+  if (!project.costAnalysis) {
+    return <p className="text-sm text-muted-foreground">No cost analysis found.</p>;
+  }
+
+  return (
+    <div className="space-y-3 text-sm">
+      {project.costAnalysis && (
+        <div>
+          <p className="font-medium">Cost Analysis</p>
+          <pre className="mt-1 text-xs bg-black/5 p-2 rounded overflow-x-auto text-white/90 max-h-96">
+            {JSON.stringify(project.costAnalysis, null, 2)}
+          </pre>
+        </div>
+      )}
+      {project.budgetComparison && (
+        <div className="border-t pt-3">
+          <p className="font-medium">Budget Comparison</p>
+          <pre className="mt-1 text-xs bg-black/5 p-2 rounded overflow-x-auto text-white/90">
+            {JSON.stringify(project.budgetComparison, null, 2)}
+          </pre>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AdminMilestonesTab({ project }: { project: Project }) {
+  if (!project.milestones || project.milestones.length === 0) {
+    return <p className="text-sm text-muted-foreground">No milestones found.</p>;
+  }
+
+  return (
+    <div className="space-y-2 text-sm">
+      {project.milestones.map((m, idx) => (
+        <div key={idx} className="border p-2 rounded bg-white">
+          <div className="flex items-center justify-between">
+            <p className="font-medium">{m.name}</p>
+            <span className={`px-2 py-0.5 rounded text-xs ${
+              m.status === "completed" || m.status === "approved" ? "bg-green-50 text-green-700" :
+              m.status === "in-progress" || m.status === "generated" || m.status === "review" ? "bg-yellow-50 text-yellow-700" :
+              m.status === "changes-requested" ? "bg-orange-50 text-orange-700" :
+              "bg-gray-50 text-gray-700"
+            }`}>
+              {m.status}
+            </span>
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">{m.description}</p>
+          {m.amount && <p className="text-xs mt-1">Amount: ${m.amount.toLocaleString()}</p>}
+          {m.dueDate && <p className="text-xs mt-1">Due: {new Date(m.dueDate).toLocaleDateString()}</p>}
+          {m.generatedAt && <p className="text-xs mt-1">Generated: {new Date(m.generatedAt).toLocaleString()}</p>}
+          {m.approvedAt && <p className="text-xs mt-1">Approved: {new Date(m.approvedAt).toLocaleString()}</p>}
+          {m.previewUrl && (
+            <a href={m.previewUrl} target="_blank" className="text-xs text-primary hover:underline mt-1 inline-block">Preview Link</a>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function AdminPrototypesTab({ project }: { project: Project }) {
+  if (!project.milestoneVersions || project.milestoneVersions.length === 0) {
+    return <p className="text-sm text-muted-foreground">No prototype versions found.</p>;
+  }
+
+  return (
+    <div className="space-y-2 text-sm">
+      {project.milestoneVersions.map((mv, idx) => (
+        <div key={idx} className="border p-2 rounded bg-white">
+          <div className="flex items-center justify-between">
+            <p className="font-medium">{mv.milestoneName} (v{mv.version})</p>
+            <span className={`px-2 py-0.5 rounded text-xs ${
+              mv.status === "generated" ? "bg-blue-50 text-blue-700" :
+              mv.status === "approved" ? "bg-green-50 text-green-700" :
+              "bg-red-50 text-red-700"
+            }`}>
+              {mv.status}
+            </span>
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">Generated by: {mv.generatedBy}</p>
+          <p className="text-xs text-muted-foreground">Generated at: {new Date(mv.generatedAt).toLocaleString()}</p>
+          {mv.previewUrl && (
+            <a href={mv.previewUrl} target="_blank" className="text-xs text-primary hover:underline mt-1 inline-block">Preview Link</a>
+          )}
+          {mv.demoId && <p className="text-xs text-muted-foreground">Demo ID: {mv.demoId}</p>}
+          {mv.feedback && (
+            <div className="mt-2 p-2 bg-orange-50 rounded text-orange-800 text-xs">
+              <p className="font-medium">Feedback:</p>
+              <pre className="mt-1">{JSON.stringify(mv.feedback, null, 2)}</pre>
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function AdminPreviewLinksTab({ project }: { project: Project }) {
+  const previewLinks = [
+    ...(project.milestoneVersions?.filter(v => v.previewUrl).map(v => ({
+      name: `${v.milestoneName} v${v.version}`,
+      url: v.previewUrl,
+      demoId: v.demoId,
+      createdAt: v.generatedAt,
+    })) || []),
+    ...(project.demoId ? [{ name: "Main Demo", url: `/preview/${project._id}`, demoId: project.demoId, createdAt: project.createdAt }] : []),
+  ];
+
+  if (previewLinks.length === 0) {
+    return <p className="text-sm text-muted-foreground">No preview links found.</p>;
+  }
+
+  return (
+    <div className="space-y-2 text-sm">
+      {previewLinks.map((link, idx) => (
+        <div key={idx} className="border p-2 rounded bg-white flex items-center justify-between">
+          <div>
+            <p className="font-medium">{link.name}</p>
+            <p className="text-xs text-muted-foreground">Demo ID: {link.demoId}</p>
+            <p className="text-xs text-muted-foreground">Created: {new Date(link.createdAt).toLocaleString()}</p>
+          </div>
+          <a href={link.url} target="_blank" className="px-3 py-1 bg-primary text-white text-xs rounded hover:bg-primary/90">Open</a>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function AdminCheckoutTab({ project }: { project: Project }) {
+  return (
+    <div className="space-y-3 text-sm">
+      <div className="border p-2 rounded bg-white">
+        <p className="font-medium">Checkout URL</p>
+        <p className="text-xs text-primary mt-1 truncate">{`/checkout/${project._id}`}</p>
+        <a href={`/checkout/${project._id}`} target="_blank" className="px-3 py-1 bg-primary text-white text-xs rounded hover:bg-primary/90 mt-2 inline-block">Open Checkout</a>
+      </div>
+      {project.milestones && project.milestones.length > 0 && (
+        <div className="border p-2 rounded bg-white">
+          <p className="font-medium">Milestone Checkout Links</p>
+          {project.milestones.map((m, idx) => m.amount && m.amount > 0 && (
+            <div key={idx} className="mt-2">
+              <p className="text-xs font-medium">{m.name}</p>
+              <p className="text-xs text-primary truncate">{`/checkout/${project._id}?milestone=${idx}`}</p>
+              <a href={`/checkout/${project._id}?milestone=${idx}`} target="_blank" className="px-2 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 mt-1 inline-block">Pay Milestone</a>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AdminErrorsTab({ project }: { project: Project }) {
+  // In a real implementation, this would fetch from an error log collection
+  return (
+    <div className="space-y-2 text-sm">
+      <p className="text-muted-foreground">Error logging would be implemented here.</p>
+      <p className="text-xs text-muted-foreground">This would show:</p>
+      <ul className="list-disc list-inside text-xs text-muted-foreground space-y-1 ml-4">
+        <li>Timestamp</li>
+        <li>User/Project</li>
+        <li>Operation</li>
+        <li>API/Tool</li>
+        <li>Error message</li>
+        <li>Stack trace</li>
+        <li>Status</li>
+        <li>Retry count</li>
+      </ul>
+    </div>
+  );
+}
+
+function AdminAIDecisionsTab({ project }: { project: Project }) {
+  // In a real implementation, this would fetch from conversation/decision logs
+  return (
+    <div className="space-y-2 text-sm">
+      <p className="text-muted-foreground">AI decision tracking would be implemented here.</p>
+      {project.conversationId && (
+        <div className="border p-2 rounded bg-white">
+          <p className="font-medium">Associated Conversation</p>
+          <p className="text-xs text-primary mt-1">{project.conversationId}</p>
+        </div>
+      )}
+      {project.inquiryId && (
+        <div className="border p-2 rounded bg-white mt-2">
+          <p className="font-medium">Associated Inquiry</p>
+          <p className="text-xs text-primary mt-1">{project.inquiryId}</p>
+        </div>
+      )}
+      <p className="text-xs text-muted-foreground mt-4">This would show:</p>
+      <ul className="list-disc list-inside text-xs text-muted-foreground space-y-1 ml-4">
+        <li>AI reasoning for requirements</li>
+        <li>Tool execution results</li>
+        <li>Production analysis decisions</li>
+        <li>Cost estimation methodology</li>
+        <li>Milestone generation logic</li>
+      </ul>
     </div>
   );
 }

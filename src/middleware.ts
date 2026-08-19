@@ -1,14 +1,8 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { getToken } from "next-auth/jwt";
 
 const BACKEND_URL = process.env.BACKEND_URL;
-
-function hasValidSessionCookie(request: NextRequest): boolean {
-  const sessionToken = request.cookies.get("next-auth.session-token")?.value
-    || request.cookies.get("__Secure-next-auth.session-token")?.value;
-  const customToken = request.cookies.get("token")?.value;
-  return !!(sessionToken || customToken);
-}
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -55,7 +49,15 @@ export async function middleware(request: NextRequest) {
 
   // Protect /dashboard/* routes - require authentication
   if (pathname.startsWith("/dashboard")) {
-    if (!hasValidSessionCookie(request)) {
+    // A cookie's presence is not proof of a session. In particular, the
+    // legacy `token` cookie cannot be read by `useSession()`. Validate the
+    // Auth.js JWT used by the dashboard and require its Wall-V user identity.
+    const token = await getToken({
+      req: request,
+      secret: process.env.NEXTAUTH_SECRET,
+      secureCookie: process.env.NODE_ENV === "production",
+    });
+    if (!token?.userId) {
       const loginUrl = new URL("/login", request.url);
       loginUrl.searchParams.set("callbackUrl", pathname);
       return NextResponse.redirect(loginUrl);

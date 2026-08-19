@@ -8,8 +8,11 @@ const ALLOWED_ROLES = ["super-admin", "admin", "manager"];
 export async function GET() {
   try {
     const session = await auth();
-    if (!session?.user || !ALLOWED_ROLES.includes((session.user as Record<string, unknown>).role as string)) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!session?.user) {
+      return NextResponse.json({ success: false, error: "UNAUTHORIZED", message: "Your session has expired. Please sign in again." }, { status: 401 });
+    }
+    if (!ALLOWED_ROLES.includes(session.user.role)) {
+      return NextResponse.json({ success: false, error: "FORBIDDEN", message: "You do not have permission to manage site settings." }, { status: 403 });
     }
 
     await connectToDatabase();
@@ -31,8 +34,11 @@ export async function GET() {
 export async function PUT(request: Request) {
   try {
     const session = await auth();
-    if (!session?.user || !ALLOWED_ROLES.includes((session.user as Record<string, unknown>).role as string)) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!session?.user) {
+      return NextResponse.json({ success: false, error: "UNAUTHORIZED", message: "Your session has expired. Please sign in again." }, { status: 401 });
+    }
+    if (!ALLOWED_ROLES.includes(session.user.role)) {
+      return NextResponse.json({ success: false, error: "FORBIDDEN", message: "You do not have permission to manage site settings." }, { status: 403 });
     }
 
     const body = await request.json();

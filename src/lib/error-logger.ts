@@ -9,6 +9,9 @@ interface LogErrorOptions {
   stack?: string;
   source?: string;
   userId?: string;
+  projectId?: string;
+  operation?: string;
+  apiTool?: string;
   metadata?: Record<string, unknown>;
   userAgent?: string;
 }
@@ -27,14 +30,71 @@ export async function logError(options: LogErrorOptions): Promise<void> {
       level: options.level || "error",
       source: options.source || "unknown",
       userId: options.userId || undefined,
+      projectId: options.projectId || undefined,
+      operation: options.operation || undefined,
+      apiTool: options.apiTool || undefined,
       metadata: options.metadata || {},
       userAgent: options.userAgent || "",
-      resolved: false,
+      status: "open",
+      retryCount: 0,
     });
   } catch (err) {
     // Silently fail - error logging should never crash the app
     console.error("[ErrorLogger] Failed to log error:", err);
   }
+}
+
+/**
+ * Log production workflow specific errors
+ */
+export async function logProductionError(
+  projectId: string,
+  operation: string,
+  error: Error,
+  apiTool?: string,
+  metadata?: Record<string, unknown>
+): Promise<void> {
+  await logError({
+    level: "error",
+    message: `Production workflow error: ${error.message}`,
+    stack: error.stack,
+    source: "production-workflow",
+    projectId,
+    operation,
+    apiTool,
+    metadata: {
+      ...metadata,
+      errorName: error.name,
+    },
+  });
+}
+
+/**
+ * Log API errors with request context
+ */
+export async function logApiError(
+  request: Request,
+  error: Error,
+  source: string,
+  projectId?: string,
+  metadata?: Record<string, unknown>
+): Promise<void> {
+  await logError({
+    level: "error",
+    message: `API error in ${source}: ${error.message}`,
+    stack: error.stack,
+    source,
+    projectId,
+    operation: `API ${request.method} ${request.url}`,
+    apiTool: source,
+    metadata: {
+      ...metadata,
+      url: request.url,
+      method: request.method,
+      errorName: error.name,
+    },
+    userAgent: request.headers.get("user-agent") || undefined,
+  });
 }
 
 /**

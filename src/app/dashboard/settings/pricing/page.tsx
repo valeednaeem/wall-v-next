@@ -89,7 +89,9 @@ export default function PricingPage() {
       const res = await fetch("/api/settings/prices");
       if (res.status === 401) { window.location.href = "/login?callbackUrl=/dashboard/settings/pricing"; return; }
       const data = await res.json();
-      setPrices(data.prices || []);
+      // Support both old format { prices } and new format { success, data: { prices } }
+      const pricesList = data.data?.prices || data.prices || [];
+      setPrices(pricesList);
     } catch {
       console.error("Failed to load prices");
     } finally {
@@ -120,7 +122,12 @@ export default function PricingPage() {
         setShowForm(false);
         setEditingId(null);
         setForm(emptyForm);
+      } else {
+        const data = await res.json();
+        console.error("Failed to save price:", data.error || "Unknown error");
       }
+    } catch (err) {
+      console.error("Network error saving price:", err);
     } finally {
       setSaving(false);
     }
@@ -134,17 +141,35 @@ export default function PricingPage() {
 
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this price?")) return;
-    await fetch(`/api/settings/prices?id=${id}`, { method: "DELETE" });
-    await fetchPrices();
+    try {
+      const res = await fetch(`/api/settings/prices?id=${id}`, { method: "DELETE" });
+      if (res.ok) {
+        await fetchPrices();
+      } else {
+        const data = await res.json();
+        console.error("Failed to delete price:", data.error);
+      }
+    } catch (err) {
+      console.error("Network error deleting price:", err);
+    }
   };
 
   const handleToggleActive = async (price: ServicePrice) => {
-    await fetch("/api/settings/prices", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: price._id, active: !price.active }),
-    });
-    await fetchPrices();
+    try {
+      const res = await fetch("/api/settings/prices", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: price._id, active: !price.active }),
+      });
+      if (res.ok) {
+        await fetchPrices();
+      } else {
+        const data = await res.json();
+        console.error("Failed to toggle price:", data.error);
+      }
+    } catch (err) {
+      console.error("Network error toggling price:", err);
+    }
   };
 
   const addFeature = () => {

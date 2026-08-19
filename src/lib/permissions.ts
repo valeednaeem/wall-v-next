@@ -70,6 +70,30 @@ export const PERMISSIONS = {
   // Analytics
   ANALYTICS_VIEW: "analytics:view",
 
+  // Marketing - Google
+  MARKETING_VIEW: "marketing:view",
+  MARKETING_MANAGE: "marketing:manage",
+  GOOGLE_ANALYTICS_VIEW: "google:analytics:view",
+  GOOGLE_ANALYTICS_MANAGE: "google:analytics:manage",
+  GOOGLE_SEARCH_CONSOLE_VIEW: "google:search_console:view",
+  GOOGLE_SEARCH_CONSOLE_MANAGE: "google:search_console:manage",
+  GOOGLE_BUSINESS_PROFILE_VIEW: "google:business_profile:view",
+  GOOGLE_BUSINESS_PROFILE_MANAGE: "google:business_profile:manage",
+  GOOGLE_MERCHANT_VIEW: "google:merchant:view",
+  GOOGLE_MERCHANT_MANAGE: "google:merchant:manage",
+  GOOGLE_ADS_VIEW: "google:ads:view",
+  GOOGLE_ADS_MANAGE: "google:ads:manage",
+
+  // SEO
+  SEO_VIEW: "seo:view",
+  SEO_MANAGE: "seo:manage",
+  SEO_SITEMAP_MANAGE: "seo:sitemap:manage",
+  SEO_ROBOTS_MANAGE: "seo:robots:manage",
+
+  // Tracking
+  TRACKING_VIEW: "tracking:view",
+  TRACKING_MANAGE: "tracking:manage",
+
   // AI
   AI_ACCESS: "ai:access",
   AI_MANAGE: "ai:manage",

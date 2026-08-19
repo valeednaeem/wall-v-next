@@ -25,27 +25,32 @@ export default function LoginPage() {
       .catch(() => {});
   }, []);
 
+  const getCallbackUrl = () => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("callbackUrl") || "/dashboard";
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
 
     try {
-      const res = await fetch("/api/auth/credentials-login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+      const result = await signIn("credentials", {
+        email: email.toLowerCase().trim(),
+        password,
+        redirect: false,
       });
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.error || "Invalid email or password");
+      if (result?.error) {
+        setError("Invalid email or password");
         setLoading(false);
         return;
       }
 
-      window.location.replace(data.url || "/dashboard");
+      // Small delay to ensure session cookie is set before redirect
+      await new Promise((r) => setTimeout(r, 150));
+      window.location.href = getCallbackUrl();
     } catch {
       setError("Something went wrong");
       setLoading(false);
@@ -53,7 +58,7 @@ export default function LoginPage() {
   };
 
   const handleSocialLogin = (provider: string) => {
-    signIn(provider, { callbackUrl: "/dashboard" });
+    signIn(provider, { callbackUrl: getCallbackUrl() });
   };
 
   const hasSocialProviders = Object.values(availableProviders).some(Boolean);

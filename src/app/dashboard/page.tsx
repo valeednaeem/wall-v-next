@@ -26,31 +26,38 @@ export default function DashboardPage() {
   const { data: session, status } = useSession();
   const [data, setData] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
-  const [authChecked, setAuthChecked] = useState(false);
+  const [accessError, setAccessError] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === "loading") return;
-    if (!authChecked) {
-      setAuthChecked(true);
-    }
-  }, [status, authChecked]);
-
-  useEffect(() => {
-    if (!authChecked) return;
     if (status === "unauthenticated") {
-      window.location.href = "/login";
+      window.location.href = "/login?callbackUrl=/dashboard";
       return;
     }
     if (status === "authenticated") {
       fetch("/api/dashboard/stats")
-        .then((r) => r.json())
-        .then((d) => { if (d.success) setData(d.data); })
-        .catch(() => {})
+        .then(async (response) => {
+          const body = await response.json().catch(() => ({}));
+          if (response.status === 401) {
+            window.location.href = "/login?callbackUrl=/dashboard";
+            return;
+          }
+          if (response.status === 403) {
+            setAccessError(body.message || "You do not have permission to view dashboard analytics.");
+            return;
+          }
+          if (!response.ok) {
+            setAccessError("Dashboard data is temporarily unavailable. Please try again later.");
+            return;
+          }
+          if (body.success) setData(body.data);
+        })
+        .catch(() => setAccessError("Dashboard data is temporarily unavailable. Please try again later."))
         .finally(() => setLoading(false));
     }
-  }, [status, authChecked]);
+  }, [status]);
 
-  if (status === "loading" || !authChecked) {
+  if (status === "loading") {
     return (
       <div className="space-y-6">
         <h2 className="text-2xl font-bold">Dashboard Overview</h2>
@@ -67,6 +74,15 @@ export default function DashboardPage() {
   }
 
   if (!session) return null;
+
+  if (accessError) {
+    return (
+      <div className="rounded-lg border border-amber-200 bg-amber-50 p-6 text-amber-900">
+        <h2 className="text-xl font-semibold">Dashboard access is limited</h2>
+        <p className="mt-2 text-sm">{accessError}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
