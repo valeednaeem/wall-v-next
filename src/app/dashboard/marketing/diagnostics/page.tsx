@@ -159,7 +159,7 @@ export default function DiagnosticsPage() {
       {/* Filters */}
       <div className="flex flex-wrap gap-3">
         <div className="flex gap-2 flex-wrap">
-          {["all", "pass", "warning", "fail", "unknown"].map((f) => (
+          {(["all", "pass", "warning", "fail", "unknown"] as const).map((f) => (
             <button
               key={f}
               onClick={() => setFilter(f)}
@@ -172,7 +172,7 @@ export default function DiagnosticsPage() {
           ))}
         </div>
         <div className="flex gap-2 flex-wrap ml-auto">
-          {["all", "google", "seo", "tracking", "performance", "security", "content"].map((c) => (
+          {(["all", "google", "seo", "tracking", "performance", "security", "content"] as const).map((c) => (
             <button
               key={c}
               onClick={() => setCategoryFilter(c)}
