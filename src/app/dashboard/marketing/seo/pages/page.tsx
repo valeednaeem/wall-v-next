@@ -31,7 +31,7 @@ export default function PagesSEOPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editData, setEditData] = useState<Partial<PageSEO["seo"]>>({});
+  const [editData, setEditData] = useState<{ metaTitle?: string; metaDescription?: string }>({});
   const [saving, setSaving] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState<string | null>(null);
   const [saveMessage, setSaveMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -211,7 +211,7 @@ export default function PagesSEOPage() {
                         {isEditing ? (
                           <input
                             type="text"
-                            value={editData.metaTitle || ""}
+                            value={editData?.metaTitle || ""}
                             onChange={(e) => handleFieldChange("metaTitle", e.target.value)}
                             className="w-full rounded border px-2 py-1 text-sm"
                             placeholder="SEO title"
@@ -224,7 +224,7 @@ export default function PagesSEOPage() {
                         {isEditing ? (
                           <input
                             type="text"
-                            value={editData.metaDescription || ""}
+                            value={editData?.metaDescription || ""}
                             onChange={(e) => handleFieldChange("metaDescription", e.target.value)}
                             className="w-full rounded border px-2 py-1 text-sm"
                             placeholder="SEO description"
