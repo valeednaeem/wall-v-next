@@ -77,7 +77,9 @@ export async function POST(request: Request) {
 
     // Static pages
     if (settings.includePages) {
-      const staticPages = [
+      type ChangeFreq = "always" | "hourly" | "daily" | "weekly" | "monthly" | "yearly" | "never";
+
+      const staticPages: { url: string; changefreq: ChangeFreq; priority: number }[] = [
         { url: baseUrl, changefreq: "daily", priority: 1.0 },
         { url: `${baseUrl}/services`, changefreq: "weekly", priority: 0.9 },
         { url: `${baseUrl}/hosting-domain`, changefreq: "weekly", priority: 0.9 },
