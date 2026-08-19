@@ -33,7 +33,7 @@ export default function BlogSEOPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editData, setEditData] = useState<Partial<BlogPostSEO["seo"]> & Partial<BlogPostSEO["social"]>>({});
+  const [editData, setEditData] = useState<{ metaTitle?: string; metaDescription?: string; ogImage?: string }>({});
   const [saving, setSaving] = useState<string | null>(null);
   const [saveMessage, setSaveMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
@@ -242,7 +242,7 @@ export default function BlogSEOPage() {
                         {isEditing ? (
                           <input
                             type="text"
-                            value={editData.metaTitle ?? ""}
+                            value={editData?.metaTitle ?? ""}
                             onChange={(e) => handleFieldChange("metaTitle", e.target.value)}
                             className="w-full rounded border px-2 py-1 text-sm"
                             placeholder="SEO title"
