@@ -242,7 +242,7 @@ export default function BlogSEOPage() {
                         {isEditing ? (
                           <input
                             type="text"
-                            value={(editData.metaTitle as string) || ""}
+                            value={editData.metaTitle ?? ""}
                             onChange={(e) => handleFieldChange("metaTitle", e.target.value)}
                             className="w-full rounded border px-2 py-1 text-sm"
                             placeholder="SEO title"
@@ -255,7 +255,7 @@ export default function BlogSEOPage() {
                         {isEditing ? (
                           <input
                             type="text"
-                            value={(editData.metaDescription as string) || ""}
+                            value={editData.metaDescription ?? ""}
                             onChange={(e) => handleFieldChange("metaDescription", e.target.value)}
                             className="w-full rounded border px-2 py-1 text-sm"
                             placeholder="SEO description"
@@ -268,7 +268,7 @@ export default function BlogSEOPage() {
                         {isEditing ? (
                           <input
                             type="url"
-                            value={(editData.ogImage as string) || ""}
+                            value={editData.ogImage ?? ""}
                             onChange={(e) => handleFieldChange("ogImage", e.target.value)}
                             className="w-full rounded border px-2 py-1 text-sm"
                             placeholder="OG image URL"
