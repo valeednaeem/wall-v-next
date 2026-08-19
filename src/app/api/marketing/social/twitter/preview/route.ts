@@ -5,6 +5,7 @@ import SiteSettings from "@/models/site-settings";
 import LegalPage from "@/models/legal-page";
 import BlogPost from "@/models/blog-post";
 import Product from "@/models/product";
+import Page from "@/models/page";
 import { requirePermission } from "@/lib/api-middleware";
 
 export async function POST(request: Request) {
