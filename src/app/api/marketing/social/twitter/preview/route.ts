@@ -42,24 +42,29 @@ export async function POST(request: Request) {
       "seo.canonicalDomain",
     ]} }).lean();
 
-    const getSetting = (key: string, def: string = "") => {
+    const getSetting = <T>(key: string, def: T): T => {
       const s = settings.find((st) => st.key === `social.twitter.${key}`) || settings.find((st) => st.key === key);
-      return s?.value ?? def;
+      if (!s?.value) return def;
+      try {
+        return JSON.parse(s.value) as T;
+      } catch {
+        return s.value as unknown as T;
+      }
     };
 
-    const canonicalDomain = getSetting("canonicalDomain", process.env.NEXT_PUBLIC_APP_URL || "https://wall-v.com");
+    const canonicalDomain = getSetting<string>("canonicalDomain", process.env.NEXT_PUBLIC_APP_URL || "https://wall-v.com");
     const baseUrl = canonicalDomain.replace(/\/$/, "");
 
     // Determine which page we're previewing
-    let card = getSetting("defaultCard", "summary_large_image");
-    let title = getSetting("defaultTitle");
-    let description = getSetting("defaultDescription");
-    let image = getSetting("defaultImage");
-    let siteHandle = getSetting("siteHandle", "@wallv");
-    let creatorHandle = getSetting("creatorHandle", "@wallv");
+    let card = getSetting<string>("defaultCard", "summary_large_image");
+    let title = getSetting<string>("defaultTitle", "");
+    let description = getSetting<string>("defaultDescription", "");
+    let image = getSetting<string>("defaultImage", "");
+    let siteHandle = getSetting<string>("siteHandle", "@wallv");
+    let creatorHandle = getSetting<string>("creatorHandle", "@wallv");
 
     // Check for page-specific overrides
-    const pageOverrides = getSetting("pageOverrides", {});
+    const pageOverrides = getSetting<Record<string, { card?: string; title?: string; description?: string; image?: string }>>("pageOverrides", {});
     const pagePath = url.startsWith("/") ? url : "/" + url;
     if (pageOverrides[pagePath]) {
       const override = pageOverrides[pagePath];
