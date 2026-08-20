@@ -88,6 +88,7 @@ providers.push(Credentials({
 
     return {
       id: user._id.toString(),
+      userId: user._id.toString(),
       email: user.email,
       name: user.name,
       image: user.avatar,
