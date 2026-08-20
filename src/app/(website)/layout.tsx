@@ -6,6 +6,7 @@ import { DograhWidgetLoader } from "@/components/ai/dograh-widget-loader";
 import { CartProvider } from "@/lib/cart-context";
 import { DynamicFavicon } from "@/components/dynamic-favicon";
 import { GoogleAnalytics } from "@/components/analytics/GoogleAnalytics";
+import { Suspense } from "react";
 
 export default function WebsiteLayout({
   children,
@@ -15,10 +16,14 @@ export default function WebsiteLayout({
   return (
     <div className="flex min-h-screen flex-col">
       <DynamicFavicon />
-      <GoogleAnalytics />
+      <Suspense fallback={null}>
+        <GoogleAnalytics />
+      </Suspense>
       <CartProvider>
         <Navbar />
-        <main className="flex-1">{children}</main>
+        <main className="flex-1">
+          <Suspense fallback={null}>{children}</Suspense>
+        </main>
         <Footer />
       </CartProvider>
       <SalesChatbot />
