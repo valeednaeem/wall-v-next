@@ -33,7 +33,7 @@ export default function ProductsSEOPage() {
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editData, setEditData] = useState<Partial<ProductSEO["seo"]> & Partial<ProductSEO["social"]>>({});
+  const [editData, setEditData] = useState<{ metaTitle?: string; metaDescription?: string; ogImage?: string }>({});
   const [saving, setSaving] = useState<string | null>(null);
   const [saveMessage, setSaveMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
@@ -242,7 +242,7 @@ export default function ProductsSEOPage() {
                         {isEditing ? (
                           <input
                             type="text"
-                            value={(editData.metaTitle as string) || ""}
+                            value={editData?.metaTitle ?? ""}
                             onChange={(e) => handleFieldChange("metaTitle", e.target.value)}
                             className="w-full rounded border px-2 py-1 text-sm"
                             placeholder="SEO title"
@@ -255,7 +255,7 @@ export default function ProductsSEOPage() {
                         {isEditing ? (
                           <input
                             type="text"
-                            value={(editData.metaDescription as string) || ""}
+                            value={editData?.metaDescription ?? ""}
                             onChange={(e) => handleFieldChange("metaDescription", e.target.value)}
                             className="w-full rounded border px-2 py-1 text-sm"
                             placeholder="SEO description"
@@ -268,7 +268,7 @@ export default function ProductsSEOPage() {
                         {isEditing ? (
                           <input
                             type="url"
-                            value={(editData.ogImage as string) || ""}
+                            value={editData?.ogImage ?? ""}
                             onChange={(e) => handleFieldChange("ogImage", e.target.value)}
                             className="w-full rounded border px-2 py-1 text-sm"
                             placeholder="OG image URL"
