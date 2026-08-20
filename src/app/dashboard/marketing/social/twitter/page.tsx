@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { Save, Loader2, Eye, EyeOff, Globe, Share2, Image, CheckCircle2, AlertCircle, RefreshCw, ExternalLink, MessageSquare } from "lucide-react";
+import { Save, Loader2, Eye, EyeOff, Globe, Share2, Image, CheckCircle2, AlertCircle, RefreshCw, ExternalLink, MessageSquare, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface TwitterSettings {
