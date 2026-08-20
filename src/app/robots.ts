@@ -31,7 +31,6 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
         additionalBlocked: [],
         sitemapUrl: "",
         hostDirective: "",
-        crawlDelay: undefined,
       };
     }
 
@@ -73,7 +72,6 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
       rules,
       sitemap: sitemapUrl,
       host: settings.hostDirective,
-      crawlDelay: settings.crawlDelay,
     };
   } catch (error) {
     console.error("Robots.txt generation error:", error);
