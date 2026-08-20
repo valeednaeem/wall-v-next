@@ -19,7 +19,7 @@ export async function POST() {
       permissions: (session.user as { permissions?: string[] }).permissions || [],
     };
 
-    const permError = await requirePermission(jwtUser, "google:analytics:manage");
+    const permError = await requirePermission(jwtUser, "marketing:manage");
     if (permError) return permError;
 
     await connectToDatabase();

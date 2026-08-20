@@ -128,6 +128,23 @@ const TEST_FUNCTIONS: Record<string, (config: Record<string, unknown>) => Promis
   ads: testAds,
 };
 
+function getManagePermission(serviceId: string): string {
+  switch (serviceId) {
+    case "analytics":
+      return "google:analytics:manage";
+    case "search_console":
+      return "google:search_console:manage";
+    case "business_profile":
+      return "google:business_profile:manage";
+    case "merchant_center":
+      return "google:merchant:manage";
+    case "ads":
+      return "google:ads:manage";
+    default:
+      return "marketing:manage";
+  }
+}
+
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ serviceId: string }> }
@@ -146,10 +163,10 @@ export async function POST(
       permissions: (session.user as { permissions?: string[] }).permissions || [],
     };
 
-    const permError = await requirePermission(jwtUser, "google:analytics:manage");
+    const { serviceId } = await params;
+    const permError = await requirePermission(jwtUser, getManagePermission(serviceId));
     if (permError) return permError;
 
-    const { serviceId } = await params;
     await connectToDatabase();
 
     const service = await GoogleServiceConfig.findOne({ serviceId });

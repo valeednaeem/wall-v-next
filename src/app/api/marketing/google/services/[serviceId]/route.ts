@@ -4,6 +4,40 @@ import GoogleServiceConfig from "@/models/google-services";
 import { auth } from "@/lib/auth";
 import { requirePermission } from "@/lib/api-middleware";
 
+function getManagePermission(serviceId: string): string {
+  switch (serviceId) {
+    case "analytics":
+      return "google:analytics:manage";
+    case "search_console":
+      return "google:search_console:manage";
+    case "business_profile":
+      return "google:business_profile:manage";
+    case "merchant_center":
+      return "google:merchant:manage";
+    case "ads":
+      return "google:ads:manage";
+    default:
+      return "marketing:manage";
+  }
+}
+
+function getViewPermission(serviceId: string): string {
+  switch (serviceId) {
+    case "analytics":
+      return "google:analytics:view";
+    case "search_console":
+      return "google:search_console:view";
+    case "business_profile":
+      return "google:business_profile:view";
+    case "merchant_center":
+      return "google:merchant:view";
+    case "ads":
+      return "google:ads:view";
+    default:
+      return "marketing:view";
+  }
+}
+
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ serviceId: string }> }
@@ -22,10 +56,10 @@ export async function GET(
       permissions: (session.user as { permissions?: string[] }).permissions || [],
     };
 
-    const permError = await requirePermission(jwtUser, "google:analytics:view");
+    const { serviceId } = await params;
+    const permError = await requirePermission(jwtUser, getViewPermission(serviceId));
     if (permError) return permError;
 
-    const { serviceId } = await params;
     await connectToDatabase();
 
     const service = await GoogleServiceConfig.findOne({ serviceId }).lean();
@@ -58,10 +92,10 @@ export async function PUT(
       permissions: (session.user as { permissions?: string[] }).permissions || [],
     };
 
-    const permError = await requirePermission(jwtUser, "google:analytics:manage");
+    const { serviceId } = await params;
+    const permError = await requirePermission(jwtUser, getManagePermission(serviceId));
     if (permError) return permError;
 
-    const { serviceId } = await params;
     const body = await request.json();
     await connectToDatabase();
 

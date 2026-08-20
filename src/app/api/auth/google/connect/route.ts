@@ -29,7 +29,7 @@ export async function GET() {
       permissions: (session.user as { permissions?: string[] }).permissions || [],
     };
 
-    const permError = await requirePermission(jwtUser, "google:analytics:manage");
+    const permError = await requirePermission(jwtUser, "marketing:manage");
     if (permError) return permError;
 
     const clientId = process.env.GOOGLE_CLIENT_ID;
