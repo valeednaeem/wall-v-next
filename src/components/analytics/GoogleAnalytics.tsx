@@ -7,9 +7,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 interface GAConfig {
   measurementId: string;
   debugMode?: boolean;
-  consentMode?: "default" | "advanced";
   enabled: boolean;
-  gtmEnabled: boolean;
 }
 
 declare global {
@@ -26,25 +24,19 @@ export function GoogleAnalytics() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  // Fetch GA + GTM configuration
   useEffect(() => {
     async function fetchConfig() {
       try {
-        const [gaRes, publicRes] = await Promise.all([
-          fetch("/api/marketing/google/services/analytics/public"),
-          fetch("/api/settings/public"),
-        ]);
-        const gaData = gaRes.ok ? await gaRes.json() : null;
-        const publicData = publicRes.ok ? await publicRes.json() : null;
-        const gtmId = publicData?.data?.seo?.googleTagManagerId || "";
-        if (gaData?.success && gaData.data) {
-          setConfig({
-            measurementId: gaData.data.measurementId,
-            debugMode: gaData.data.debugMode,
-            consentMode: gaData.data.consentMode,
-            enabled: gaData.data.enabled,
-            gtmEnabled: !!gtmId,
-          });
+        const res = await fetch("/api/marketing/google/services/analytics/public");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.data) {
+            setConfig({
+              measurementId: data.data.measurementId,
+              debugMode: data.data.debugMode,
+              enabled: data.data.enabled,
+            });
+          }
         }
       } catch {
         // silent
@@ -53,7 +45,6 @@ export function GoogleAnalytics() {
     fetchConfig();
   }, []);
 
-  // Check cookie consent
   useEffect(() => {
     function checkConsent() {
       if (typeof document === "undefined") return;
@@ -82,7 +73,6 @@ export function GoogleAnalytics() {
     };
   }, []);
 
-  // Initialize: if GTM is active, just push to dataLayer; otherwise load gtag.js directly
   useEffect(() => {
     if (!config || !config.enabled || !config.measurementId) return;
     if (!consentGranted) return;
@@ -90,51 +80,36 @@ export function GoogleAnalytics() {
 
     window.dataLayer = window.dataLayer || [];
 
-    if (config.gtmEnabled) {
-      // GTM handles gtag.js — just configure GA4 via dataLayer
+    // Ensure gtag function exists (GTM may have already created it)
+    if (!window.gtag) {
       window.gtag = function gtag() {
         window.dataLayer.push(arguments);
       };
-      window.gtag("config", config.measurementId, {
-        debug_mode: config.debugMode || false,
-        send_page_view: false,
-      });
-    } else {
-      // No GTM — load gtag.js directly
-      window.gtag = function gtag() {
-        window.dataLayer.push(arguments);
-      };
-      window.gtag("js", new Date());
-      window.gtag("consent", "default", {
-        analytics_storage: "denied",
-        ad_storage: "denied",
-        ad_user_data: "denied",
-        ad_personalization: "denied",
-        wait_for_update: 500,
-      });
-      window.gtag("consent", "update", {
-        analytics_storage: "granted",
-        ad_storage: "granted",
-        ad_user_data: "granted",
-        ad_personalization: "granted",
-      });
-      window.gtag("config", config.measurementId, {
-        debug_mode: config.debugMode || false,
-        send_page_view: false,
-      });
     }
+
+    // Update consent
+    window.gtag("consent", "update", {
+      analytics_storage: "granted",
+      ad_storage: "granted",
+      ad_user_data: "granted",
+      ad_personalization: "granted",
+    });
+
+    // Configure GA4
+    window.gtag("config", config.measurementId, {
+      debug_mode: config.debugMode || false,
+      send_page_view: false,
+    });
 
     setInitialized(true);
     sendPageView(pathname, searchParams?.toString());
   }, [config, consentGranted, initialized]);
 
-  // Track page views on navigation
   useEffect(() => {
     if (!config || !config.enabled || !consentGranted || !window.gtag || !initialized) return;
     sendPageView(pathname, searchParams?.toString());
   }, [pathname, searchParams, config, consentGranted, initialized]);
 
-  // Update consent when it changes
   useEffect(() => {
     if (!config || !config.enabled || !initialized || !window.gtag) return;
     window.gtag("consent", "update", {
@@ -154,24 +129,26 @@ export function GoogleAnalytics() {
     });
   };
 
-  if (!config || !config.enabled || !config.measurementId) {
-    return null;
-  }
+  // GTM loads gtag.js — only render fallback script if GTM is NOT present
+  const [gtmPresent, setGtmPresent] = useState(false);
+  useEffect(() => {
+    // Check if GTM already loaded gtag by checking dataLayer for gtm.js event
+    const hasGtm = window.dataLayer?.some((item: unknown) => {
+      const e = item as Record<string, unknown>;
+      return e?.event === "gtm.js";
+    });
+    setGtmPresent(!!hasGtm);
+  }, []);
 
-  // If GTM is active, don't load any scripts — GTM handles everything
-  if (config.gtmEnabled) {
-    return null;
-  }
+  if (!config || !config.enabled || !config.measurementId) return null;
+  if (gtmPresent) return null;
 
-  // Fallback: no GTM, load gtag.js directly
   return (
-    <>
-      <Script
-        id="google-analytics"
-        strategy="afterInteractive"
-        src={`https://www.googletagmanager.com/gtag/js?id=${config.measurementId}`}
-      />
-    </>
+    <Script
+      id="google-analytics"
+      strategy="afterInteractive"
+      src={`https://www.googletagmanager.com/gtag/js?id=${config.measurementId}`}
+    />
   );
 }
 

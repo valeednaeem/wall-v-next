@@ -9,7 +9,7 @@ import { GoogleAnalytics } from "@/components/analytics/GoogleAnalytics";
 import { GoogleTagManager } from "@/components/analytics/GoogleTagManager";
 import { Suspense } from "react";
 
-export default function WebsiteLayout({
+export default async function WebsiteLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -17,8 +17,8 @@ export default function WebsiteLayout({
   return (
     <div className="flex min-h-screen flex-col">
       <DynamicFavicon />
+      <GoogleTagManager />
       <Suspense fallback={null}>
-        <GoogleTagManager />
         <GoogleAnalytics />
       </Suspense>
       <CartProvider>

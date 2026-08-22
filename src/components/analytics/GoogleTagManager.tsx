@@ -1,29 +1,23 @@
-"use client";
+import { connectToDatabase } from "@/lib/mongodb";
+import SiteSettings from "@/models/site-settings";
 
-import { useEffect, useState } from "react";
-import Script from "next/script";
+async function getGtmId(): Promise<string> {
+  try {
+    await connectToDatabase();
+    const setting = await SiteSettings.findOne({ key: "seo.googleTagManagerId" }).lean();
+    return (setting?.value as string) || "";
+  } catch {
+    return "";
+  }
+}
 
-export function GoogleTagManager() {
-  const [gtmId, setGtmId] = useState("");
-
-  useEffect(() => {
-    fetch("/api/settings/public")
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.success && d.data?.seo?.googleTagManagerId) {
-          setGtmId(d.data.seo.googleTagManagerId);
-        }
-      })
-      .catch(() => {});
-  }, []);
-
+export async function GoogleTagManager() {
+  const gtmId = await getGtmId();
   if (!gtmId) return null;
 
   return (
     <>
-      <Script
-        id="gtm-consent-init"
-        strategy="beforeInteractive"
+      <script
         dangerouslySetInnerHTML={{
           __html: `
             window.dataLayer = window.dataLayer || [];
@@ -38,9 +32,7 @@ export function GoogleTagManager() {
           `,
         }}
       />
-      <Script
-        id="gtm-head"
-        strategy="afterInteractive"
+      <script
         dangerouslySetInnerHTML={{
           __html: `
             (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
