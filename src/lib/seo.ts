@@ -118,13 +118,14 @@ export function generateArticleSchema(article: {
   };
 }
 
-export function generateOrganizationSchema() {
+export function generateOrganizationSchema(logoUrl?: string) {
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://wall-v.com";
   return {
     "@context": "https://schema.org",
     "@type": "Organization",
     name: "Wall-V",
-    url: process.env.NEXT_PUBLIC_APP_URL || "https://wall-v.com",
-    logo: `${process.env.NEXT_PUBLIC_APP_URL || "https://wall-v.com"}/wall-v-logo.png`,
+    url: baseUrl,
+    ...(logoUrl && { logo: logoUrl }),
     sameAs: [],
     contactPoint: {
       "@type": "ContactPoint",
