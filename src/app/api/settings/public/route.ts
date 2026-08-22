@@ -27,6 +27,7 @@ export async function GET() {
           metaDescription: grouped.seo?.metaDescription || "",
           keywords: grouped.seo?.keywords || [],
           ogImage: grouped.seo?.ogImage || "",
+          googleTagManagerId: grouped.seo?.googleTagManagerId || "",
         },
         social: {
           facebook: grouped.socialMedia?.facebook || "",
