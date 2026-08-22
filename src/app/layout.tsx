@@ -6,54 +6,69 @@ import { Providers } from "@/components/providers";
 import { CookieConsent } from "@/components/cookie-consent";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/react";
+import { connectToDatabase } from "@/lib/mongodb";
+import SiteSettings from "@/models/site-settings";
 
 const inter = Inter({
   weight: ["400", "500", "600", "700"],
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
-  title: {
-    default: "Wall-V | AI-Powered Software Agency",
-    template: "%s | Wall-V",
-  },
-  description:
-    "Wall-V is an AI-powered software agency specializing in custom software development, AI automation, ERP/CRM solutions, web hosting, domain registration, and digital products.",
-  keywords: [
-    "software agency",
-    "AI automation",
-    "custom software development",
-    "web hosting",
-    "ERP",
-    "CRM",
-    "SaaS",
-    "digital products",
-    "web development",
-    "Wall-V",
-  ],
-  authors: [{ name: "Wall-V" }],
-  creator: "Wall-V",
-  openGraph: {
-    type: "website",
-    locale: "en_US",
-    siteName: "Wall-V",
-    title: "Wall-V | AI-Powered Software Agency",
+async function getGoogleVerification(): Promise<string> {
+  try {
+    await connectToDatabase();
+    const setting = await SiteSettings.findOne({ key: "seo.googleSearchConsole" }).lean();
+    return (setting?.value as string) || "";
+  } catch {
+    return "";
+  }
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  const googleVerification = await getGoogleVerification();
+  return {
+    title: {
+      default: "Wall-V | AI-Powered Software Agency",
+      template: "%s | Wall-V",
+    },
     description:
-      "AI-powered software agency providing custom software development, AI automation, ERP/CRM solutions, web hosting, and digital products.",
-    images: [{ url: "/og-default.png", width: 1200, height: 630 }],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Wall-V | AI-Powered Software Agency",
-    description:
-      "AI-powered software agency providing custom software development, AI automation, ERP/CRM solutions, web hosting, and digital products.",
-    images: ["/og-default.png"],
-  },
-  robots: { index: true, follow: true },
-  verification: {
-    google: "QORrwz1mvBarCLniVud2TU0ohuh_FRRSCVXp-J-JRGA",
-  },
-};
+      "Wall-V is an AI-powered software agency specializing in custom software development, AI automation, ERP/CRM solutions, web hosting, domain registration, and digital products.",
+    keywords: [
+      "software agency",
+      "AI automation",
+      "custom software development",
+      "web hosting",
+      "ERP",
+      "CRM",
+      "SaaS",
+      "digital products",
+      "web development",
+      "Wall-V",
+    ],
+    authors: [{ name: "Wall-V" }],
+    creator: "Wall-V",
+    openGraph: {
+      type: "website",
+      locale: "en_US",
+      siteName: "Wall-V",
+      title: "Wall-V | AI-Powered Software Agency",
+      description:
+        "AI-powered software agency providing custom software development, AI automation, ERP/CRM solutions, web hosting, and digital products.",
+      images: [{ url: "/og-default.png", width: 1200, height: 630 }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: "Wall-V | AI-Powered Software Agency",
+      description:
+        "AI-powered software agency providing custom software development, AI automation, ERP/CRM solutions, web hosting, and digital products.",
+      images: ["/og-default.png"],
+    },
+    robots: { index: true, follow: true },
+    verification: {
+      google: googleVerification || undefined,
+    },
+  };
+}
 
 export const viewport: Viewport = {
   width: "device-width",
