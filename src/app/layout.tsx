@@ -33,6 +33,9 @@ export const metadata: Metadata = {
   ],
   authors: [{ name: "Wall-V" }],
   creator: "Wall-V",
+  icons: {
+    icon: "/favicon.png",
+  },
   openGraph: {
     type: "website",
     locale: "en_US",

@@ -124,7 +124,7 @@ export function generateOrganizationSchema() {
     "@type": "Organization",
     name: "Wall-V",
     url: process.env.NEXT_PUBLIC_APP_URL || "https://wall-v.com",
-    logo: `${process.env.NEXT_PUBLIC_APP_URL || "https://wall-v.com"}/logo.png`,
+    logo: `${process.env.NEXT_PUBLIC_APP_URL || "https://wall-v.com"}/wall-v-logo.png`,
     sameAs: [],
     contactPoint: {
       "@type": "ContactPoint",
