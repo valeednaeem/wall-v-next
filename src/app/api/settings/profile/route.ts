@@ -20,7 +20,7 @@ const profileUpdateSchema = z.object({
       github: z.string().url().max(2048).or(z.literal("")),
       dribbble: z.string().url().max(2048).or(z.literal("")),
     }).optional(),
-  }).strict(),
+  }),
 }).or(z.object({
   portfolio: z.array(z.object({
     id: z.string().min(1).max(100),
@@ -88,8 +88,9 @@ export async function PUT(request: Request) {
 
     const parsed = profileUpdateSchema.safeParse(await request.json());
     if (!parsed.success) {
+      console.error("[Profile PUT] Validation error:", parsed.error.flatten());
       return NextResponse.json(
-        { success: false, error: "VALIDATION_ERROR", message: "Please correct the highlighted profile fields." },
+        { success: false, error: "VALIDATION_ERROR", message: "Please correct the highlighted profile fields.", details: parsed.error.flatten() },
         { status: 400 }
       );
     }
