@@ -30,7 +30,7 @@ const ALL_PERMISSIONS = [
   "ai:access", "ai:manage",
 ];
 
-export async function POST() {
+async function fixRoles() {
   try {
     let user;
     try {
@@ -106,4 +106,12 @@ export async function POST() {
     console.error("Fix roles error:", error);
     return NextResponse.json({ error: "Failed to fix roles" }, { status: 500 });
   }
+}
+
+export async function GET() {
+  return fixRoles();
+}
+
+export async function POST() {
+  return fixRoles();
 }
