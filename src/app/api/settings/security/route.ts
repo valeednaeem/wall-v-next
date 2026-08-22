@@ -44,6 +44,12 @@ export async function PUT(request: Request) {
         if (!body.current || !body.newPass) {
           return NextResponse.json({ error: "Current and new password required" }, { status: 400 });
         }
+        if (typeof body.newPass !== "string" || body.newPass.length < 8) {
+          return NextResponse.json({ error: "New password must be at least 8 characters" }, { status: 400 });
+        }
+        if (body.newPass.length > 128) {
+          return NextResponse.json({ error: "Password must be less than 128 characters" }, { status: 400 });
+        }
         const user = await User.findById(session.user.id).select("+password");
         if (!user) {
           return NextResponse.json({ error: "User not found" }, { status: 404 });
