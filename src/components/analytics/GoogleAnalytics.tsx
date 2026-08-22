@@ -95,15 +95,13 @@ export function GoogleAnalytics() {
     };
     window.gtag("js", new Date());
 
-    // Set consent mode if advanced
-    if (config.consentMode === "advanced") {
-      window.gtag("consent", "default", {
-        analytics_storage: "granted",
-        ad_storage: "granted",
-        ad_user_data: "granted",
-        ad_personalization: "granted",
-      });
-    }
+    // Update consent based on user preference
+    window.gtag("consent", "update", {
+      analytics_storage: consentGranted ? "granted" : "denied",
+      ad_storage: consentGranted ? "granted" : "denied",
+      ad_user_data: consentGranted ? "granted" : "denied",
+      ad_personalization: consentGranted ? "granted" : "denied",
+    });
 
     // Configure GA4
     window.gtag("config", config.measurementId, {
@@ -125,14 +123,12 @@ export function GoogleAnalytics() {
   // Update consent mode when consent changes after initialization
   useEffect(() => {
     if (!config || !config.enabled || !config.measurementId || !initialized || !window.gtag) return;
-    if (config.consentMode === "advanced") {
-      window.gtag("consent", "update", {
-        analytics_storage: consentGranted ? "granted" : "denied",
-        ad_storage: consentGranted ? "granted" : "denied",
-        ad_user_data: consentGranted ? "granted" : "denied",
-        ad_personalization: consentGranted ? "granted" : "denied",
-      });
-    }
+    window.gtag("consent", "update", {
+      analytics_storage: consentGranted ? "granted" : "denied",
+      ad_storage: consentGranted ? "granted" : "denied",
+      ad_user_data: consentGranted ? "granted" : "denied",
+      ad_personalization: consentGranted ? "granted" : "denied",
+    });
   }, [consentGranted, config, initialized]);
 
   const sendPageView = (path: string, search?: string) => {
@@ -166,14 +162,14 @@ export function GoogleAnalytics() {
           __html: `
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
-            gtag('js', new Date());
-            ${config.consentMode === "advanced" ? `
             gtag('consent', 'default', {
-              analytics_storage: '${consentGranted ? "granted" : "denied"}',
-              ad_storage: '${consentGranted ? "granted" : "denied"}',
-              ad_user_data: '${consentGranted ? "granted" : "denied"}',
-              ad_personalization: '${consentGranted ? "granted" : "denied"}',
-            });` : ""}
+              analytics_storage: 'denied',
+              ad_storage: 'denied',
+              ad_user_data: 'denied',
+              ad_personalization: 'denied',
+              wait_for_update: 500,
+            });
+            gtag('js', new Date());
           `,
         }}
       />
