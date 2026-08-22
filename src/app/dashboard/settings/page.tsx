@@ -476,7 +476,24 @@ BEHAVIOR:
           <div className="rounded-lg border p-6 space-y-4">
             <h3 className="font-semibold">Analytics & Verification</h3>
             <div className="grid md:grid-cols-2 gap-4">
-              <SecretInput label="Google Analytics ID" value={seo.googleAnalyticsId} onChange={(v) => setSeo({ ...seo, googleAnalyticsId: v })} placeholder="G-XXXXXXXXXX" />
+              <div>
+                <label className="text-sm font-medium">Google Analytics ID</label>
+                <p className="text-xs text-muted-foreground mb-1">Paste your full Google Tag code or just the ID (G-XXXXXXXXXX)</p>
+                <textarea
+                  value={seo.googleAnalyticsId}
+                  onChange={(e) => {
+                    const raw = e.target.value;
+                    const match = raw.match(/G-[A-Z0-9]+/i);
+                    setSeo({ ...seo, googleAnalyticsId: match ? match[0] : raw });
+                  }}
+                  className="mt-1 w-full rounded-lg border px-3 py-2 text-sm font-mono"
+                  rows={3}
+                  placeholder={'<!-- Paste full Google Tag code here -->\nOR just: G-XXXXXXXXXX'}
+                />
+                {seo.googleAnalyticsId && (
+                  <p className="text-xs text-green-600 mt-1">Detected: {seo.googleAnalyticsId}</p>
+                )}
+              </div>
               <SecretInput label="Google Tag Manager ID" value={seo.googleTagManagerId} onChange={(v) => setSeo({ ...seo, googleTagManagerId: v })} placeholder="GTM-XXXXXXX" />
               <SecretInput label="Google Search Console" value={seo.googleSearchConsole} onChange={(v) => setSeo({ ...seo, googleSearchConsole: v })} placeholder="Verification code" />
               <SecretInput label="Bing Webmaster" value={seo.bingWebmaster} onChange={(v) => setSeo({ ...seo, bingWebmaster: v })} placeholder="Verification code" />
