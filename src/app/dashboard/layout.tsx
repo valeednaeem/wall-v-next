@@ -45,6 +45,8 @@ const sidebarItems: SidebarItem[] = [
     { label: "New Agent", href: "/dashboard/agents/new", roles: ["super-admin", "admin"] },
     { label: "Conversations", href: "/dashboard/agents/conversations", roles: ["super-admin", "admin", "manager"] },
     { label: "Project Requests", href: "/dashboard/agents/project-requests", roles: ["super-admin", "admin", "manager"] },
+    { label: "Approvals", href: "/dashboard/agents/approvals", roles: ["super-admin", "admin"] },
+    { label: "Audit Logs", href: "/dashboard/agents/audit-logs", roles: ["super-admin", "admin"] },
   ]},
   { label: "CRM", href: "/dashboard/crm", icon: <Users className="h-4 w-4" />, roles: ["super-admin", "admin", "manager", "staff"], children: [
     { label: "Overview", href: "/dashboard/crm" },
