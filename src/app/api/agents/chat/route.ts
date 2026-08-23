@@ -75,25 +75,23 @@ export async function POST(request: NextRequest) {
 
     const memoryContext = memories.map((m) => `${m.category}: ${m.key} = ${JSON.stringify(m.value)}`).join("\n");
 
-    const toolInstructions = `\n\n## Your Tools
-You have access to tools to query the application database:
-- get_projects: List projects (filter by status, clientEmail, projectType)
-- get_project: Get single project details
-- get_clients: List clients (search by name/email/company)
-- get_client: Get single client details
-- get_leads: List leads
-- get_invoices: List invoices
-- get_quotes: List quotations
-- get_company_info: Get Wall-V services and pricing
-- get_project_requests: List AI project requests
+    const toolInstructions = `## CRITICAL: You MUST use your tools
+You have database tools available. When the user asks about ANY of these topics, you MUST call the appropriate tool BEFORE responding:
+- Projects → call get_projects or get_project
+- Clients → call get_clients or get_client
+- Leads → call get_leads
+- Invoices/Payments → call get_invoices
+- Quotes → call get_quotes
+- Company info/pricing → call get_company_info
+- Project requests → call get_project_requests
 
-Always use your tools to look up real data. Do not make up information.`;
+NEVER say "I don't have access" or "I can't see". You DO have access. USE YOUR TOOLS.`;
 
     const fullSystemPrompt = [
+      toolInstructions,
       agent.systemPrompt,
       ...agent.instructions,
       memoryContext ? `\nRelevant memories:\n${memoryContext}` : "",
-      toolInstructions,
     ].filter(Boolean).join("\n");
 
     const startTime = Date.now();
