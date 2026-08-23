@@ -90,31 +90,28 @@ export async function POST(
 
     // User context for the system prompt
     const userContext = conversation.visitor?.id
-      ? `\n\n## Current User Context\n- User ID: ${conversation.visitor.id}\n- Email: ${conversation.visitor.name || "unknown"}\nYou are speaking with a logged-in admin user. You have full access to query the database using your tools.`
+      ? `\n\n## Current User Context\n- User ID: ${conversation.visitor.id}\n- Email: ${conversation.visitor.name || "unknown"}\nYou are speaking with a logged-in admin user.`
       : "";
 
-    // Build system prompt with tool instructions
-    const toolInstructions = `\n\n## Your Tools
-You have access to the following tools to query the application database:
-- get_projects: List projects (filter by status, clientEmail, projectType)
-- get_project: Get single project details (by projectId or projectName)
-- get_clients: List clients (search by name/email/company)
-- get_client: Get single client (by clientId or email)
-- get_leads: List leads (filter by status, search)
-- get_invoices: List invoices (filter by projectId, status)
-- get_quotes: List quotations (filter by projectId, status)
-- get_company_info: Get Wall-V services and pricing
-- get_project_requests: List AI project requests
+    // Build system prompt — tool instructions FIRST for maximum priority
+    const fullSystemPrompt = `## CRITICAL: You MUST use your tools
+You have database tools available. When the user asks about ANY of these topics, you MUST call the appropriate tool BEFORE responding:
+- Projects → call get_projects or get_project
+- Clients → call get_clients or get_client
+- Leads → call get_leads
+- Invoices/Payments → call get_invoices
+- Quotes → call get_quotes
+- Company info/pricing → call get_company_info
+- Project requests → call get_project_requests
 
-IMPORTANT: Always use your tools to look up real data when the user asks about projects, clients, leads, invoices, quotes, or company info. Do not make up information — query the database.`;
+NEVER say "I don't have access" or "I can't see". You DO have access. USE YOUR TOOLS.
+If a tool returns empty results, say "No records found" — never claim you lack access.
 
-    const fullSystemPrompt = [
-      agent.systemPrompt,
-      ...agent.instructions,
-      memoryContext ? `\nRelevant memories:\n${memoryContext}` : "",
-      userContext,
-      toolInstructions,
-    ].filter(Boolean).join("\n");
+${agent.systemPrompt}
+
+${userContext}
+
+${memoryContext ? `Relevant memories:\n${memoryContext}` : ""}`;
 
     const startTime = Date.now();
 

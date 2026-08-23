@@ -433,19 +433,23 @@ export async function runAgentWithTools(opts: {
   const toolCallsLog: { name: string; args: unknown; result: unknown }[] = [];
 
   for (let iteration = 0; iteration < maxIterations; iteration++) {
+    const requestBody = {
+      model,
+      messages: allMessages,
+      tools: AGENT_TOOL_DEFINITIONS,
+      temperature,
+      max_tokens: maxTokens,
+    };
+
+    console.log(`[Agent Tools] Iteration ${iteration + 1}, sending ${AGENT_TOOL_DEFINITIONS.length} tools to OpenAI`);
+
     const apiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${apiKey}`,
       },
-      body: JSON.stringify({
-        model,
-        messages: allMessages,
-        tools: AGENT_TOOL_DEFINITIONS,
-        temperature,
-        max_tokens: maxTokens,
-      }),
+      body: JSON.stringify(requestBody),
     });
 
     if (!apiResponse.ok) {
@@ -462,8 +466,11 @@ export async function runAgentWithTools(opts: {
 
     // If no tool calls, return the text response
     if (!assistantMessage.tool_calls || assistantMessage.tool_calls.length === 0) {
+      console.log(`[Agent Tools] No tool calls, returning text response`);
       return { response: assistantMessage.content || "", toolCalls: toolCallsLog };
     }
+
+    console.log(`[Agent Tools] ${assistantMessage.tool_calls.length} tool calls:`, assistantMessage.tool_calls.map((tc: { function: { name: string } }) => tc.function.name));
 
     // Add assistant message to history
     allMessages.push({
