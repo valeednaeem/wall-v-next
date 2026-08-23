@@ -31,6 +31,12 @@ export async function PUT(request: NextRequest) {
       ...body.channels,
     };
     agent.status = "active";
+
+    // Update system prompt with tool instructions if provided
+    if (body.systemPrompt) {
+      agent.systemPrompt = body.systemPrompt;
+    }
+
     await agent.save();
 
     return NextResponse.json({

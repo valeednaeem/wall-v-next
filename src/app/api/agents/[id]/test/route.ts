@@ -5,6 +5,7 @@ import AgentConversation from "@/models/agent-conversation";
 import AgentExecution from "@/models/agent-execution";
 import AgentMemory from "@/models/agent-memory";
 import connectToDatabase from "@/lib/mongodb";
+import { runAgentWithTools } from "@/lib/agent-tools";
 
 export async function POST(
   request: NextRequest,
@@ -74,7 +75,7 @@ export async function POST(
 
     // Build context for AI response
     const conversationHistory = conversation.messages.slice(-20).map(
-      (m: { role: string; content: string }) => `${m.role}: ${m.content}`
+      (m: { role: string; content: string }) => ({ role: m.role, content: m.content })
     );
 
     // Get relevant memories
@@ -87,63 +88,44 @@ export async function POST(
 
     const memoryContext = memories.map((m) => `${m.category}: ${m.key} = ${JSON.stringify(m.value)}`).join("\n");
 
-    // Build system prompt
+    // User context for the system prompt
     const userContext = conversation.visitor?.id
-      ? `\n\n## Current User Context\n- User ID: ${conversation.visitor.id}\n- Email: ${conversation.visitor.name || "unknown"}\nYou are speaking with a logged-in user. You can reference their account information.`
+      ? `\n\n## Current User Context\n- User ID: ${conversation.visitor.id}\n- Email: ${conversation.visitor.name || "unknown"}\nYou are speaking with a logged-in admin user. You have full access to query the database using your tools.`
       : "";
 
-    const systemParts = [
+    // Build system prompt with tool instructions
+    const toolInstructions = `\n\n## Your Tools
+You have access to the following tools to query the application database:
+- get_projects: List projects (filter by status, clientEmail, projectType)
+- get_project: Get single project details (by projectId or projectName)
+- get_clients: List clients (search by name/email/company)
+- get_client: Get single client (by clientId or email)
+- get_leads: List leads (filter by status, search)
+- get_invoices: List invoices (filter by projectId, status)
+- get_quotes: List quotations (filter by projectId, status)
+- get_company_info: Get Wall-V services and pricing
+- get_project_requests: List AI project requests
+
+IMPORTANT: Always use your tools to look up real data when the user asks about projects, clients, leads, invoices, quotes, or company info. Do not make up information — query the database.`;
+
+    const fullSystemPrompt = [
       agent.systemPrompt,
       ...agent.instructions,
       memoryContext ? `\nRelevant memories:\n${memoryContext}` : "",
       userContext,
-      `\nConversation history:\n${conversationHistory.join("\n")}`,
-    ].filter(Boolean);
-
-    const fullSystemPrompt = systemParts.join("\n");
+      toolInstructions,
+    ].filter(Boolean).join("\n");
 
     const startTime = Date.now();
 
-    // Call AI (using fetch to OpenAI-compatible API)
-    const apiKey = process.env.OPENAI_API_KEY;
-    let responseText = "";
-
-    if (apiKey) {
-      try {
-        const aiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${apiKey}`,
-          },
-          body: JSON.stringify({
-            model: agent.aiModel || "gpt-4o",
-            messages: [
-              { role: "system", content: fullSystemPrompt },
-              { role: "user", content: message },
-            ],
-            temperature: agent.temperature,
-            max_tokens: agent.maxTokens,
-          }),
-        });
-
-        if (aiResponse.ok) {
-          const data = await aiResponse.json();
-          responseText = data.choices?.[0]?.message?.content || "No response generated.";
-          execution.tokens = {
-            prompt: data.usage?.prompt_tokens || 0,
-            completion: data.usage?.completion_tokens || 0,
-            total: data.usage?.total_tokens || 0,
-          };
-        } else {
-          responseText = `AI API error: ${aiResponse.status}`;
-        }
-      } catch {
-        responseText = "Failed to call AI API. Check your configuration.";
-      }
-    } else {
-      responseText = `[Test Mode] Agent "${agent.name}" received: "${message}"\n\nNo AI API key configured. Set OPENAI_API_KEY to enable real responses.`;
-    }
+    // Run agent with tool-calling loop
+    const { response: responseText, toolCalls } = await runAgentWithTools({
+      systemPrompt: fullSystemPrompt,
+      messages: conversationHistory,
+      model: agent.aiModel || "gpt-4o",
+      temperature: agent.temperature || 0.7,
+      maxTokens: agent.maxTokens || 2048,
+    });
 
     const duration = Date.now() - startTime;
 
@@ -152,19 +134,14 @@ export async function POST(
       role: "assistant",
       content: responseText,
       timestamp: new Date(),
-      tokenCount: execution.tokens.completion,
+      tokenCount: 0,
     });
     conversation.messageCount += 1;
-    conversation.tokenUsage = {
-      prompt: conversation.tokenUsage.prompt + execution.tokens.prompt,
-      completion: conversation.tokenUsage.completion + execution.tokens.completion,
-      total: conversation.tokenUsage.total + execution.tokens.total,
-    };
     await conversation.save();
 
     // Update execution
     execution.status = "completed";
-    execution.output = { response: responseText };
+    execution.output = { response: responseText, toolCalls };
     execution.duration = duration;
     execution.completedAt = new Date();
     await execution.save();
@@ -187,6 +164,7 @@ export async function POST(
         duration,
         tokens: execution.tokens,
       },
+      toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Failed to test agent";

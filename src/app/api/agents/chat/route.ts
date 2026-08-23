@@ -4,6 +4,7 @@ import AgentConversation from "@/models/agent-conversation";
 import AgentExecution from "@/models/agent-execution";
 import AgentMemory from "@/models/agent-memory";
 import connectToDatabase from "@/lib/mongodb";
+import { runAgentWithTools } from "@/lib/agent-tools";
 
 export async function POST(request: NextRequest) {
   try {
@@ -62,7 +63,7 @@ export async function POST(request: NextRequest) {
 
     // Build context
     const conversationHistory = conversation.messages.slice(-20).map(
-      (m: { role: string; content: string }) => `${m.role}: ${m.content}`
+      (m: { role: string; content: string }) => ({ role: m.role, content: m.content })
     );
 
     const memories = await AgentMemory.find({
@@ -74,50 +75,36 @@ export async function POST(request: NextRequest) {
 
     const memoryContext = memories.map((m) => `${m.category}: ${m.key} = ${JSON.stringify(m.value)}`).join("\n");
 
-    const systemParts = [
+    const toolInstructions = `\n\n## Your Tools
+You have access to tools to query the application database:
+- get_projects: List projects (filter by status, clientEmail, projectType)
+- get_project: Get single project details
+- get_clients: List clients (search by name/email/company)
+- get_client: Get single client details
+- get_leads: List leads
+- get_invoices: List invoices
+- get_quotes: List quotations
+- get_company_info: Get Wall-V services and pricing
+- get_project_requests: List AI project requests
+
+Always use your tools to look up real data. Do not make up information.`;
+
+    const fullSystemPrompt = [
       agent.systemPrompt,
       ...agent.instructions,
       memoryContext ? `\nRelevant memories:\n${memoryContext}` : "",
-      `\nConversation history:\n${conversationHistory.join("\n")}`,
-    ].filter(Boolean);
-
-    const fullSystemPrompt = systemParts.join("\n");
+      toolInstructions,
+    ].filter(Boolean).join("\n");
 
     const startTime = Date.now();
-    let responseText = "";
 
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (apiKey) {
-      try {
-        const aiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${apiKey}`,
-          },
-          body: JSON.stringify({
-            model: agent.aiModel || "gpt-4o",
-            messages: [
-              { role: "system", content: fullSystemPrompt },
-              { role: "user", content: message },
-            ],
-            temperature: agent.temperature,
-            max_tokens: agent.maxTokens,
-          }),
-        });
-
-        if (aiResponse.ok) {
-          const data = await aiResponse.json();
-          responseText = data.choices?.[0]?.message?.content || "I'm sorry, I couldn't generate a response.";
-        } else {
-          responseText = agent.guardrails?.fallbackMessage || "I'm experiencing technical difficulties. Please try again later.";
-        }
-      } catch {
-        responseText = agent.guardrails?.fallbackMessage || "I'm experiencing technical difficulties. Please try again later.";
-      }
-    } else {
-      responseText = "AI service is not configured. Please contact support.";
-    }
+    const { response: responseText, toolCalls } = await runAgentWithTools({
+      systemPrompt: fullSystemPrompt,
+      messages: conversationHistory,
+      model: agent.aiModel || "gpt-4o",
+      temperature: agent.temperature || 0.7,
+      maxTokens: agent.maxTokens || 2048,
+    });
 
     const duration = Date.now() - startTime;
 
@@ -137,7 +124,7 @@ export async function POST(request: NextRequest) {
       type: "chat",
       status: "completed",
       input: { message },
-      output: { response: responseText },
+      output: { response: responseText, toolCalls },
       tokens: { prompt: 0, completion: 0, total: 0 },
       cost: 0,
       duration,
