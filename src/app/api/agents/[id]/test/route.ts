@@ -88,10 +88,15 @@ export async function POST(
     const memoryContext = memories.map((m) => `${m.category}: ${m.key} = ${JSON.stringify(m.value)}`).join("\n");
 
     // Build system prompt
+    const userContext = conversation.visitor?.id
+      ? `\n\n## Current User Context\n- User ID: ${conversation.visitor.id}\n- Email: ${conversation.visitor.name || "unknown"}\nYou are speaking with a logged-in user. You can reference their account information.`
+      : "";
+
     const systemParts = [
       agent.systemPrompt,
       ...agent.instructions,
       memoryContext ? `\nRelevant memories:\n${memoryContext}` : "",
+      userContext,
       `\nConversation history:\n${conversationHistory.join("\n")}`,
     ].filter(Boolean);
 
