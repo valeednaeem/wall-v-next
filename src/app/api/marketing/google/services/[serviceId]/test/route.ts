@@ -3,6 +3,7 @@ import { connectToDatabase } from "@/lib/mongodb";
 import GoogleServiceConfig from "@/models/google-services";
 import { auth } from "@/lib/auth";
 import { requirePermission } from "@/lib/api-middleware";
+import { getValidGoogleToken } from "@/lib/google-auth";
 
 interface TestResult {
   success: boolean;
@@ -12,7 +13,7 @@ interface TestResult {
   error?: string;
 }
 
-async function testAnalytics(config: Record<string, unknown>): Promise<TestResult> {
+async function testAnalytics(config: Record<string, unknown>, _userId?: string): Promise<TestResult> {
   const measurementId = config.measurementId as string;
   const apiSecret = config.apiSecret as string;
 
@@ -58,24 +59,64 @@ async function testAnalytics(config: Record<string, unknown>): Promise<TestResul
   }
 }
 
-async function testSearchConsole(config: Record<string, unknown>): Promise<TestResult> {
+async function testSearchConsole(config: Record<string, unknown>, userId?: string): Promise<TestResult> {
   const propertyUrl = config.propertyUrl as string;
 
   if (!propertyUrl) {
     return { success: false, status: "config_required", message: "Property URL is required" };
   }
 
-  // For Search Console, we can't easily test without OAuth
-  // This would require the Search Console API with proper auth
-  return {
-    success: false,
-    status: "auth_required",
-    message: "Search Console requires OAuth authorization. Connect your Google account first.",
-    details: { propertyUrl },
-  };
+  if (!userId) {
+    return { success: false, status: "auth_required", message: "User ID required for authentication" };
+  }
+
+  const tokenData = await getValidGoogleToken(userId);
+  if (!tokenData) {
+    return {
+      success: false,
+      status: "auth_required",
+      message: "Search Console requires OAuth authorization. Connect your Google account first.",
+      details: { propertyUrl },
+    };
+  }
+
+  try {
+    const encodedSiteUrl = encodeURIComponent(propertyUrl);
+    const response = await fetch(
+      `https://www.googleapis.com/webmasters/v3/sites/${encodedSiteUrl}/sitemapSubmissionRate`,
+      {
+        headers: { Authorization: `Bearer ${tokenData.accessToken}` },
+      }
+    );
+
+    if (response.ok) {
+      return {
+        success: true,
+        status: "connected",
+        message: "Search Console connected successfully",
+        details: { propertyUrl },
+      };
+    } else {
+      const errorData = await response.json().catch(() => null);
+      return {
+        success: false,
+        status: "connection_failed",
+        message: errorData?.error?.message || `API returned ${response.status}`,
+        details: { propertyUrl },
+      };
+    }
+  } catch (error) {
+    return {
+      success: false,
+      status: "connection_failed",
+      message: "Failed to test Search Console connection",
+      error: error instanceof Error ? error.message : "Unknown error",
+      details: { propertyUrl },
+    };
+  }
 }
 
-async function testBusinessProfile(config: Record<string, unknown>): Promise<TestResult> {
+async function testBusinessProfile(config: Record<string, unknown>, _userId?: string): Promise<TestResult> {
   const accountId = config.accountId as string;
 
   if (!accountId) {
@@ -90,7 +131,7 @@ async function testBusinessProfile(config: Record<string, unknown>): Promise<Tes
   };
 }
 
-async function testMerchantCenter(config: Record<string, unknown>): Promise<TestResult> {
+async function testMerchantCenter(config: Record<string, unknown>, _userId?: string): Promise<TestResult> {
   const merchantId = config.merchantId as string;
 
   if (!merchantId) {
@@ -105,7 +146,7 @@ async function testMerchantCenter(config: Record<string, unknown>): Promise<Test
   };
 }
 
-async function testAds(config: Record<string, unknown>): Promise<TestResult> {
+async function testAds(config: Record<string, unknown>, _userId?: string): Promise<TestResult> {
   const customerId = config.customerId as string;
 
   if (!customerId) {
@@ -120,7 +161,7 @@ async function testAds(config: Record<string, unknown>): Promise<TestResult> {
   };
 }
 
-const TEST_FUNCTIONS: Record<string, (config: Record<string, unknown>) => Promise<TestResult>> = {
+const TEST_FUNCTIONS: Record<string, (config: Record<string, unknown>, userId?: string) => Promise<TestResult>> = {
   analytics: testAnalytics,
   search_console: testSearchConsole,
   business_profile: testBusinessProfile,
@@ -185,7 +226,7 @@ export async function POST(
       lastTested: new Date(),
     });
 
-    const result = await testFn(service.config);
+    const result = await testFn(service.config, session.user.id);
 
     // Update with test result
     const newStatus = result.success ? "connected" : result.status;
