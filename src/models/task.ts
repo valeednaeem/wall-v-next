@@ -4,6 +4,7 @@ export interface ITask extends Document {
   title: string;
   description?: string;
   project: mongoose.Types.ObjectId;
+  stage?: mongoose.Types.ObjectId;
   assignee?: mongoose.Types.ObjectId;
   reporter: mongoose.Types.ObjectId;
   status: "todo" | "in-progress" | "review" | "done" | "cancelled";
@@ -11,6 +12,7 @@ export interface ITask extends Document {
   dueDate?: Date;
   estimatedHours?: number;
   loggedHours: number;
+  dependencies: mongoose.Types.ObjectId[];
   tags: string[];
   attachments: {
     name: string;
@@ -25,6 +27,12 @@ export interface ITask extends Document {
     title: string;
     completed: boolean;
   }[];
+  acceptanceCriteria: string[];
+  deliverables: {
+    name: string;
+    url: string;
+    type: string;
+  }[];
   order: number;
   createdAt: Date;
   updatedAt: Date;
@@ -35,6 +43,7 @@ const TaskSchema = new Schema<ITask>(
     title: { type: String, required: true, trim: true },
     description: String,
     project: { type: Schema.Types.ObjectId, ref: "Project", required: true },
+    stage: { type: Schema.Types.ObjectId, ref: "ProjectStage" },
     assignee: { type: Schema.Types.ObjectId, ref: "User" },
     reporter: { type: Schema.Types.ObjectId, ref: "User", required: true },
     status: {
@@ -50,6 +59,7 @@ const TaskSchema = new Schema<ITask>(
     dueDate: Date,
     estimatedHours: Number,
     loggedHours: { type: Number, default: 0 },
+    dependencies: [{ type: Schema.Types.ObjectId, ref: "Task" }],
     tags: [String],
     attachments: [
       {
@@ -70,12 +80,21 @@ const TaskSchema = new Schema<ITask>(
         completed: { type: Boolean, default: false },
       },
     ],
+    acceptanceCriteria: [String],
+    deliverables: [
+      {
+        name: String,
+        url: String,
+        type: String,
+      },
+    ],
     order: { type: Number, default: 0 },
   },
   { timestamps: true }
 );
 
 TaskSchema.index({ project: 1 });
+TaskSchema.index({ stage: 1 });
 TaskSchema.index({ assignee: 1 });
 TaskSchema.index({ status: 1 });
 

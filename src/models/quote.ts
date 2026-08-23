@@ -2,6 +2,7 @@ import mongoose, { Schema, Document } from "mongoose";
 
 export interface IQuote extends Document {
   reference: string;
+  project?: mongoose.Types.ObjectId;
   client?: mongoose.Types.ObjectId;
   inquiry?: mongoose.Types.ObjectId;
   items: {
@@ -9,6 +10,8 @@ export interface IQuote extends Document {
     quantity: number;
     unitPrice: number;
     total: number;
+    category?: string;
+    stage?: mongoose.Types.ObjectId;
   }[];
   subtotal: number;
   tax: number;
@@ -16,10 +19,18 @@ export interface IQuote extends Document {
   discount: number;
   total: number;
   currency: string;
-  status: "draft" | "sent" | "accepted" | "rejected" | "expired";
+  status: "draft" | "internal-review" | "sent" | "viewed" | "accepted" | "rejected" | "revision-requested" | "expired";
   validUntil: Date;
   notes?: string;
   terms?: string;
+  version: number;
+  sentAt?: Date;
+  viewedAt?: Date;
+  acceptedAt?: Date;
+  rejectedAt?: Date;
+  rejectedReason?: string;
+  preparedBy?: mongoose.Types.ObjectId;
+  approvedBy?: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -27,6 +38,7 @@ export interface IQuote extends Document {
 const QuoteSchema = new Schema<IQuote>(
   {
     reference: { type: String, required: true, unique: true },
+    project: { type: Schema.Types.ObjectId, ref: "Project" },
     client: { type: Schema.Types.ObjectId, ref: "Client" },
     inquiry: { type: Schema.Types.ObjectId, ref: "Inquiry" },
     items: [
@@ -35,6 +47,8 @@ const QuoteSchema = new Schema<IQuote>(
         quantity: { type: Number, required: true, min: 1 },
         unitPrice: { type: Number, required: true, min: 0 },
         total: { type: Number, required: true },
+        category: String,
+        stage: { type: Schema.Types.ObjectId, ref: "ProjectStage" },
       },
     ],
     subtotal: { type: Number, required: true },
@@ -45,18 +59,27 @@ const QuoteSchema = new Schema<IQuote>(
     currency: { type: String, default: "USD" },
     status: {
       type: String,
-      enum: ["draft", "sent", "accepted", "rejected", "expired"],
+      enum: ["draft", "internal-review", "sent", "viewed", "accepted", "rejected", "revision-requested", "expired"],
       default: "draft",
     },
     validUntil: { type: Date, required: true },
     notes: String,
     terms: String,
+    version: { type: Number, default: 1 },
+    sentAt: Date,
+    viewedAt: Date,
+    acceptedAt: Date,
+    rejectedAt: Date,
+    rejectedReason: String,
+    preparedBy: { type: Schema.Types.ObjectId, ref: "User" },
+    approvedBy: { type: Schema.Types.ObjectId, ref: "User" },
   },
   { timestamps: true }
 );
 
 QuoteSchema.index({ reference: 1 });
 QuoteSchema.index({ client: 1 });
+QuoteSchema.index({ project: 1 });
 QuoteSchema.index({ status: 1 });
 
 export default mongoose.models.Quote ||
