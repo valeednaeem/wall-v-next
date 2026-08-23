@@ -8,7 +8,7 @@ import {
   LayoutDashboard, Package, FileText, FolderKanban, Users, Receipt,
   Cloud, Globe, Headphones, Settings, ShoppingBag, Tags, ChevronRight,
   Menu, X, LogOut, User, CreditCard, Shield, Search, Bell, MessageSquare, Phone, AlertTriangle, Eye,
-  BarChart3, Globe2, SearchCheck, Store, Target, Share2, LineChart, Zap
+  BarChart3, Globe2, SearchCheck, Store, Target, Share2, LineChart, Zap, Bot
 } from "lucide-react";
 
 interface SidebarChild {
@@ -40,6 +40,11 @@ const sidebarItems: SidebarItem[] = [
   { label: "Production", href: "/dashboard/production", icon: <Package className="h-4 w-4" />, roles: ["super-admin", "admin", "manager"] },
   { label: "AI Conversations", href: "/dashboard/ai-conversations", icon: <MessageSquare className="h-4 w-4" />, roles: ["super-admin", "admin", "manager"] },
   { label: "Voice Agent Calls", href: "/dashboard/voice-agent-conversations", icon: <Phone className="h-4 w-4" />, roles: ["super-admin", "admin", "manager"] },
+  { label: "AI Agents", href: "/dashboard/agents", icon: <Bot className="h-4 w-4" />, roles: ["super-admin", "admin", "manager", "staff"], children: [
+    { label: "All Agents", href: "/dashboard/agents" },
+    { label: "New Agent", href: "/dashboard/agents/new", roles: ["super-admin", "admin"] },
+    { label: "Conversations", href: "/dashboard/agents/conversations", roles: ["super-admin", "admin", "manager"] },
+  ]},
   { label: "CRM", href: "/dashboard/crm", icon: <Users className="h-4 w-4" />, roles: ["super-admin", "admin", "manager", "staff"], children: [
     { label: "Overview", href: "/dashboard/crm" },
     { label: "Leads", href: "/dashboard/crm/leads" },

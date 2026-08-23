@@ -97,6 +97,16 @@ export const PERMISSIONS = {
   // AI
   AI_ACCESS: "ai:access",
   AI_MANAGE: "ai:manage",
+
+  // Agents
+  AGENTS_VIEW: "agents:view",
+  AGENTS_CREATE: "agents:create",
+  AGENTS_EDIT: "agents:edit",
+  AGENTS_DELETE: "agents:delete",
+  AGENTS_EXECUTE: "agents:execute",
+  AGENTS_APPROVE: "agents:approve",
+  AGENTS_MONITOR: "agents:monitor",
+  AGENTS_CONFIGURE: "agents:configure",
 } as const;
 
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
