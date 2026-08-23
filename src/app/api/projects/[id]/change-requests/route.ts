@@ -4,6 +4,7 @@ import connectToDatabase from "@/lib/mongodb";
 import ChangeRequest from "@/models/change-request";
 import Project from "@/models/project";
 import { logProjectActivity } from "@/lib/activity-logger";
+import { sendEmail, generateChangeRequestEmail } from "@/lib/mail";
 
 export async function GET(
   request: NextRequest,
@@ -91,6 +92,31 @@ export async function PUT(
       description: `Change request "${cr.title}" ${action}ed`,
       entity: { model: "ChangeRequest", id: cr._id.toString() },
     });
+
+    // Send email notification for submitted, approved, or rejected change requests
+    if (["submit", "approve", "reject"].includes(action)) {
+      try {
+        const populated = await Project.findById(id)
+          .populate("clientRef", "name email")
+          .lean();
+        const clientEmail = (populated?.clientRef as { email?: string } | null)?.email ||
+          (typeof populated?.client === "object" && populated?.client !== null ? (populated.client as { email?: string }).email : null);
+        const clientName = (populated?.clientRef as { name?: string } | null)?.name || "Client";
+
+        if (clientEmail) {
+          const emailContent = generateChangeRequestEmail({
+            clientName,
+            projectName: populated?.name || "Project",
+            changeTitle: cr.title,
+            changeType: cr.type,
+            status: action === "submit" ? "submitted" : action === "approve" ? "approved" : "rejected",
+          });
+          await sendEmail({ to: clientEmail, ...emailContent });
+        }
+      } catch {
+        // Email failure should not block change request update
+      }
+    }
     return NextResponse.json({ changeRequest: cr });
   } catch (error: unknown) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Failed" }, { status: 500 });

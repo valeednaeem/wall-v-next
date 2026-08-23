@@ -10,7 +10,7 @@ interface ChatMessage {
 }
 
 interface AgentChatWidgetProps {
-  agentId: string;
+  agentId?: string;
   agentName?: string;
   primaryColor?: string;
   position?: "bottom-right" | "bottom-left";
@@ -18,8 +18,8 @@ interface AgentChatWidgetProps {
 }
 
 export default function AgentChatWidget({
-  agentId,
-  agentName = "AI Assistant",
+  agentId: propAgentId,
+  agentName = "Wall-V Assistant",
   primaryColor = "#7c3aed",
   position = "bottom-right",
   welcomeMessage,
@@ -28,6 +28,8 @@ export default function AgentChatWidget({
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [resolvedAgentId, setResolvedAgentId] = useState<string | null>(propAgentId || null);
+  const [agentReady, setAgentReady] = useState(!!propAgentId);
   const [sessionId] = useState(`widget-${Date.now()}-${Math.random().toString(36).slice(2)}`);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -35,20 +37,47 @@ export default function AgentChatWidget({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // Auto-discover master agent if no agentId provided
+  useEffect(() => {
+    if (propAgentId) return;
+    const fetchAgent = async () => {
+      try {
+        const res = await fetch("/api/agents?limit=100");
+        if (res.ok) {
+          const data = await res.json();
+          const agents = data.agents || [];
+          const master = agents.find((a: { isMasterAgent: boolean; status: string }) => a.isMasterAgent && a.status === "active");
+          if (master) {
+            setResolvedAgentId(master._id);
+            setAgentReady(true);
+          } else if (agents.length > 0) {
+            // Fallback to first active client-facing agent
+            const clientFacing = agents.find((a: { isClientFacing: boolean; status: string }) => a.isClientFacing && a.status === "active");
+            setResolvedAgentId(clientFacing?._id || agents[0]._id);
+            setAgentReady(true);
+          }
+        }
+      } catch {
+        // Agent discovery failed silently
+      }
+    };
+    fetchAgent();
+  }, [propAgentId]);
+
   useEffect(() => {
     if (isOpen && messages.length === 0) {
       setMessages([
         {
           role: "assistant",
-          content: welcomeMessage || `Hi! I'm ${agentName}. How can I help you today?`,
+          content: welcomeMessage || "Hi! I'm your Wall-V project consultant. I'll help you scope your project and provide a tailored quote. What kind of project are you looking to build?",
           timestamp: new Date(),
         },
       ]);
     }
-  }, [isOpen]);
+  }, [isOpen, messages.length, welcomeMessage]);
 
   const sendMessage = async () => {
-    if (!input.trim() || loading) return;
+    if (!input.trim() || loading || !resolvedAgentId) return;
 
     const userMsg: ChatMessage = { role: "user", content: input.trim(), timestamp: new Date() };
     setMessages((prev) => [...prev, userMsg]);
@@ -56,17 +85,16 @@ export default function AgentChatWidget({
     setLoading(true);
 
     try {
-      const res = await fetch("/api/agents/chat", {
+      const res = await fetch("/api/agents/master-chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message: userMsg.content,
-          agentId,
+          agentId: resolvedAgentId,
           sessionId,
-          channel: "website",
+          visitor: {},
           context: {
-            page: window.location.href,
-            referrer: document.referrer,
+            page: typeof window !== "undefined" ? window.location.href : "",
           },
         }),
       });
@@ -77,11 +105,16 @@ export default function AgentChatWidget({
           ...prev,
           { role: "assistant", content: data.response, timestamp: new Date() },
         ]);
+      } else {
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: "Sorry, I'm having trouble right now. Please try again later.", timestamp: new Date() },
+        ]);
       }
     } catch {
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: "Sorry, I'm having trouble right now. Please try again.", timestamp: new Date() },
+        { role: "assistant", content: "Sorry, I'm having trouble connecting. Please try again.", timestamp: new Date() },
       ]);
     } finally {
       setLoading(false);
@@ -151,6 +184,11 @@ export default function AgentChatWidget({
                 </div>
               </div>
             )}
+            {!agentReady && (
+              <div className="text-center text-xs text-gray-400 py-2">
+                Connecting to assistant...
+              </div>
+            )}
             <div ref={messagesEndRef} />
           </div>
 
@@ -162,13 +200,13 @@ export default function AgentChatWidget({
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-                placeholder="Type a message..."
+                placeholder={agentReady ? "Type a message..." : "Connecting..."}
                 className="flex-1 px-3 py-2 border border-gray-200 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
-                disabled={loading}
+                disabled={loading || !agentReady}
               />
               <button
                 onClick={sendMessage}
-                disabled={loading || !input.trim()}
+                disabled={loading || !input.trim() || !agentReady}
                 className="w-9 h-9 rounded-full flex items-center justify-center text-white disabled:opacity-50 transition-colors"
                 style={{ backgroundColor: primaryColor }}
               >

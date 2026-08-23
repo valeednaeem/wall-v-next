@@ -5,6 +5,7 @@ import ProjectPayment from "@/models/project-payment";
 import Invoice from "@/models/invoice";
 import Project from "@/models/project";
 import { logProjectActivity } from "@/lib/activity-logger";
+import { sendEmail, generatePaymentConfirmationEmail } from "@/lib/mail";
 
 export async function GET(
   request: NextRequest,
@@ -85,6 +86,29 @@ export async function POST(
       entity: { model: "ProjectPayment", id: payment._id.toString() },
       after: { amount, type, method },
     });
+
+    // Send payment confirmation email
+    try {
+      const populated = await Project.findById(id)
+        .populate("clientRef", "name email")
+        .lean();
+      const clientEmail = (populated?.clientRef as { email?: string } | null)?.email ||
+        (typeof populated?.client === "object" && populated?.client !== null ? (populated.client as { email?: string }).email : null);
+      const clientName = (populated?.clientRef as { name?: string } | null)?.name || "Client";
+
+      if (clientEmail) {
+        const emailContent = generatePaymentConfirmationEmail({
+          clientName,
+          projectName: project.name,
+          amount,
+          currency: project.currency || "USD",
+          paymentId: payment._id.toString(),
+        });
+        await sendEmail({ to: clientEmail, ...emailContent });
+      }
+    } catch {
+      // Email failure should not block payment recording
+    }
 
     return NextResponse.json({ payment }, { status: 201 });
   } catch (error: unknown) {

@@ -1,3 +1,5 @@
+import nodemailer from "nodemailer";
+
 interface EmailOptions {
   to: string;
   subject: string;
@@ -5,9 +7,28 @@ interface EmailOptions {
   text?: string;
 }
 
+function getTransporter() {
+  return nodemailer.createTransport({
+    host: process.env.SMTP_HOST || "smtp.gmail.com",
+    port: parseInt(process.env.SMTP_PORT || "587"),
+    secure: process.env.SMTP_SECURE === "true",
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    },
+  });
+}
+
 export async function sendEmail({ to, subject, html, text }: EmailOptions): Promise<boolean> {
   try {
-    // TODO: Integrate with SMTP provider (Nodemailer, Resend, SendGrid, etc.)
+    const transporter = getTransporter();
+    await transporter.sendMail({
+      from: process.env.EMAIL_FROM || process.env.SMTP_FROM || "noreply@wall-v.com",
+      to,
+      subject,
+      html,
+      text,
+    });
     console.log("Email sent:", { to, subject });
     return true;
   } catch (error) {
@@ -39,6 +60,232 @@ export function generateWelcomeEmail(name: string): { subject: string; html: str
         <p>Thank you for joining Wall-V. We're excited to have you on board.</p>
         <p>You can now access our AI-powered tools, manage your projects, and much more.</p>
         <a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard" style="display: inline-block; background: #7c3aed; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; margin: 16px 0;">Go to Dashboard</a>
+      </div>
+    `,
+  };
+}
+
+export function generateProjectStageEmail(opts: {
+  clientName: string;
+  projectName: string;
+  stageName: string;
+  status: "started" | "completed";
+}): { subject: string; html: string } {
+  const action = opts.status === "completed" ? "completed" : "started";
+  return {
+    subject: `Project ${action.charAt(0).toUpperCase() + action.slice(1)}: ${opts.stageName} - ${opts.projectName}`,
+    html: `
+      <div style="max-width: 600px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif;">
+        <div style="background: linear-gradient(135deg, #7c3aed, #6366f1); padding: 24px; border-radius: 12px 12px 0 0;">
+          <h1 style="color: white; margin: 0; font-size: 20px;">Wall-V Project Update</h1>
+        </div>
+        <div style="background: #f9fafb; padding: 24px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px;">
+          <p style="color: #374151; font-size: 16px;">Hi ${opts.clientName},</p>
+          <p style="color: #374151;">
+            The stage <strong>${opts.stageName}</strong> for your project <strong>${opts.projectName}</strong> has been <strong>${action}</strong>.
+          </p>
+          ${opts.status === "completed"
+            ? `<p style="color: #059669; font-weight: bold;">✅ Stage Completed</p>`
+            : `<p style="color: #2563eb; font-weight: bold;">🔄 Stage In Progress</p>`
+          }
+          <p style="color: #6b7280; font-size: 14px; margin-top: 24px;">
+            You can track progress in your <a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard/client-portal" style="color: #7c3aed;">Client Portal</a>.
+          </p>
+        </div>
+        <div style="text-align: center; padding: 16px; color: #9ca3af; font-size: 12px;">
+          Wall-V Digital Agency
+        </div>
+      </div>
+    `,
+  };
+}
+
+export function generateInvoiceEmail(opts: {
+  clientName: string;
+  projectName: string;
+  invoiceNumber: string;
+  amount: number;
+  currency: string;
+  dueDate?: string;
+  invoiceId: string;
+}): { subject: string; html: string } {
+  return {
+    subject: `Invoice ${opts.invoiceNumber} - ${opts.projectName}`,
+    html: `
+      <div style="max-width: 600px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif;">
+        <div style="background: linear-gradient(135deg, #7c3aed, #6366f1); padding: 24px; border-radius: 12px 12px 0 0;">
+          <h1 style="color: white; margin: 0; font-size: 20px;">New Invoice</h1>
+        </div>
+        <div style="background: #f9fafb; padding: 24px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px;">
+          <p style="color: #374151; font-size: 16px;">Hi ${opts.clientName},</p>
+          <p style="color: #374151;">
+            A new invoice has been generated for your project <strong>${opts.projectName}</strong>.
+          </p>
+          <div style="background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin: 16px 0;">
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="padding: 8px 0; color: #6b7280;">Invoice Number:</td>
+                <td style="padding: 8px 0; text-align: right; font-weight: bold;">${opts.invoiceNumber}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; color: #6b7280;">Amount Due:</td>
+                <td style="padding: 8px 0; text-align: right; font-weight: bold; color: #7c3aed; font-size: 20px;">
+                  ${opts.currency} ${opts.amount.toLocaleString()}
+                </td>
+              </tr>
+              ${opts.dueDate ? `
+              <tr>
+                <td style="padding: 8px 0; color: #6b7280;">Due Date:</td>
+                <td style="padding: 8px 0; text-align: right;">${opts.dueDate}</td>
+              </tr>
+              ` : ""}
+            </table>
+          </div>
+          <a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard/client-portal" style="display: inline-block; background: #7c3aed; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; margin: 16px 0;">
+            View in Portal
+          </a>
+        </div>
+        <div style="text-align: center; padding: 16px; color: #9ca3af; font-size: 12px;">
+          Wall-V Digital Agency
+        </div>
+      </div>
+    `,
+  };
+}
+
+export function generateQuotationEmail(opts: {
+  clientName: string;
+  projectName: string;
+  quoteNumber: string;
+  amount: number;
+  currency: string;
+  validUntil?: string;
+}): { subject: string; html: string } {
+  return {
+    subject: `Quotation ${opts.quoteNumber} - ${opts.projectName}`,
+    html: `
+      <div style="max-width: 600px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif;">
+        <div style="background: linear-gradient(135deg, #7c3aed, #6366f1); padding: 24px; border-radius: 12px 12px 0 0;">
+          <h1 style="color: white; margin: 0; font-size: 20px;">Your Project Quotation</h1>
+        </div>
+        <div style="background: #f9fafb; padding: 24px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px;">
+          <p style="color: #374151; font-size: 16px;">Hi ${opts.clientName},</p>
+          <p style="color: #374151;">
+            Here's your quotation for <strong>${opts.projectName}</strong>.
+          </p>
+          <div style="background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin: 16px 0;">
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="padding: 8px 0; color: #6b7280;">Quote Number:</td>
+                <td style="padding: 8px 0; text-align: right; font-weight: bold;">${opts.quoteNumber}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; color: #6b7280;">Total Amount:</td>
+                <td style="padding: 8px 0; text-align: right; font-weight: bold; color: #7c3aed; font-size: 20px;">
+                  ${opts.currency} ${opts.amount.toLocaleString()}
+                </td>
+              </tr>
+              ${opts.validUntil ? `
+              <tr>
+                <td style="padding: 8px 0; color: #6b7280;">Valid Until:</td>
+                <td style="padding: 8px 0; text-align: right;">${opts.validUntil}</td>
+              </tr>
+              ` : ""}
+            </table>
+          </div>
+          <p style="color: #6b7280; font-size: 14px;">
+            Please review the quotation and let us know if you have any questions.
+            You can approve or discuss changes through your <a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard/client-portal" style="color: #7c3aed;">Client Portal</a>.
+          </p>
+        </div>
+        <div style="text-align: center; padding: 16px; color: #9ca3af; font-size: 12px;">
+          Wall-V Digital Agency
+        </div>
+      </div>
+    `,
+  };
+}
+
+export function generatePaymentConfirmationEmail(opts: {
+  clientName: string;
+  projectName: string;
+  amount: number;
+  currency: string;
+  paymentId: string;
+}): { subject: string; html: string } {
+  return {
+    subject: `Payment Confirmed - ${opts.projectName}`,
+    html: `
+      <div style="max-width: 600px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif;">
+        <div style="background: linear-gradient(135deg, #059669, #10b981); padding: 24px; border-radius: 12px 12px 0 0;">
+          <h1 style="color: white; margin: 0; font-size: 20px;">Payment Received</h1>
+        </div>
+        <div style="background: #f9fafb; padding: 24px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px;">
+          <p style="color: #374151; font-size: 16px;">Hi ${opts.clientName},</p>
+          <p style="color: #374151;">
+            We've received your payment for <strong>${opts.projectName}</strong>.
+          </p>
+          <div style="background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin: 16px 0;">
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="padding: 8px 0; color: #6b7280;">Amount Paid:</td>
+                <td style="padding: 8px 0; text-align: right; font-weight: bold; color: #059669; font-size: 20px;">
+                  ${opts.currency} ${opts.amount.toLocaleString()}
+                </td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; color: #6b7280;">Payment ID:</td>
+                <td style="padding: 8px 0; text-align: right; font-size: 12px; color: #6b7280;">${opts.paymentId}</td>
+              </tr>
+            </table>
+          </div>
+          <p style="color: #6b7280; font-size: 14px;">
+            Thank you for your payment! You can view your payment history in the <a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard/client-portal" style="color: #7c3aed;">Client Portal</a>.
+          </p>
+        </div>
+        <div style="text-align: center; padding: 16px; color: #9ca3af; font-size: 12px;">
+          Wall-V Digital Agency
+        </div>
+      </div>
+    `,
+  };
+}
+
+export function generateChangeRequestEmail(opts: {
+  clientName: string;
+  projectName: string;
+  changeTitle: string;
+  changeType: string;
+  status: "submitted" | "approved" | "rejected";
+}): { subject: string; html: string } {
+  const statusColors: Record<string, string> = {
+    submitted: "#2563eb",
+    approved: "#059669",
+    rejected: "#dc2626",
+  };
+  return {
+    subject: `Change Request ${opts.status.charAt(0).toUpperCase() + opts.status.slice(1)}: ${opts.changeTitle}`,
+    html: `
+      <div style="max-width: 600px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif;">
+        <div style="background: linear-gradient(135deg, ${statusColors[opts.status]}, #6366f1); padding: 24px; border-radius: 12px 12px 0 0;">
+          <h1 style="color: white; margin: 0; font-size: 20px;">Change Request Update</h1>
+        </div>
+        <div style="background: #f9fafb; padding: 24px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px;">
+          <p style="color: #374151; font-size: 16px;">Hi ${opts.clientName},</p>
+          <p style="color: #374151;">
+            A change request for <strong>${opts.projectName}</strong> has been <strong style="color: ${statusColors[opts.status]}">${opts.status}</strong>.
+          </p>
+          <div style="background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin: 16px 0;">
+            <p style="margin: 0; color: #6b7280;">Change: <strong>${opts.changeTitle}</strong></p>
+            <p style="margin: 4px 0 0; color: #6b7280; font-size: 13px;">Type: ${opts.changeType}</p>
+          </div>
+          <p style="color: #6b7280; font-size: 14px;">
+            View details in your <a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard/client-portal" style="color: #7c3aed;">Client Portal</a>.
+          </p>
+        </div>
+        <div style="text-align: center; padding: 16px; color: #9ca3af; font-size: 12px;">
+          Wall-V Digital Agency
+        </div>
       </div>
     `,
   };

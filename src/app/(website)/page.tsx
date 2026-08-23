@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import ChatWidgetLoader from "@/components/agents/ChatWidgetLoader";
 
 const services = [
   { title: "AI Automation", description: "Intelligent agents & workflows that automate your business processes.", icon: "🤖" },
@@ -228,6 +229,9 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* AI Chat Widget */}
+      <ChatWidgetLoader />
     </div>
   );
 }

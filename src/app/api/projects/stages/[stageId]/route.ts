@@ -2,8 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthUser } from "@/lib/auth";
 import connectToDatabase from "@/lib/mongodb";
 import ProjectStage from "@/models/project-stage";
+import Project from "@/models/project";
+import Client from "@/models/client";
 import Task from "@/models/task";
 import { logProjectActivity } from "@/lib/activity-logger";
+import { sendEmail, generateProjectStageEmail } from "@/lib/mail";
 
 // PUT /api/projects/stages/[stageId]/status
 // Update stage status
@@ -51,6 +54,33 @@ export async function PUT(
       before: { status: oldStatus },
       after: { status },
     });
+
+    // Send email notification for stage completion or start
+    if (status === "completed" || status === "active") {
+      try {
+        const project = await Project.findById(stage.project)
+          .populate("clientRef", "name email")
+          .lean();
+        if (project) {
+          const clientEmail = (project.clientRef as { email?: string } | null)?.email ||
+            (typeof project.client === "object" && project.client !== null ? (project.client as { email?: string }).email : null);
+          const clientName = (project.clientRef as { name?: string } | null)?.name ||
+            (typeof project.client === "object" && project.client !== null ? (project.client as { name?: string }).name : "Client");
+
+          if (clientEmail) {
+            const emailContent = generateProjectStageEmail({
+              clientName: clientName || "Client",
+              projectName: project.name,
+              stageName: stage.name,
+              status: status === "completed" ? "completed" : "started",
+            });
+            await sendEmail({ to: clientEmail, ...emailContent });
+          }
+        }
+      } catch {
+        // Email notification failure should not block the request
+      }
+    }
 
     return NextResponse.json({ stage });
   } catch (error: unknown) {

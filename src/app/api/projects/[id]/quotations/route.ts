@@ -4,6 +4,7 @@ import connectToDatabase from "@/lib/mongodb";
 import Quote from "@/models/quote";
 import Project from "@/models/project";
 import { logProjectActivity } from "@/lib/activity-logger";
+import { sendEmail, generateQuotationEmail } from "@/lib/mail";
 
 export async function GET(
   request: NextRequest,
@@ -91,6 +92,30 @@ export async function POST(
       entity: { model: "Quote", id: quote._id.toString() },
       after: { reference, total, currency: project.currency },
     });
+
+    // Send quotation email to client
+    try {
+      const populated = await Project.findById(id)
+        .populate("clientRef", "name email")
+        .lean();
+      const clientEmail = (populated?.clientRef as { email?: string } | null)?.email ||
+        (typeof populated?.client === "object" && populated?.client !== null ? (populated.client as { email?: string }).email : null);
+      const clientName = (populated?.clientRef as { name?: string } | null)?.name || "Client";
+
+      if (clientEmail) {
+        const emailContent = generateQuotationEmail({
+          clientName,
+          projectName: project.name,
+          quoteNumber: reference,
+          amount: total,
+          currency: project.currency || "USD",
+          validUntil: validUntil.toLocaleDateString(),
+        });
+        await sendEmail({ to: clientEmail, ...emailContent });
+      }
+    } catch {
+      // Email failure should not block quotation creation
+    }
 
     return NextResponse.json({ quote }, { status: 201 });
   } catch (error: unknown) {

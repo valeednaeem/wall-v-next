@@ -52,6 +52,7 @@ export async function GET() {
       totalAgentConversations,
       totalProjectRequests,
       pendingProjectRequests,
+      projectsByLifecycleStatus,
     ] =
       await Promise.all([
         User.countDocuments(),
@@ -77,6 +78,15 @@ export async function GET() {
         AgentConversation.countDocuments(),
         ProjectRequest.countDocuments(),
         ProjectRequest.countDocuments({ status: { $in: ["collecting", "requirements-gathered"] } }),
+        Project.aggregate([
+          { $group: { _id: "$lifecycleStatus", count: { $sum: 1 } } },
+        ]).then((results) => {
+          const map: Record<string, number> = {};
+          for (const r of results) {
+            map[r._id || "other"] = r.count;
+          }
+          return map;
+        }),
       ]);
 
     return NextResponse.json({
@@ -102,6 +112,7 @@ export async function GET() {
         totalAgentConversations,
         totalProjectRequests,
         pendingProjectRequests,
+        projectsByLifecycleStatus,
       },
     });
   } catch (error) {

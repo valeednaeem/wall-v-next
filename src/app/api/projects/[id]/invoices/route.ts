@@ -4,6 +4,7 @@ import connectToDatabase from "@/lib/mongodb";
 import Invoice from "@/models/invoice";
 import Project from "@/models/project";
 import { logProjectActivity } from "@/lib/activity-logger";
+import { sendEmail, generateInvoiceEmail } from "@/lib/mail";
 
 export async function GET(
   request: NextRequest,
@@ -93,6 +94,31 @@ export async function POST(
       entity: { model: "Invoice", id: invoice._id.toString() },
       after: { invoiceNumber, total },
     });
+
+    // Send invoice email to client
+    try {
+      const populated = await Project.findById(id)
+        .populate("clientRef", "name email")
+        .lean();
+      const clientEmail = (populated?.clientRef as { email?: string } | null)?.email ||
+        (typeof populated?.client === "object" && populated?.client !== null ? (populated.client as { email?: string }).email : null);
+      const clientName = (populated?.clientRef as { name?: string } | null)?.name || "Client";
+
+      if (clientEmail) {
+        const emailContent = generateInvoiceEmail({
+          clientName,
+          projectName: project.name,
+          invoiceNumber,
+          amount: total,
+          currency: project.currency || "USD",
+          dueDate: dueDate.toLocaleDateString(),
+          invoiceId: invoice._id.toString(),
+        });
+        await sendEmail({ to: clientEmail, ...emailContent });
+      }
+    } catch {
+      // Email failure should not block invoice creation
+    }
 
     return NextResponse.json({ invoice }, { status: 201 });
   } catch (error: unknown) {
