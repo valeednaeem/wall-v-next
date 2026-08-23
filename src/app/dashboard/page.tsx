@@ -20,6 +20,11 @@ interface Stats {
   totalOrders: number;
   pendingOrders: number;
   totalRevenue: number;
+  totalAgents: number;
+  activeAgents: number;
+  totalAgentConversations: number;
+  totalProjectRequests: number;
+  pendingProjectRequests: number;
 }
 
 export default function DashboardPage() {
@@ -107,6 +112,24 @@ export default function DashboardPage() {
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {[
+          { label: "AI Agents", value: data?.totalAgents || 0, icon: "🤖", color: "text-violet-500", sub: `${data?.activeAgents || 0} active` },
+          { label: "Agent Conversations", value: data?.totalAgentConversations || 0, icon: "💬", color: "text-blue-500" },
+          { label: "Project Requests", value: data?.totalProjectRequests || 0, icon: "📋", color: "text-amber-500", sub: `${data?.pendingProjectRequests || 0} pending` },
+          { label: "Qualified Leads", value: data?.qualifiedLeads || 0, icon: "🎯", color: "text-emerald-500" },
+        ].map((stat) => (
+          <div key={stat.label} className="rounded-lg border p-6">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">{stat.label}</p>
+              <span className={`text-2xl ${stat.color}`}>{stat.icon}</span>
+            </div>
+            <p className="mt-2 text-3xl font-bold">{stat.value}</p>
+            {stat.sub && <p className="text-xs text-muted-foreground mt-1">{stat.sub}</p>}
+          </div>
+        ))}
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {[
           { label: "Total Users", value: data?.totalUsers || 0, icon: "👥", color: "text-blue-500" },
           { label: "Total Products", value: data?.totalProducts || 0, icon: "📦", color: "text-green-500" },
           { label: "Blog Posts", value: data?.totalPosts || 0, icon: "✍️", color: "text-purple-500" },
@@ -145,17 +168,20 @@ export default function DashboardPage() {
         <div className="rounded-lg border p-6">
           <h3 className="text-lg font-semibold mb-4">Quick Actions</h3>
           <div className="space-y-2">
-            <Link href="/dashboard/ecommerce/products/new" className="block rounded-lg border p-3 text-sm hover:bg-accent transition-colors">
-              + Add New Product
+            <Link href="/dashboard/agents/new" className="block rounded-lg border p-3 text-sm hover:bg-accent transition-colors">
+              + Create New AI Agent
             </Link>
-            <Link href="/dashboard/blog/new" className="block rounded-lg border p-3 text-sm hover:bg-accent transition-colors">
-              + Create Blog Post
+            <Link href="/dashboard/agents/project-requests" className="block rounded-lg border p-3 text-sm hover:bg-accent transition-colors">
+              View Project Requests {data?.pendingProjectRequests ? `(${data.pendingProjectRequests} pending)` : ""}
             </Link>
             <Link href="/dashboard/projects/new" className="block rounded-lg border p-3 text-sm hover:bg-accent transition-colors">
               + Start New Project
             </Link>
             <Link href="/dashboard/crm/leads" className="block rounded-lg border p-3 text-sm hover:bg-accent transition-colors">
               View CRM Leads
+            </Link>
+            <Link href="/dashboard/ecommerce/products/new" className="block rounded-lg border p-3 text-sm hover:bg-accent transition-colors">
+              + Add New Product
             </Link>
           </div>
         </div>

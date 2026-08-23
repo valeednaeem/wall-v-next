@@ -8,6 +8,10 @@ import Project from "@/models/project";
 import Client from "@/models/client";
 import Lead from "@/models/lead";
 import Order from "@/models/order";
+import Agent from "@/models/agent";
+import AgentConversation from "@/models/agent-conversation";
+import AgentExecution from "@/models/agent-execution";
+import ProjectRequest from "@/models/project-request";
 import { getAuthUser } from "@/lib/auth";
 import { requirePermission } from "@/lib/api-middleware";
 
@@ -43,6 +47,11 @@ export async function GET() {
       totalOrders,
       pendingOrders,
       totalRevenue,
+      totalAgents,
+      activeAgents,
+      totalAgentConversations,
+      totalProjectRequests,
+      pendingProjectRequests,
     ] =
       await Promise.all([
         User.countDocuments(),
@@ -63,6 +72,11 @@ export async function GET() {
           { $match: { paymentStatus: "paid" } },
           { $group: { _id: null, total: { $sum: "$total" } } },
         ]).then((result) => result[0]?.total || 0),
+        Agent.countDocuments(),
+        Agent.countDocuments({ status: "active" }),
+        AgentConversation.countDocuments(),
+        ProjectRequest.countDocuments(),
+        ProjectRequest.countDocuments({ status: { $in: ["collecting", "requirements-gathered"] } }),
       ]);
 
     return NextResponse.json({
@@ -83,6 +97,11 @@ export async function GET() {
         totalOrders,
         pendingOrders,
         totalRevenue,
+        totalAgents,
+        activeAgents,
+        totalAgentConversations,
+        totalProjectRequests,
+        pendingProjectRequests,
       },
     });
   } catch (error) {
