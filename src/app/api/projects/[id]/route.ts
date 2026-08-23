@@ -38,7 +38,15 @@ export async function GET(
     await connectToDatabase();
     const resolved = await params;
     id = resolved.id;
-    const project = await Project.findById(id).lean();
+    const project = await Project.findById(id)
+      .populate("stages")
+      .populate("currentStage")
+      .populate("requirements")
+      .populate("changeRequests")
+      .populate("clientRef", "name email phone company")
+      .populate("projectManager", "name email")
+      .populate("team.user", "name email")
+      .lean();
     if (!project) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }

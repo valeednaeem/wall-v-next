@@ -72,6 +72,7 @@ const sidebarItems: SidebarItem[] = [
     { label: "Domain Offers", href: "/dashboard/domains/offers" },
   ]},
   { label: "Support", href: "/dashboard/support", icon: <Headphones className="h-4 w-4" /> },
+  { label: "Client Portal", href: "/dashboard/client-portal", icon: <Users className="h-4 w-4" /> },
   { label: "Error Logs", href: "/dashboard/errors", icon: <AlertTriangle className="h-4 w-4" />, roles: ["super-admin", "admin"] },
   { label: "Previews", href: "/dashboard/previews", icon: <Eye className="h-4 w-4" />, roles: ["super-admin", "admin", "manager"] },
   { label: "Users", href: "/dashboard/users", icon: <Users className="h-4 w-4" />, roles: ["super-admin", "admin"], children: [
