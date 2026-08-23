@@ -6,6 +6,11 @@ import AgentSkill from "@/models/agent-skill";
 import AgentHook from "@/models/agent-hook";
 import connectToDatabase from "@/lib/mongodb";
 
+// Ensure all referenced models are registered
+void AgentTool;
+void AgentSkill;
+void AgentHook;
+
 export async function GET(request: NextRequest) {
   try {
     const user = await getAuthUser();
