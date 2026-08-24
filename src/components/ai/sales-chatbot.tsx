@@ -33,15 +33,6 @@ interface GeneratedAsset {
   filename?: string;
 }
 
-interface AgentInfo {
-  _id: string;
-  name: string;
-  slug: string;
-  isMasterAgent: boolean;
-  isClientFacing: boolean;
-  status: string;
-}
-
 const LANGUAGES = [
   { code: "en", label: "English" },
   { code: "es", label: "Español" },
@@ -108,17 +99,12 @@ export function SalesChatbot() {
   useEffect(() => {
     async function discoverAgent() {
       try {
-        const res = await fetch("/api/agents?limit=100");
+        const res = await fetch("/api/agents/public");
         const data = await res.json();
-        const agents = data.agents || data || [];
-        const master = agents.find(
-          (a: AgentInfo) => a.isMasterAgent && a.status === "active"
-        ) || agents.find(
-          (a: AgentInfo) => a.isClientFacing && a.status === "active"
-        ) || agents[0];
-        if (master) {
-          setAgentId(master._id);
-          setAgentName(master.name || "Wall-V AI");
+        const agent = data.agent;
+        if (agent) {
+          setAgentId(agent._id);
+          setAgentName(agent.name || "Wall-V AI");
         }
       } catch {
         // Use default agent name
