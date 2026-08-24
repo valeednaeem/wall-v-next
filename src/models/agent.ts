@@ -8,6 +8,10 @@ export interface IAgent extends Document {
   role: "sales" | "support" | "technical" | "marketing" | "operations" | "custom";
   status: "active" | "inactive" | "draft" | "testing";
   avatar?: string;
+  division?: string;
+  divisionLabel?: string;
+  divisionIcon?: string;
+  divisionColor?: string;
   personality?: {
     tone: "formal" | "casual" | "friendly" | "professional" | "technical";
     language: string;
@@ -85,6 +89,10 @@ const AgentSchema = new Schema<IAgent>(
     role: { type: String, enum: ["sales", "support", "technical", "marketing", "operations", "custom"], default: "custom" },
     status: { type: String, enum: ["active", "inactive", "draft", "testing"], default: "draft" },
     avatar: String,
+    division: { type: String, index: true },
+    divisionLabel: String,
+    divisionIcon: String,
+    divisionColor: String,
     personality: {
       tone: { type: String, enum: ["formal", "casual", "friendly", "professional", "technical"], default: "professional" },
       language: { type: String, default: "en" },
