@@ -347,7 +347,7 @@ Guide the conversation naturally based on what information is still missing.`;
             messages: [
               {
                 role: "system",
-                content: (agent.systemPrompt || MASTER_AGENT_SYSTEM_PROMPT) + stateContext + (skillContext ? `\n\n${skillContext}` : ""),
+                content: `Your name is "${agent.name}". Always introduce yourself by this exact name. Never use placeholder names like "[Your Name]".\n\n${agent.systemPrompt || MASTER_AGENT_SYSTEM_PROMPT}` + stateContext + (skillContext ? `\n\n${skillContext}` : ""),
               },
               ...conversation.messages.slice(-20).map((m: { role: string; content: string }) => ({
                 role: m.role as "user" | "assistant",
