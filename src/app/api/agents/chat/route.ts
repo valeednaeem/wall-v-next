@@ -5,6 +5,8 @@ import AgentExecution from "@/models/agent-execution";
 import AgentMemory from "@/models/agent-memory";
 import connectToDatabase from "@/lib/mongodb";
 import { runAgentWithTools } from "@/lib/agent-tools";
+import { findMatchingSkills, buildSkillContext, trackSkillUsage } from "@/lib/agent-skills";
+import { captureMemoriesFromMessage } from "@/lib/agent-memory";
 
 export async function POST(request: NextRequest) {
   try {
@@ -61,6 +63,14 @@ export async function POST(request: NextRequest) {
     conversation.messageCount += 1;
     await conversation.save();
 
+    // Capture memories from user message (non-blocking)
+    captureMemoriesFromMessage(
+      agent._id.toString(),
+      message,
+      conversation._id.toString(),
+      chatSessionId
+    ).catch(() => {});
+
     // Build context
     const conversationHistory = conversation.messages.slice(-20).map(
       (m: { role: string; content: string }) => ({ role: m.role, content: m.content })
@@ -74,6 +84,15 @@ export async function POST(request: NextRequest) {
       .limit(10);
 
     const memoryContext = memories.map((m) => `${m.category}: ${m.key} = ${JSON.stringify(m.value)}`).join("\n");
+
+    // Find matching skills for this message
+    const matchedSkills = await findMatchingSkills(agent._id.toString(), message);
+    const skillContext = buildSkillContext(matchedSkills);
+
+    // Track skill usage
+    for (const skill of matchedSkills) {
+      await trackSkillUsage(skill.skillId, true);
+    }
 
     const toolInstructions = `## CRITICAL: You MUST use your tools
 You have database tools available. When the user asks about ANY of these topics, you MUST call the appropriate tool BEFORE responding:
@@ -91,6 +110,7 @@ NEVER say "I don't have access" or "I can't see". You DO have access. USE YOUR T
       toolInstructions,
       agent.systemPrompt,
       ...agent.instructions,
+      skillContext,
       memoryContext ? `\nRelevant memories:\n${memoryContext}` : "",
     ].filter(Boolean).join("\n");
 

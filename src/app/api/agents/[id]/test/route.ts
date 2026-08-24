@@ -6,6 +6,7 @@ import AgentExecution from "@/models/agent-execution";
 import AgentMemory from "@/models/agent-memory";
 import connectToDatabase from "@/lib/mongodb";
 import { runAgentWithTools } from "@/lib/agent-tools";
+import { findMatchingSkills, buildSkillContext, trackSkillUsage } from "@/lib/agent-skills";
 
 export async function POST(
   request: NextRequest,
@@ -88,6 +89,15 @@ export async function POST(
 
     const memoryContext = memories.map((m) => `${m.category}: ${m.key} = ${JSON.stringify(m.value)}`).join("\n");
 
+    // Find matching skills for this message
+    const matchedSkills = await findMatchingSkills(agent._id.toString(), message);
+    const skillContext = buildSkillContext(matchedSkills);
+
+    // Track skill usage
+    for (const skill of matchedSkills) {
+      await trackSkillUsage(skill.skillId, true);
+    }
+
     // User context for the system prompt
     const userContext = conversation.visitor?.id
       ? `\n\n## Current User Context\n- User ID: ${conversation.visitor.id}\n- Email: ${conversation.visitor.name || "unknown"}\nYou are speaking with a logged-in admin user.`
@@ -108,6 +118,8 @@ NEVER say "I don't have access" or "I can't see". You DO have access. USE YOUR T
 If a tool returns empty results, say "No records found" — never claim you lack access.
 
 ${agent.systemPrompt}
+
+${skillContext}
 
 ${userContext}
 

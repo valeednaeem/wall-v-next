@@ -6,6 +6,18 @@ import AgentMemory from "@/models/agent-memory";
 import ProjectRequest from "@/models/project-request";
 import Lead from "@/models/lead";
 import connectToDatabase from "@/lib/mongodb";
+import { findMatchingSkills, buildSkillContext } from "@/lib/agent-skills";
+import { processHooks } from "@/lib/agent-hooks";
+import { captureMemoriesFromMessage } from "@/lib/agent-memory";
+import {
+  analyzeSentiment,
+  checkBlockedTopics,
+  shouldEscalate,
+  getSatisfactionSurvey,
+  parseSatisfactionResponse,
+  saveSatisfaction,
+  estimateTokens,
+} from "@/lib/agent-conversation-enhancements";
 
 interface ConversationState {
   step: string;
@@ -192,6 +204,14 @@ export async function POST(request: NextRequest) {
     });
     conversation.messageCount += 1;
 
+    // Capture memories from user message (non-blocking)
+    captureMemoriesFromMessage(
+      agent._id.toString(),
+      message,
+      conversation._id.toString(),
+      chatSessionId
+    ).catch(() => {});
+
     // Parse conversation state
     const state = parseConversationState(
       conversation.messages.map((m: { role: string; content: string }) => ({
@@ -199,6 +219,103 @@ export async function POST(request: NextRequest) {
         content: m.content,
       }))
     );
+
+    // ─── ENHANCEMENTS: Sentiment, Blocked Topics, Escalation ───
+    const sentimentResult = analyzeSentiment(message);
+
+    // Check blocked topics
+    const blockedTopics = (agent as Record<string, unknown>).guardrails as Record<string, unknown> | undefined;
+    const blockedTopicsList = (blockedTopics?.blockedTopics as string[]) || [];
+    const blockedCheck = checkBlockedTopics(message, blockedTopicsList);
+
+    // Check if escalation is needed
+    const escalationCheck = shouldEscalate({
+      message,
+      sentiment: { score: sentimentResult.score, label: sentimentResult.label, trend: "stable" },
+      blockedTopic: blockedCheck.blocked,
+      conversationLength: conversation.messageCount,
+    });
+
+    // Handle escalation
+    if (escalationCheck.escalate) {
+      conversation.status = "escalated";
+      conversation.escalatedTo = "human";
+      conversation.escalatedAt = new Date();
+      await conversation.save();
+
+      return NextResponse.json({
+        response: `I understand this is important to you. ${escalationCheck.reason === "Explicit escalation request" ? "Let me connect you with a human agent." : "I'm escalating this to a human agent who can better assist you."} A team member will reach out shortly. Is there anything else I can help with in the meantime?`,
+        conversationId: conversation._id,
+        sessionId: chatSessionId,
+        messageCount: conversation.messageCount,
+        state: state.step,
+        escalation: {
+          triggered: true,
+          reason: escalationCheck.reason,
+          priority: escalationCheck.priority,
+        },
+      });
+    }
+
+    // Handle blocked topics
+    if (blockedCheck.blocked) {
+      return NextResponse.json({
+        response: "I appreciate your question, but I'm not able to discuss that topic. Is there something else I can help you with regarding our services or your project?",
+        conversationId: conversation._id,
+        sessionId: chatSessionId,
+        messageCount: conversation.messageCount,
+        state: state.step,
+        blockedTopic: blockedCheck.matchedTopic,
+      });
+    }
+
+    // Check for satisfaction response (if conversation is near end)
+    if (state.step === "generate-brief" || state.step === "completed") {
+      const satisfaction = parseSatisfactionResponse(message);
+      if (satisfaction.score) {
+        await saveSatisfaction(
+          conversation._id.toString(),
+          satisfaction.score,
+          satisfaction.feedback
+        );
+
+        return NextResponse.json({
+          response: satisfaction.score >= 4
+            ? "Thank you for your positive feedback! We're glad we could help. Is there anything else you'd like to know about your project?"
+            : "Thank you for your feedback. We appreciate it and will use it to improve our service. Is there anything else I can help you with?",
+          conversationId: conversation._id,
+          sessionId: chatSessionId,
+          messageCount: conversation.messageCount,
+          state: state.step,
+          satisfaction: {
+            score: satisfaction.score,
+            feedback: satisfaction.feedback,
+          },
+        });
+      }
+    }
+
+    // Process hooks for website chat
+    try {
+      await processHooks("website-chat", {
+        message,
+        conversation: {
+          id: conversation._id,
+          sessionId: chatSessionId,
+          messageCount: conversation.messageCount,
+        },
+        visitor: visitor || {},
+        context: context || {},
+        state,
+        agent: {
+          id: agent._id,
+          name: agent.name,
+          role: agent.role,
+        },
+      }, agent._id.toString());
+    } catch {
+      // Hook processing is non-critical
+    }
 
     // Build system prompt with state context
     const stateContext = `\n\n## Current Conversation State:
@@ -209,6 +326,10 @@ export async function POST(request: NextRequest) {
 - Timeline: ${state.timeline || "not discussed"}
 
 Guide the conversation naturally based on what information is still missing.`;
+
+    // Find matching skills for this message
+    const matchedSkills = await findMatchingSkills(agent._id.toString(), message);
+    const skillContext = buildSkillContext(matchedSkills);
 
     const apiKey = process.env.OPENAI_API_KEY;
     let responseText = "";
@@ -224,7 +345,10 @@ Guide the conversation naturally based on what information is still missing.`;
           body: JSON.stringify({
             model: agent.aiModel || "gpt-4o",
             messages: [
-              { role: "system", content: (agent.systemPrompt || MASTER_AGENT_SYSTEM_PROMPT) + stateContext },
+              {
+                role: "system",
+                content: (agent.systemPrompt || MASTER_AGENT_SYSTEM_PROMPT) + stateContext + (skillContext ? `\n\n${skillContext}` : ""),
+              },
               ...conversation.messages.slice(-20).map((m: { role: string; content: string }) => ({
                 role: m.role as "user" | "assistant",
                 content: m.content,
@@ -238,6 +362,27 @@ Guide the conversation naturally based on what information is still missing.`;
         if (aiResponse.ok) {
           const data = await aiResponse.json();
           responseText = data.choices?.[0]?.message?.content || "";
+
+          // Track token usage
+          if (data.usage) {
+            const promptTokens = data.usage.prompt_tokens || 0;
+            const completionTokens = data.usage.completion_tokens || 0;
+            conversation.tokenUsage = {
+              prompt: promptTokens,
+              completion: completionTokens,
+              total: promptTokens + completionTokens,
+            };
+          } else {
+            // Estimate tokens if not provided
+            const systemPromptLen = (agent.systemPrompt || MASTER_AGENT_SYSTEM_PROMPT).length + stateContext.length + (skillContext?.length || 0);
+            const promptTokens = estimateTokens(JSON.stringify(conversation.messages.slice(-20))) + estimateTokens(systemPromptLen.toString());
+            const completionTokens = estimateTokens(responseText);
+            conversation.tokenUsage = {
+              prompt: promptTokens,
+              completion: completionTokens,
+              total: promptTokens + completionTokens,
+            };
+          }
         }
       } catch {
         // Fall through to default response
@@ -359,7 +504,7 @@ This helps us create your project brief.`,
       status: "completed",
       input: { message },
       output: { response: responseText },
-      tokens: { prompt: 0, completion: 0, total: 0 },
+      tokens: conversation.tokenUsage || { prompt: 0, completion: 0, total: 0 },
       cost: 0,
       duration: 0,
       retryCount: 0,

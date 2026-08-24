@@ -369,15 +369,18 @@ async function executeGetProjectRequests(args: Record<string, unknown>) {
     .sort({ createdAt: -1 })
     .limit(limit)
     .lean();
-  return requests.map((r: Record<string, unknown>) => ({
-    id: r._id,
-    client: r.client,
-    projectType: r.requirements?.projectType,
-    objective: r.requirements?.objective,
-    budget: r.requirements?.budget,
-    status: r.status,
-    approvalStatus: r.approvalStatus,
-  }));
+  return requests.map((r: Record<string, unknown>) => {
+    const requirements = r.requirements as Record<string, unknown> | undefined;
+    return {
+      id: r._id,
+      client: r.client,
+      projectType: requirements?.projectType,
+      objective: requirements?.objective,
+      budget: requirements?.budget,
+      status: r.status,
+      approvalStatus: r.approvalStatus,
+    };
+  });
 }
 
 // Main executor
