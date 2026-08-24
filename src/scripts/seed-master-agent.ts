@@ -29,7 +29,7 @@ const AgentSchema = new mongoose.Schema({
   temperature: Number,
   maxTokens: Number,
   memory: {
-    type: String,
+    memoryType: String,
     maxItems: Number,
     ttl: Number,
   },
@@ -163,7 +163,7 @@ ALWAYS use your tools to look up real data when asked about projects, clients, i
       temperature: 0.7,
       maxTokens: 2048,
       memory: {
-        type: "conversation",
+        memoryType: "conversation",
         maxItems: 50,
         ttl: 86400,
       },

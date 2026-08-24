@@ -108,7 +108,7 @@ const AgentSchema = new Schema<IAgent>(
     tools: [{ type: Schema.Types.ObjectId, ref: "AgentTool" }],
     hooks: [{ type: Schema.Types.ObjectId, ref: "AgentHook" }],
     memory: {
-      type: { type: String, enum: ["none", "conversation", "persistent", "global"], default: "conversation" },
+      memoryType: { type: String, enum: ["none", "conversation", "persistent", "global"], default: "conversation" },
       maxItems: { type: Number, default: 50 },
       ttl: { type: Number, default: 86400 },
     },

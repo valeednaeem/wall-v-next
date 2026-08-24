@@ -342,7 +342,7 @@ async function importAgents() {
           temperature: 0.7,
           maxTokens: 2048,
           memory: {
-            type: "conversation",
+            memoryType: "conversation",
             maxItems: 50,
             ttl: 86400,
           },
