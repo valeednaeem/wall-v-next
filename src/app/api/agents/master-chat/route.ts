@@ -4,7 +4,10 @@ import AgentConversation from "@/models/agent-conversation";
 import AgentExecution from "@/models/agent-execution";
 import AgentMemory from "@/models/agent-memory";
 import ProjectRequest from "@/models/project-request";
-import Lead from "@/models/lead";
+import User from "@/models/user";
+import Client from "@/models/client";
+import Project from "@/models/project";
+import Invoice from "@/models/invoice";
 import connectToDatabase from "@/lib/mongodb";
 import { findMatchingSkills, buildSkillContext } from "@/lib/agent-skills";
 import { processHooks } from "@/lib/agent-hooks";
@@ -458,47 +461,189 @@ This helps us create your project brief.`,
             // Missing required info — ask for it instead of crashing
             responseText = `I'd love to create this project for you, but I need a couple of details first:\n\n${!clientName ? "- **Your full name**\n" : ""}${!clientEmail ? "- **Your email address**\n" : ""}\nCould you please provide ${!clientName && !clientEmail ? "these" : "this"} so I can set everything up?`;
           } else {
-            // Create lead
-            const lead = await Lead.create({
-              name: clientName,
-              email: clientEmail,
-              phone: projectData.client?.phone || visitor?.phone || "",
-              source: "ai-agent",
-              status: "qualified",
-              budget: projectData.requirements?.budget?.max,
-              requirements: JSON.stringify(projectData.requirements),
-              serviceInterest: [projectData.requirements?.projectType],
+            // === STEP 1: Find or create User account ===
+            let user = await User.findOne({ email: clientEmail.toLowerCase() });
+            const isNewUser = !user;
+            if (!user) {
+              const bcrypt = (await import("bcryptjs")).default;
+              const tempPassword = await bcrypt.hash("WallV@" + Date.now(), 12);
+              const baseSlug = clientName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+              user = await User.create({
+                name: clientName,
+                email: clientEmail.toLowerCase(),
+                password: tempPassword,
+                slug: `${baseSlug}-${Date.now()}`,
+                role: "customer",
+                isActive: true,
+                isEmailVerified: false,
+                phone: projectData.client?.phone || visitor?.phone || "",
+                company: projectData.client?.company || "",
+              });
+            }
+
+            // === STEP 2: Find or create Client record ===
+            let client = await Client.findOne({ email: clientEmail.toLowerCase() });
+            if (!client) {
+              client = await Client.create({
+                user: user._id,
+                name: clientName,
+                email: clientEmail.toLowerCase(),
+                phone: projectData.client?.phone || visitor?.phone || "",
+                company: projectData.client?.company || "",
+                source: "ai-agent",
+                status: "active",
+                type: projectData.client?.company ? "business" : "individual",
+                lastContact: new Date(),
+              });
+            } else if (!client.user) {
+              // Link existing client to user account
+              client.user = user._id;
+              await client.save();
+            }
+
+            // === STEP 3: Create Project ===
+            const budget = projectData.requirements?.budget || state?.budget || {};
+            const budgetMax = budget.max || budget.min || 0;
+            const projectTypeRaw = projectData.requirements?.projectType || state?.projectType || "other";
+            const projectTypeMap: Record<string, string> = {
+              "website": "web-development",
+              "web app": "web-development",
+              "web application": "web-development",
+              "mobile app": "mobile-app",
+              "ai solution": "ai-solution",
+              "ai/automation": "ai-solution",
+              "e-commerce": "e-commerce",
+              "ecommerce": "e-commerce",
+              "hosting": "hosting",
+            };
+            const projectType = projectTypeMap[projectTypeRaw.toLowerCase()] || "other";
+
+            const projectName = `${projectTypeRaw} - ${clientName}`;
+            const projectSlug = projectName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
+            const project = await Project.create({
+              name: projectName,
+              slug: `${projectSlug}-${Date.now()}`,
+              description: projectData.requirements?.objective || state?.objective || `${projectTypeRaw} project for ${clientName}`,
+              client: { name: clientName, email: clientEmail.toLowerCase(), phone: projectData.client?.phone || "" },
+              clientRef: client._id,
+              projectType: projectType as "web-development" | "mobile-app" | "ai-solution" | "e-commerce" | "hosting" | "other",
+              status: "new",
+              lifecycleStatus: "project-created",
+              priority: "medium",
+              budget: budgetMax,
+              currency: budget.currency || "USD",
+              conversationRef: conversation._id,
+              agentRef: agent._id,
+              scope: {
+                description: projectData.requirements?.objective || state?.objective || "",
+                features: state?.features || [],
+                exclusions: [],
+                assumptions: [],
+                constraints: [],
+                version: 1,
+              },
+              financial: {
+                quotedAmount: budgetMax,
+                approvedAmount: 0,
+                invoicedAmount: 0,
+                paidAmount: 0,
+                outstandingAmount: 0,
+                overdueAmount: 0,
+                currency: budget.currency || "USD",
+              },
             });
 
-            // Create project request
+            // Update client project count
+            client.totalProjects = (client.totalProjects || 0) + 1;
+            await client.save();
+
+            // === STEP 4: Create Invoice ===
+            const invoiceItems = (state?.features?.length ? state.features : ["Project Development"]).map((feat: string) => ({
+              description: feat,
+              quantity: 1,
+              unitPrice: budgetMax / (state?.features?.length || 1),
+              total: budgetMax / (state?.features?.length || 1),
+              category: "development",
+            }));
+
+            const invoiceCount = await Invoice.countDocuments();
+            const invoiceNumber = `INV-${String(invoiceCount + 1).padStart(5, "0")}`;
+            const dueDate = new Date();
+            dueDate.setDate(dueDate.getDate() + 30);
+
+            const invoice = await Invoice.create({
+              invoiceNumber,
+              client: client._id,
+              project: project._id,
+              items: invoiceItems,
+              subtotal: budgetMax,
+              tax: 0,
+              taxRate: 0,
+              discount: 0,
+              total: budgetMax,
+              amountPaid: 0,
+              amountDue: budgetMax,
+              currency: budget.currency || "USD",
+              status: "draft",
+              type: "standard",
+              dueDate,
+              notes: `Project: ${projectName}`,
+              billingAddress: {
+                name: clientName,
+                email: clientEmail.toLowerCase(),
+                address: "",
+                city: "",
+                country: "",
+              },
+            });
+
+            // Update project financials
+            project.lifecycleStatus = "invoiced";
+            project.financial.invoicedAmount = budgetMax;
+            project.financial.outstandingAmount = budgetMax;
+            await project.save();
+
+            // === STEP 5: Create ProjectRequest for tracking ===
             const projectRequest = await ProjectRequest.create({
               agent: agent._id,
               conversation: conversation._id,
               client: {
                 name: clientName,
-                email: clientEmail,
+                email: clientEmail.toLowerCase(),
                 phone: projectData.client?.phone || "",
                 company: projectData.client?.company || "",
               },
               requirements: projectData.requirements,
               extractedData: {
                 rawConversation: conversation.messages.map((m: { role: string; content: string }) => `${m.role}: ${m.content}`).join("\n"),
-                keyDecisions: state.features,
+                keyDecisions: state?.features || [],
                 missingInformation: [],
-                confidenceScore: 75,
+                confidenceScore: 85,
               },
-              status: "requirements-gathered",
+              status: "project-created",
+              project: project._id,
+              quote: { min: budgetMax * 0.8, max: budgetMax, currency: budget.currency || "USD" },
             });
 
-            conversation.lead = lead._id;
-            conversation.outcome = "lead-created";
+            // Update conversation
+            conversation.outcome = "project-created";
             conversation.outcomeDetails = {
-              projectRequestId: projectRequest._id,
+              projectId: project._id.toString(),
+              clientId: client._id.toString(),
+              invoiceId: invoice._id.toString(),
+              projectRequestId: projectRequest._id.toString(),
+              userId: user._id.toString(),
+              isNewUser,
             };
+
+            // Build confirmation message
+            responseText = `Your project has been created successfully.\n\n**Project:** ${projectName}\n**Invoice:** ${invoiceNumber} — $${budgetMax.toLocaleString()}\n**Status:** Pending Payment\n\n${isNewUser ? `An account has been created for you. You can log in at wall-v.com using your email and the temporary password that will be sent to you.\n\n` : ""}You can track your project and make payment from your dashboard at wall-v.com/dashboard.\n\nIs there anything else you'd like help with?`;
           }
         }
-      } catch {
-        // Not valid JSON, continue normally
+      } catch (err) {
+        console.error("Project creation error:", err);
+        responseText = "I encountered an issue while creating your project. Our team has been notified and will follow up shortly. Could you also email us at support@wall-v.com so we can assist you directly?";
       }
     }
 
