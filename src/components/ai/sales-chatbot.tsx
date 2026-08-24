@@ -33,6 +33,15 @@ interface GeneratedAsset {
   filename?: string;
 }
 
+interface AgentInfo {
+  _id: string;
+  name: string;
+  slug: string;
+  isMasterAgent: boolean;
+  isClientFacing: boolean;
+  status: string;
+}
+
 const LANGUAGES = [
   { code: "en", label: "English" },
   { code: "es", label: "Español" },
@@ -81,6 +90,8 @@ export function SalesChatbot() {
   const [generatedAssets, setGeneratedAssets] = useState<GeneratedAsset[]>([]);
   const [toolLoading, setToolLoading] = useState<string | null>(null);
   const [lastProjectUrl, setLastProjectUrl] = useState<string | null>(null);
+  const [agentId, setAgentId] = useState<string | null>(null);
+  const [agentName, setAgentName] = useState("Wall-V AI");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const langMenuRef = useRef<HTMLDivElement>(null);
@@ -91,6 +102,29 @@ export function SalesChatbot() {
   // Generate session ID on mount
   useEffect(() => {
     setSessionId(`chat_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`);
+  }, []);
+
+  // Auto-discover master agent on mount
+  useEffect(() => {
+    async function discoverAgent() {
+      try {
+        const res = await fetch("/api/agents?limit=100");
+        const data = await res.json();
+        const agents = data.agents || data || [];
+        const master = agents.find(
+          (a: AgentInfo) => a.isMasterAgent && a.status === "active"
+        ) || agents.find(
+          (a: AgentInfo) => a.isClientFacing && a.status === "active"
+        ) || agents[0];
+        if (master) {
+          setAgentId(master._id);
+          setAgentName(master.name || "Wall-V AI");
+        }
+      } catch {
+        // Use default agent name
+      }
+    }
+    discoverAgent();
   }, []);
 
   useEffect(() => {
@@ -121,11 +155,11 @@ export function SalesChatbot() {
     if (isOpen && !hasGreeted.current) {
       hasGreeted.current = true;
       const greetings: Record<string, string> = {
-        en: "Hey! I'm Wall-V AI — your project consultant.\n\nI can help you figure out exactly what you need, whether it's a website, web app, mobile app, AI solution, hosting, or anything digital.\n\nWhat are you looking to build?",
-        es: "Hola! Soy Wall-V AI, tu consultor de proyectos.\n\nPuedo ayudarte a descubrir exactamente lo que necesitas — ya sea un sitio web, aplicación web, app móvil, solución de IA, hosting, o cualquier cosa digital.\n\nQué quieres crear?",
-        ar: "!مرحباً، أنا Wall-V AI، مستشار المشاريع\n\nيمكنني مساعدتك في اكتشاف ما تحتاجه بالضبط\n\nما الذي تريد بناءه؟",
-        ur: "!السلام علیکم، میں Wall-V AI ہوں\n\nمیں آپ کو دریافت کرنے میں مدد کر سکتا ہوں\n\nآپ کیا بنانا چاہتے ہیں؟",
-        fr: "Bonjour! Je suis Wall-V AI, votre consultant.\n\nJe peux vous aider à découvrir ce dont vous avez besoin.\n\nQue cherchez-vous à créer?",
+        en: `Hey! I'm ${agentName} — your project consultant.\n\nI can help you figure out exactly what you need, whether it's a website, web app, mobile app, AI solution, hosting, or anything digital.\n\nWhat are you looking to build?`,
+        es: `Hola! Soy ${agentName}, tu consultor de proyectos.\n\nPuedo ayudarte a descubrir exactamente lo que necesitas — ya sea un sitio web, aplicación web, app móvil, solución de IA, hosting, o cualquier cosa digital.\n\nQué quieres crear?`,
+        ar: `!مرحباً، أنا ${agentName}، مستشار المشاريع\n\nيمكنني مساعدتك في اكتشاف ما تحتاجه بالضبط\n\nما الذي تريد بناءه؟`,
+        ur: `!السلام علیکم، میں ${agentName} ہوں\n\nمیں آپ کو دریافت کرنے میں مدد کر سکتا ہوں\n\nآپ کیا بنانا چاہتے ہیں؟`,
+        fr: `Bonjour! Je suis ${agentName}, votre consultant.\n\nJe peux vous aider à découvrir ce dont vous avez besoin.\n\nQue cherchez-vous à créer?`,
       };
       setMessages([{
         role: "assistant",
@@ -133,7 +167,7 @@ export function SalesChatbot() {
         suggestions: ["I need a website", "I need a mobile app", "I need AI/automation", "I need hosting", "I have an idea"],
       }]);
     }
-  }, [isOpen, language]);
+  }, [isOpen, language, agentName]);
 
   const sendMessage = useCallback(async (overrideInput?: string) => {
     const textToUse = overrideInput || input;
@@ -145,54 +179,54 @@ export function SalesChatbot() {
     setInput("");
     setIsLoading(true);
 
-    // Build conversation history for AI (only user/assistant messages, skip initial greeting)
-    const conversationHistory = messages.slice(1).map((msg) => ({
-      role: msg.role,
-      content: msg.content,
-    }));
-
     try {
-      const res = await fetch("/api/ai/discover", {
+      const res = await fetch("/api/agents/master-chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message: textToUse.trim(),
-          conversationHistory,
-          language,
+          agentId: agentId,
           sessionId,
-          incomingConversationState: conversationState,
+          visitor: { language },
+          context: { page: window.location.href, language },
         }),
       });
 
       const data = await res.json();
 
-      if (data.success) {
-        // Only show suggestions at key decision points, not every message
+      if (data.response) {
+        // Parse state from response to detect conversation stage
+        const state = data.state || "greeting";
         let suggestions: string[] = [];
-        const stage = data.data.stage;
-        const action = data.data.action;
-        const lastCategory = data.data.conversationState?.lastQuestionCategory;
 
-        // Show suggestions only when AI asks a question (not when providing info)
-        if (action === "confirm") {
-          // Brief ready - show action buttons
+        // Show suggestions based on conversation state
+        if (state === "generate-brief" || state === "completed") {
           suggestions = ["Generate project", "Get a quote", "I need changes"];
-        } else if (lastCategory === "projectType" || lastCategory === "objective") {
-          // Early stages - show relevant project suggestions
-          suggestions = data.data.suggestions || [];
+        } else if (state === "greeting" || state === "identify-project") {
+          suggestions = ["I need a website", "I need a mobile app", "I need AI/automation", "I need hosting"];
         }
-        // Don't show suggestions for other stages (budget, timeline, contact info, etc.)
-        // Let the user type naturally
 
         const aiMessage: Message = {
           role: "assistant",
-          content: data.data.message,
+          content: data.response,
           suggestions,
-          action: data.data.action,
         };
         setMessages([...updatedMessages, aiMessage]);
-        setConversationState(data.data.conversationState);
-        setSessionId(data.data.sessionId);
+
+        // Update conversation state from backend
+        if (data.state) {
+          setConversationState((prev) => ({
+            ...prev,
+            stage: data.state,
+            language,
+            turnCount: (prev?.turnCount || 0) + 1,
+          } as DiscoveryState));
+        }
+
+        // Update session ID if new
+        if (data.sessionId) {
+          setSessionId(data.sessionId);
+        }
       } else {
         setMessages([...updatedMessages, {
           role: "assistant",
@@ -207,7 +241,7 @@ export function SalesChatbot() {
     } finally {
       setIsLoading(false);
     }
-  }, [input, isLoading, messages, language, sessionId, conversationState]);
+  }, [input, isLoading, messages, language, sessionId, agentId]);
 
   // Tool handlers
   const handleBilling = useCallback(async () => {
@@ -832,7 +866,7 @@ export function SalesChatbot() {
                 <Sparkles className="h-4 w-4" />
               </div>
               <div>
-                <h3 className="text-sm font-semibold">Wall-V AI</h3>
+                <h3 className="text-sm font-semibold">{agentName}</h3>
                 <p className="text-xs opacity-80">Project Consultant</p>
               </div>
             </div>
