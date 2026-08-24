@@ -60,6 +60,7 @@ const MASTER_AGENT_SYSTEM_PROMPT = `You are the Master Client Agent for Wall-V, 
 - If the client provides information unprompted, acknowledge it and don't re-ask
 - After gathering enough info, summarize what you understand
 - Generate an estimated quote based on Wall-V's pricing
+- **IMPORTANT**: Before creating the project, you MUST collect the client's name and email. Never skip this step. If they haven't provided it yet, ask for it before confirming.
 - When the client confirms, output a structured JSON block for project creation
 - Keep responses concise and helpful
 - If the client asks about pricing, give general ranges based on project type
@@ -449,38 +450,52 @@ This helps us create your project brief.`,
       try {
         const projectData = JSON.parse(jsonMatch[1]);
         if (projectData.action === "create_project_request") {
-          // Create lead
-          const lead = await Lead.create({
-            name: projectData.client.name || visitor?.name || "Unknown",
-            email: projectData.client.email || visitor?.email || "",
-            phone: projectData.client.phone,
-            source: "ai-agent",
-            status: "qualified",
-            budget: projectData.requirements.budget?.max,
-            requirements: JSON.stringify(projectData.requirements),
-            serviceInterest: [projectData.requirements.projectType],
-          });
+          // Validate required fields before creating
+          const clientName = projectData.client?.name || visitor?.name || "";
+          const clientEmail = projectData.client?.email || visitor?.email || "";
 
-          // Create project request
-          const projectRequest = await ProjectRequest.create({
-            agent: agent._id,
-            conversation: conversation._id,
-            client: projectData.client,
-            requirements: projectData.requirements,
-            extractedData: {
-              rawConversation: conversation.messages.map((m: { role: string; content: string }) => `${m.role}: ${m.content}`).join("\n"),
-              keyDecisions: state.features,
-              missingInformation: [],
-              confidenceScore: 75,
-            },
-            status: "requirements-gathered",
-          });
+          if (!clientName || !clientEmail) {
+            // Missing required info — ask for it instead of crashing
+            responseText = `I'd love to create this project for you, but I need a couple of details first:\n\n${!clientName ? "- **Your full name**\n" : ""}${!clientEmail ? "- **Your email address**\n" : ""}\nCould you please provide ${!clientName && !clientEmail ? "these" : "this"} so I can set everything up?`;
+          } else {
+            // Create lead
+            const lead = await Lead.create({
+              name: clientName,
+              email: clientEmail,
+              phone: projectData.client?.phone || visitor?.phone || "",
+              source: "ai-agent",
+              status: "qualified",
+              budget: projectData.requirements?.budget?.max,
+              requirements: JSON.stringify(projectData.requirements),
+              serviceInterest: [projectData.requirements?.projectType],
+            });
 
-          conversation.lead = lead._id;
-          conversation.outcome = "lead-created";
-          conversation.outcomeDetails = {
-            projectRequestId: projectRequest._id,
-          };
+            // Create project request
+            const projectRequest = await ProjectRequest.create({
+              agent: agent._id,
+              conversation: conversation._id,
+              client: {
+                name: clientName,
+                email: clientEmail,
+                phone: projectData.client?.phone || "",
+                company: projectData.client?.company || "",
+              },
+              requirements: projectData.requirements,
+              extractedData: {
+                rawConversation: conversation.messages.map((m: { role: string; content: string }) => `${m.role}: ${m.content}`).join("\n"),
+                keyDecisions: state.features,
+                missingInformation: [],
+                confidenceScore: 75,
+              },
+              status: "requirements-gathered",
+            });
+
+            conversation.lead = lead._id;
+            conversation.outcome = "lead-created";
+            conversation.outcomeDetails = {
+              projectRequestId: projectRequest._id,
+            };
+          }
         }
       } catch {
         // Not valid JSON, continue normally
