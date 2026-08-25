@@ -57,27 +57,23 @@ export async function GET(request: Request) {
     // Scope projects to client for non-admin users
     const adminRoles = ["super-admin", "admin", "manager"];
     if (!adminRoles.includes(user.role)) {
-      // Find client records linked to this user's email or user ID
-      const client = await Client.findOne({
+      // Find client records linked to this user (by email or user ID)
+      const linkedClients = await Client.find({
         $or: [
           { email: user.email?.toLowerCase() || "" },
           { user: user.userId },
         ],
       }).lean();
+      const clientIds = linkedClients.map((c: any) => c._id);
 
-      if (client) {
-        // Show projects belonging to this client (by clientRef, embedded email, or client ObjectId)
-        query.$or = [
-          { clientRef: client._id },
-          { "client.email": user.email?.toLowerCase() || "" },
-          { "client": client._id.toString() },
-        ];
-      } else {
-        // No client record — try to find projects by email directly
-        query.$or = [
-          { "client.email": user.email?.toLowerCase() || "" },
-        ];
-      }
+      // Match projects by: embedded client email, clientRef, or client ObjectId
+      query.$or = [
+        { "client.email": user.email?.toLowerCase() || "" },
+        ...(clientIds.length > 0 ? [
+          { clientRef: { $in: clientIds } },
+          { client: { $in: clientIds.map((id: any) => id.toString()) } },
+        ] : []),
+      ];
     }
 
     const total = await Project.countDocuments(query);

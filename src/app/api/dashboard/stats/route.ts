@@ -30,8 +30,22 @@ export async function GET() {
     // Customer/Client role: return their own data only
     const customerRoles = ["customer", "CLIENT", "client"];
     if (customerRoles.includes(user.role)) {
-      const client = await Client.findOne({ email: user.email }).lean();
-      const clientFilter = client ? { "client.email": user.email } : { "client.email": user.email };
+      // Find client records linked to this user
+      const linkedClients = await Client.find({
+        $or: [
+          { email: user.email?.toLowerCase() || "" },
+          { user: user.userId },
+        ],
+      }).lean();
+      const clientIds = linkedClients.map((c: any) => c._id);
+
+      // Match projects by: embedded client email, clientRef, or client ObjectId
+      const clientFilter: any = {
+        $or: [
+          { "client.email": user.email?.toLowerCase() || "" },
+          ...(clientIds.length > 0 ? [{ clientRef: { $in: clientIds } }] : []),
+        ],
+      };
 
       const [myProjects, myActiveProjects, myCompletedProjects] = await Promise.all([
         Project.countDocuments(clientFilter),
@@ -42,7 +56,7 @@ export async function GET() {
       const recentProjects = await Project.find(clientFilter)
         .sort({ createdAt: -1 })
         .limit(5)
-        .select("name status projectType progress budget currency createdAt")
+        .select("name status projectType progress budget currency createdAt description")
         .lean();
 
       return NextResponse.json({
