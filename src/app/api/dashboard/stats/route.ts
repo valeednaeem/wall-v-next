@@ -27,8 +27,9 @@ export async function GET() {
 
     await connectToDatabase();
 
-    // Customer role: return their own data only
-    if (user.role === "customer") {
+    // Customer/Client role: return their own data only
+    const customerRoles = ["customer", "CLIENT", "client"];
+    if (customerRoles.includes(user.role)) {
       const client = await Client.findOne({ email: user.email }).lean();
       const clientFilter = client ? { "client.email": user.email } : { "client.email": user.email };
 
