@@ -113,6 +113,92 @@ function parseConversationState(messages: { role: string; content: string }[]): 
   };
 
   const allText = messages.map((m) => m.content).join(" ").toLowerCase();
+  const userMessages = messages.filter((m) => m.role === "user").map((m) => m.content);
+
+  // Extract client info from user messages
+  for (const msg of userMessages) {
+    // Email detection
+    const emailMatch = msg.match(/[\w.+-]+@[\w-]+\.[\w.]+/i);
+    if (emailMatch && !state.clientInfo.email) {
+      state.clientInfo.email = emailMatch[0].toLowerCase();
+    }
+
+    // Name detection — look for "my name is X", "I'm X", "this is X", "I am X"
+    const namePatterns = [
+      /(?:my name is|i'?m|this is|i am|name'?s? is|called)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/i,
+      /^([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)$/,
+    ];
+    for (const pattern of namePatterns) {
+      const nameMatch = msg.match(pattern);
+      if (nameMatch && !state.clientInfo.name) {
+        const name = nameMatch[1].trim();
+        // Exclude common non-name words
+        const excludeWords = ["yes", "no", "sure", "okay", "ok", "thanks", "hello", "hi", "hey", "website", "web", "app", "project", "need", "want", "looking", "building", "create", "build"];
+        if (!excludeWords.includes(name.toLowerCase()) && name.length > 1) {
+          state.clientInfo.name = name;
+        }
+      }
+    }
+
+    // Phone detection
+    const phoneMatch = msg.match(/(?:phone|tel|mobile|number)[:\s]*([+\d\s()-]{7,})/i) || msg.match(/(\+?\d{1,4}[\s-]?\d{6,})/);
+    if (phoneMatch && !state.clientInfo.phone) {
+      state.clientInfo.phone = phoneMatch[1] || phoneMatch[0];
+    }
+
+    // Company detection
+    const companyPatterns = [
+      /(?:company|business|firm|organization|org)[:\s]+(.+?)(?:\.|,|$)/i,
+      /(?:at|from|working at|working for)\s+([A-Z][\w\s&]+?)(?:\.|,|\s+(?:and|but|so|which|who)|$)/i,
+    ];
+    for (const pattern of companyPatterns) {
+      const companyMatch = msg.match(pattern);
+      if (companyMatch && !state.clientInfo.company) {
+        state.clientInfo.company = companyMatch[1].trim();
+      }
+    }
+
+    // Objective detection
+    const objectivePatterns = [
+      /(?:objective|goal|need|want to|looking to|trying to|purpose|aim)\s+(.+?)(?:\.|,|$)/i,
+      /(?:i need|we need|i want|we want|i'?m looking|we'?re looking)\s+(.+?)(?:\.|,|$)/i,
+    ];
+    for (const pattern of objectivePatterns) {
+      const objMatch = msg.match(pattern);
+      if (objMatch && !state.objective) {
+        state.objective = objMatch[1].trim();
+      }
+    }
+
+    // Confirmation detection
+    const confirmPatterns = /^(?:yes|yep|yeah|sure|go ahead|proceed|confirm|do it|let'?s go|i'?m in|absolutely|sounds good|perfect|great|that works|i agree|approved|create it|start|begin|looks good|fine|ok|okay)\b/i;
+    if (confirmPatterns.test(msg.trim())) {
+      state.confirmedByClient = true;
+    }
+
+    // Industry detection
+    const industryPatterns = [
+      /(?:industry|sector|field|niche)[:\s]+(.+?)(?:\.|,|$)/i,
+      /(?:in the|in)\s+(healthcare|finance|education|retail|technology|tech|real estate|food|fashion|travel|automotive|manufacturing|media|entertainment|nonprofit|legal|construction|energy|agriculture|logistics|insurance)\s/i,
+    ];
+    for (const pattern of industryPatterns) {
+      const indMatch = msg.match(pattern);
+      if (indMatch && !state.industry) {
+        state.industry = (indMatch[1] || indMatch[0]).trim();
+      }
+    }
+
+    // Target audience detection
+    const audiencePatterns = [
+      /(?:target audience|audience|users|customers|for)\s+(.+?)(?:\.|,|$)/i,
+    ];
+    for (const pattern of audiencePatterns) {
+      const audMatch = msg.match(pattern);
+      if (audMatch && !state.targetAudience) {
+        state.targetAudience = audMatch[1].trim();
+      }
+    }
+  }
 
   // Detect project type
   if (allText.includes("e-commerce") || allText.includes("ecommerce") || allText.includes("online store")) {
@@ -447,20 +533,96 @@ This helps us create your project brief.`,
       responseText = guidedResponses[state.step] || guidedResponses.greeting;
     }
 
-    // Check if AI response contains project creation request
+    // Check if AI response contains project creation request (JSON block or confirmation intent)
     const jsonMatch = responseText.match(/```json\s*([\s\S]*?)```/);
+    let projectData: Record<string, unknown> | null = null;
+
+    // 1. Try to parse JSON block from AI response
     if (jsonMatch) {
       try {
-        const projectData = JSON.parse(jsonMatch[1]);
-        if (projectData.action === "create_project_request") {
+        const parsed = JSON.parse(jsonMatch[1]);
+        if (parsed.action === "create_project_request") {
+          projectData = parsed;
+        }
+      } catch (e) {
+        console.error("Failed to parse JSON from AI response:", e);
+      }
+    }
+
+    // 2. If no JSON block, detect confirmation intent from AI response + conversation state
+    if (!projectData && state.confirmedByClient) {
+      const confirmationPatterns = /(?:proceed|create|confirm|go ahead|start|begin|set up|build|do it|let'?s go|absolutely|yes please|sounds good|perfect|great|that works|i agree|approved)/i;
+      if (confirmationPatterns.test(responseText) && state.projectType && state.clientInfo?.name && state.clientInfo?.email) {
+        projectData = {
+          action: "create_project_request",
+          client: {
+            name: state.clientInfo.name,
+            email: state.clientInfo.email,
+            phone: state.clientInfo.phone || "",
+            company: state.clientInfo.company || "",
+          },
+          requirements: {
+            projectType: state.projectType,
+            objective: state.objective || "",
+            features: state.features || [],
+            designStyle: state.designStyle || "",
+            industry: state.industry || "",
+            targetAudience: state.targetAudience || "",
+            integrations: state.integrations || [],
+            budget: state.budget || { min: 0, max: 0, currency: "USD" },
+            timeline: state.timeline || "",
+            pages: state.pages || [],
+            specialRequirements: state.specialRequirements || "",
+          },
+        };
+      }
+    }
+
+    // 3. Also check if user explicitly said "yes" to confirmation and we have enough info
+    if (!projectData) {
+      const lastUserMsg = conversation.messages.filter((m: { role: string }) => m.role === "user").slice(-1)[0]?.content?.toLowerCase() || "";
+      const explicitYes = /^(?:yes|yep|yeah|sure|go ahead|proceed|confirm|do it|let'?s go|i'?m in|absolutely|sounds good|perfect|that works|i agree|approved|create it|start|begin)\b/i.test(lastUserMsg);
+      if (explicitYes && state.projectType && state.clientInfo?.name && state.clientInfo?.email) {
+        projectData = {
+          action: "create_project_request",
+          client: {
+            name: state.clientInfo.name,
+            email: state.clientInfo.email,
+            phone: state.clientInfo.phone || "",
+            company: state.clientInfo.company || "",
+          },
+          requirements: {
+            projectType: state.projectType,
+            objective: state.objective || "",
+            features: state.features || [],
+            designStyle: state.designStyle || "",
+            industry: state.industry || "",
+            targetAudience: state.targetAudience || "",
+            integrations: state.integrations || [],
+            budget: state.budget || { min: 0, max: 0, currency: "USD" },
+            timeline: state.timeline || "",
+            pages: state.pages || [],
+            specialRequirements: state.specialRequirements || "",
+          },
+        };
+      }
+    }
+
+    if (projectData) {
+      try {
           // Validate required fields before creating
-          const clientName = projectData.client?.name || visitor?.name || "";
-          const clientEmail = projectData.client?.email || visitor?.email || "";
+          const clientName = (projectData.client as Record<string, string>)?.name || visitor?.name || "";
+          const clientEmail = (projectData.client as Record<string, string>)?.email || visitor?.email || "";
 
           if (!clientName || !clientEmail) {
             // Missing required info — ask for it instead of crashing
             responseText = `I'd love to create this project for you, but I need a couple of details first:\n\n${!clientName ? "- **Your full name**\n" : ""}${!clientEmail ? "- **Your email address**\n" : ""}\nCould you please provide ${!clientName && !clientEmail ? "these" : "this"} so I can set everything up?`;
           } else {
+            // Extract typed data from projectData
+            const pdClient = projectData.client as Record<string, string> || {};
+            const pdReqs = projectData.requirements as Record<string, unknown> || {};
+            const pdBudget = (pdReqs.budget || {}) as { min?: number; max?: number; currency?: string };
+
             // === STEP 1: Find or create User account ===
             let user = await User.findOne({ email: clientEmail.toLowerCase() });
             const isNewUser = !user;
@@ -476,8 +638,8 @@ This helps us create your project brief.`,
                 role: "customer",
                 isActive: true,
                 isEmailVerified: false,
-                phone: projectData.client?.phone || visitor?.phone || "",
-                company: projectData.client?.company || "",
+                phone: pdClient.phone || visitor?.phone || "",
+                company: pdClient.company || "",
               });
             }
 
@@ -488,11 +650,11 @@ This helps us create your project brief.`,
                 user: user._id,
                 name: clientName,
                 email: clientEmail.toLowerCase(),
-                phone: projectData.client?.phone || visitor?.phone || "",
-                company: projectData.client?.company || "",
+                phone: pdClient.phone || visitor?.phone || "",
+                company: pdClient.company || "",
                 source: "ai-agent",
                 status: "active",
-                type: projectData.client?.company ? "business" : "individual",
+                type: pdClient.company ? "business" : "individual",
                 lastContact: new Date(),
               });
             } else if (!client.user) {
@@ -502,9 +664,9 @@ This helps us create your project brief.`,
             }
 
             // === STEP 3: Create Project ===
-            const budget = projectData.requirements?.budget || state?.budget || {};
+            const budget = pdBudget.max || pdBudget.min ? pdBudget : (state?.budget || { min: 0, max: 0, currency: "USD" });
             const budgetMax = budget.max || budget.min || 0;
-            const projectTypeRaw = projectData.requirements?.projectType || state?.projectType || "other";
+            const projectTypeRaw = (pdReqs.projectType as string) || state?.projectType || "other";
             const projectTypeMap: Record<string, string> = {
               "website": "web-development",
               "web app": "web-development",
@@ -524,8 +686,8 @@ This helps us create your project brief.`,
             const project = await Project.create({
               name: projectName,
               slug: `${projectSlug}-${Date.now()}`,
-              description: projectData.requirements?.objective || state?.objective || `${projectTypeRaw} project for ${clientName}`,
-              client: { name: clientName, email: clientEmail.toLowerCase(), phone: projectData.client?.phone || "" },
+              description: (pdReqs.objective as string) || state?.objective || `${projectTypeRaw} project for ${clientName}`,
+              client: { name: clientName, email: clientEmail.toLowerCase(), phone: pdClient.phone || "" },
               clientRef: client._id,
               projectType: projectType as "web-development" | "mobile-app" | "ai-solution" | "e-commerce" | "hosting" | "other",
               status: "new",
@@ -536,7 +698,7 @@ This helps us create your project brief.`,
               conversationRef: conversation._id,
               agentRef: agent._id,
               scope: {
-                description: projectData.requirements?.objective || state?.objective || "",
+                description: (pdReqs.objective as string) || state?.objective || "",
                 features: state?.features || [],
                 exclusions: [],
                 assumptions: [],
@@ -611,10 +773,10 @@ This helps us create your project brief.`,
               client: {
                 name: clientName,
                 email: clientEmail.toLowerCase(),
-                phone: projectData.client?.phone || "",
-                company: projectData.client?.company || "",
+                phone: pdClient.phone || "",
+                company: pdClient.company || "",
               },
-              requirements: projectData.requirements,
+              requirements: pdReqs as Record<string, unknown>,
               extractedData: {
                 rawConversation: conversation.messages.map((m: { role: string; content: string }) => `${m.role}: ${m.content}`).join("\n"),
                 keyDecisions: state?.features || [],
@@ -640,7 +802,6 @@ This helps us create your project brief.`,
             // Build confirmation message
             responseText = `Your project has been created successfully.\n\n**Project:** ${projectName}\n**Invoice:** ${invoiceNumber} — $${budgetMax.toLocaleString()}\n**Status:** Pending Payment\n\n${isNewUser ? `An account has been created for you. You can log in at wall-v.com using your email and the temporary password that will be sent to you.\n\n` : ""}You can track your project and make payment from your dashboard at wall-v.com/dashboard.\n\nIs there anything else you'd like help with?`;
           }
-        }
       } catch (err) {
         console.error("Project creation error:", err);
         responseText = "I encountered an issue while creating your project. Our team has been notified and will follow up shortly. Could you also email us at support@wall-v.com so we can assist you directly?";
