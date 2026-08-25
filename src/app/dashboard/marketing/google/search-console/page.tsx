@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { Save, Loader2, CheckCircle2, AlertCircle, ExternalLink, RefreshCw, Eye, EyeOff, Key, FileText, Globe } from "lucide-react";
+import { Save, Loader2, CheckCircle2, AlertCircle, ExternalLink, RefreshCw, Eye, EyeOff, Key, FileText, Globe, Link2, Unlink } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface SearchConsoleConfig {
@@ -30,6 +30,7 @@ export default function SearchConsolePage() {
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [submittingSitemap, setSubmittingSitemap] = useState(false);
+  const [reconnecting, setReconnecting] = useState(false);
   const [showSecrets, setShowSecrets] = useState<Record<string, boolean>>({});
   const [saveMessage, setSaveMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
@@ -129,6 +130,21 @@ export default function SearchConsolePage() {
     setShowSecrets((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
+  const handleReconnect = async () => {
+    setReconnecting(true);
+    try {
+      const res = await fetch("/api/auth/google/connect");
+      const data = await res.json();
+      if (data.success && data.data.authUrl) {
+        window.location.href = data.data.authUrl;
+      }
+    } catch (error) {
+      console.error("Failed to reconnect:", error);
+    } finally {
+      setReconnecting(false);
+    }
+  };
+
   const getStatusConfig = (status: string) => {
     const configs: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
       not_configured: { label: "Not configured", color: "bg-gray-100 text-gray-700", icon: <AlertCircle className="h-3.5 w-3.5" /> },
@@ -190,6 +206,20 @@ export default function SearchConsolePage() {
         </div>
       )}
 
+      {/* Auth Required Warning */}
+      {currentStatus === "auth_required" && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 flex items-start gap-3">
+          <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
+          <div>
+            <h4 className="font-semibold text-amber-800">Google Account Needs Reconnection</h4>
+            <p className="text-sm text-amber-700 mt-1">
+              Your Google account was connected before Search Console permissions were available.
+              Click <strong>Reconnect Google Account</strong> below to grant all required permissions including Search Console access.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Connection Status Card */}
       <div className="rounded-lg border p-6">
         <h3 className="font-semibold mb-4">Connection Status</h3>
@@ -228,6 +258,12 @@ export default function SearchConsolePage() {
             {testing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
             Verify Connection
           </button>
+          {currentStatus === "auth_required" && (
+            <button onClick={handleReconnect} disabled={reconnecting} className="inline-flex items-center gap-2 text-sm bg-amber-500 text-white rounded-lg px-3 py-2 hover:bg-amber-600 transition-colors disabled:opacity-50">
+              {reconnecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />}
+              Reconnect Google Account
+            </button>
+          )}
           <a href="https://search.google.com/search-console" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-sm border rounded-lg px-3 py-2 hover:bg-accent transition-colors">
             <ExternalLink className="h-4 w-4" />
             Open Search Console
