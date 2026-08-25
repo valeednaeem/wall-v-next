@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { connectToDatabase } from "@/lib/mongodb";
 import GoogleOAuthToken from "@/models/google-oauth";
 import { requirePermission } from "@/lib/api-middleware";
+import crypto from "crypto";
 
 const GOOGLE_SCOPES = [
   "https://www.googleapis.com/auth/analytics.readonly",
@@ -39,7 +40,11 @@ export async function GET() {
 
     const redirectUri = `${process.env.NEXTAUTH_URL}/api/auth/google/callback`;
     const scope = GOOGLE_SCOPES.join(" ");
-    const state = Buffer.from(JSON.stringify({ userId: session.user.id, timestamp: Date.now() })).toString("base64");
+
+    // Sign state with HMAC to prevent tampering
+    const statePayload = JSON.stringify({ userId: session.user.id, timestamp: Date.now() });
+    const stateSignature = crypto.createHmac("sha256", process.env.NEXTAUTH_SECRET || "fallback-secret").update(statePayload).digest("hex");
+    const state = Buffer.from(JSON.stringify({ payload: statePayload, signature: stateSignature })).toString("base64");
 
     const authUrl = new URL("https://accounts.google.com/o/oauth2/v2/auth");
     authUrl.searchParams.set("client_id", clientId);

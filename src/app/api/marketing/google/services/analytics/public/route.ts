@@ -26,10 +26,8 @@ export async function GET() {
         enabled: service.enabled === true && service.status === "connected",
         measurementId: service.config?.measurementId || "",
         propertyId: service.config?.propertyId || "",
-        dataStreamId: service.config?.dataStreamId || "",
         debugMode: service.config?.debugMode || false,
         consentMode: service.config?.consentMode || "default",
-        apiSecret: service.config?.apiSecret || "",
       },
     });
   } catch (error) {

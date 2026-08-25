@@ -70,15 +70,27 @@ export async function GET() {
 
             for (const product of products) {
               synced++;
-              const status = product.contentLanguage && product.targetCountry ? "approved" : "pending";
-              if (status === "approved") approved++;
-              else pending++;
 
-              if (product.issues && product.issues.length > 0) {
-                issues++;
-              }
-              if (product.disapprovals && product.disapprovals.length > 0) {
+              // Determine actual status from product issues/disapprovals
+              const hasIssues = product.productStatus?.itemIssues?.length > 0;
+              const hasDisapprovals = product.productStatus?.destinationStatuses?.some(
+                (ds: Record<string, string>) => ds.destination === "Shopping" && ds.status === "disapproved"
+              );
+
+              if (hasDisapprovals) {
                 rejected++;
+              } else if (hasIssues) {
+                issues++;
+              } else {
+                // Check if approved for Shopping destination
+                const isApproved = product.productStatus?.destinationStatuses?.some(
+                  (ds: Record<string, string>) => ds.destination === "Shopping" && ds.status === "accepted"
+                );
+                if (isApproved) {
+                  approved++;
+                } else {
+                  pending++;
+                }
               }
             }
 

@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import GoogleOAuthToken from "@/models/google-oauth";
-import { getFullUser } from "@/lib/auth";
+import User from "@/models/user";
+import crypto from "crypto";
 
 export async function GET(request: Request) {
   try {
@@ -18,9 +19,18 @@ export async function GET(request: Request) {
       return NextResponse.redirect(`${process.env.NEXTAUTH_URL}/dashboard/marketing/google?error=invalid_callback`);
     }
 
+    // Verify signed state
     let userId: string;
     try {
-      const stateData = JSON.parse(Buffer.from(state, "base64").toString());
+      const decoded = JSON.parse(Buffer.from(state, "base64").toString());
+      const stateData = JSON.parse(decoded.payload);
+
+      // Verify HMAC signature
+      const expectedSig = crypto.createHmac("sha256", process.env.NEXTAUTH_SECRET || "fallback-secret").update(decoded.payload).digest("hex");
+      if (decoded.signature !== expectedSig) {
+        return NextResponse.redirect(`${process.env.NEXTAUTH_URL}/dashboard/marketing/google?error=invalid_signature`);
+      }
+
       userId = stateData.userId;
       if (Date.now() - stateData.timestamp > 10 * 60 * 1000) {
         return NextResponse.redirect(`${process.env.NEXTAUTH_URL}/dashboard/marketing/google?error=state_expired`);
@@ -29,10 +39,11 @@ export async function GET(request: Request) {
       return NextResponse.redirect(`${process.env.NEXTAUTH_URL}/dashboard/marketing/google?error=invalid_state`);
     }
 
+    // Find user directly from DB (no session cookie needed for GET redirect)
     await connectToDatabase();
-    const user = await getFullUser();
-    if (!user || user._id.toString() !== userId) {
-      return NextResponse.redirect(`${process.env.NEXTAUTH_URL}/dashboard/marketing/google?error=user_mismatch`);
+    const user = await User.findById(userId).lean();
+    if (!user) {
+      return NextResponse.redirect(`${process.env.NEXTAUTH_URL}/dashboard/marketing/google?error=user_not_found`);
     }
 
     const clientId = process.env.GOOGLE_CLIENT_ID;

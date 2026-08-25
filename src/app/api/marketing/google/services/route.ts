@@ -8,7 +8,7 @@ const DEFAULT_SERVICES = [
   {
     serviceId: "analytics",
     name: "Google Analytics",
-    icon: "GA4",
+    icon: "BarChart3",
     description: "Track website traffic, user behavior, and conversions",
     configUrl: "/dashboard/marketing/google/analytics",
     defaultConfig: {
@@ -22,7 +22,7 @@ const DEFAULT_SERVICES = [
   {
     serviceId: "search_console",
     name: "Search Console",
-    icon: "GSC",
+    icon: "Search",
     description: "Monitor search performance, indexing, and sitemaps",
     configUrl: "/dashboard/marketing/google/search-console",
     defaultConfig: {
@@ -32,8 +32,8 @@ const DEFAULT_SERVICES = [
   },
   {
     serviceId: "business_profile",
-    name: "Google Business Profile",
-    icon: "GBP",
+    name: "Business Profile",
+    icon: "Building2",
     description: "Manage business listings, reviews, and local presence",
     configUrl: "/dashboard/marketing/google/business-profile",
     defaultConfig: {
@@ -43,8 +43,8 @@ const DEFAULT_SERVICES = [
   },
   {
     serviceId: "merchant_center",
-    name: "Google Merchant Center",
-    icon: "GMC",
+    name: "Merchant Center",
+    icon: "ShoppingBag",
     description: "Sync products for Google Shopping and free listings",
     configUrl: "/dashboard/marketing/google/merchant-center",
     defaultConfig: {
@@ -56,7 +56,7 @@ const DEFAULT_SERVICES = [
   {
     serviceId: "ads",
     name: "Google Ads",
-    icon: "ADS",
+    icon: "Megaphone",
     description: "Configure conversion tracking and campaign readiness",
     configUrl: "/dashboard/marketing/google/ads",
     defaultConfig: {
