@@ -35,10 +35,10 @@ export async function POST(request: Request) {
     const messageParts: string[] = [];
     messageParts.push(`Project Type: ${projectBrief.projectType}`);
     if (projectBrief.objective) messageParts.push(`Objective: ${projectBrief.objective}`);
-    if (projectBrief.businessContext.industry) messageParts.push(`Industry: ${projectBrief.businessContext.industry}`);
+    if (projectBrief.businessContext?.industry) messageParts.push(`Industry: ${projectBrief.businessContext.industry}`);
     if (projectBrief.targetAudience) messageParts.push(`Target Audience: ${projectBrief.targetAudience}`);
-    if (projectBrief.features.length > 0) messageParts.push(`Features: ${projectBrief.features.join(", ")}`);
-    if (projectBrief.integrations.length > 0) messageParts.push(`Integrations: ${projectBrief.integrations.join(", ")}`);
+    if (projectBrief.features?.length > 0) messageParts.push(`Features: ${projectBrief.features.join(", ")}`);
+    if (projectBrief.integrations?.length > 0) messageParts.push(`Integrations: ${projectBrief.integrations.join(", ")}`);
     if (projectBrief.estimatedBudget) messageParts.push(`Budget: $${projectBrief.estimatedBudget}`);
     if (projectBrief.desiredTimeline) messageParts.push(`Timeline: ${projectBrief.desiredTimeline}`);
     if (projectBrief.designPreferences) messageParts.push(`Design: ${projectBrief.designPreferences}`);

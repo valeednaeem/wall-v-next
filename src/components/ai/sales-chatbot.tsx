@@ -672,7 +672,9 @@ export function SalesChatbot() {
       return;
     }
     if (suggestion === "Generate project" || suggestion === "Generate another") {
-      handleGenerateProject();
+      // Send confirmation to master-chat to trigger actual project creation
+      setInput("yes, please create the project");
+      setTimeout(() => sendMessage("yes, please create the project"), 50);
       return;
     }
     if (suggestion === "View project summary" || suggestion === "Show summary") {
