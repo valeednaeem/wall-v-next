@@ -412,7 +412,7 @@ async function createOrUpdateProject(
   // Create inquiry
   const inquiry = await Inquiry.create({
     name: reqs.clientName || "Unknown",
-    email: reqs.clientEmail || "",
+    email: reqs.clientEmail || `pending+${Date.now()}@wall-v.com`,
     phone: reqs.clientPhone,
     company: reqs.clientCompany,
     subject: `Project: ${projectName}`,
@@ -420,8 +420,8 @@ async function createOrUpdateProject(
     source: "ai-chatbot",
     status: "new",
     type: "sales",
-    leadId: lead?._id,
-    clientId: client._id,
+    lead: lead?._id,
+    client: client._id,
   });
 
   // Create project with default milestones

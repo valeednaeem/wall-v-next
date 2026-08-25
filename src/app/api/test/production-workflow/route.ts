@@ -137,7 +137,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const result = await runProductionWorkflow(TEST_SCENARIOS[scenario], { skipPreview });
+    const result = await runProductionWorkflow(TEST_SCENARIOS[scenario], { skipPreview: true, skipDemo: true });
     return NextResponse.json({ success: true, scenario, result });
   } catch (error) {
     await logError({
@@ -147,7 +147,7 @@ export async function GET(request: Request) {
       stack: error instanceof Error ? error.stack : undefined,
     });
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Test failed" },
+      { error: error instanceof Error ? error.message : "Test failed", stack: error instanceof Error ? error.stack : undefined },
       { status: 500 }
     );
   }
