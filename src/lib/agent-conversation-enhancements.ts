@@ -297,7 +297,7 @@ export function shouldEscalate(params: {
   }
 
   // 5. Long conversation without resolution
-  if (conversationLength > 20) {
+  if (conversationLength > 50) {
     triggers.push({ reason: "Long conversation without resolution", priority: "low" });
   }
 
@@ -361,37 +361,33 @@ export function parseSatisfactionResponse(
 ): { score?: number; feedback?: string } {
   const lower = message.trim().toLowerCase();
 
-  // Check for numeric rating
-  const ratingMatch = lower.match(/^(\d)$/);
+  // Only match EXACT single-word ratings or "X/5" format — not casual mentions in sentences
+  // e.g. "5" or "4/5" → match. "that's fine" or "sounds great" → no match.
+  const ratingMatch = lower.match(/^(\d)(?:\/5)?$/);
   if (ratingMatch) {
     const score = parseInt(ratingMatch[1]);
     if (score >= 1 && score <= 5) {
-      // Check if there's additional feedback after the number
-      const remaining = lower.replace(/^\d\s*/, "").trim();
-      return {
-        score,
-        feedback: remaining || undefined,
-      };
+      return { score };
     }
   }
 
-  // Check for word-based ratings
-  const wordRatings: Record<number, string[]> = {
+  // Single-word exact matches only
+  const exactWordRatings: Record<number, string[]> = {
     1: ["poor", "bad", "terrible", "awful", "worst"],
-    2: ["fair", "okay", "mediocre", "not great"],
-    3: ["good", "fine", "decent", "alright"],
-    4: ["very good", "great", "nice", "impressed"],
+    2: ["fair", "mediocre"],
+    3: ["good", "fine", "decent"],
+    4: ["great", "nice", "impressed"],
     5: ["excellent", "amazing", "perfect", "outstanding", "fantastic"],
   };
 
-  for (const [score, words] of Object.entries(wordRatings)) {
-    if (words.some((w) => lower.includes(w))) {
-      return { score: parseInt(score), feedback: lower };
+  for (const [score, words] of Object.entries(exactWordRatings)) {
+    if (words.includes(lower)) {
+      return { score: parseInt(score) };
     }
   }
 
-  // Just feedback
-  return { feedback: lower };
+  // No match — not a satisfaction response
+  return {};
 }
 
 /**
