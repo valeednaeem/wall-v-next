@@ -24,12 +24,43 @@ export async function GET() {
         { status: 401 }
       );
     }
+
+    await connectToDatabase();
+
+    // Customer role: return their own data only
+    if (user.role === "customer") {
+      const client = await Client.findOne({ email: user.email }).lean();
+      const clientFilter = client ? { "client.email": user.email } : { "client.email": user.email };
+
+      const [myProjects, myActiveProjects, myCompletedProjects] = await Promise.all([
+        Project.countDocuments(clientFilter),
+        Project.countDocuments({ ...clientFilter, status: { $in: ["in-progress", "review", "testing", "new", "planning"] } }),
+        Project.countDocuments({ ...clientFilter, status: "completed" }),
+      ]);
+
+      const recentProjects = await Project.find(clientFilter)
+        .sort({ createdAt: -1 })
+        .limit(5)
+        .select("name status projectType progress budget currency createdAt")
+        .lean();
+
+      return NextResponse.json({
+        success: true,
+        data: {
+          totalProjects: myProjects,
+          activeProjects: myActiveProjects,
+          completedProjects: myCompletedProjects,
+          recentProjects,
+          role: "customer",
+        },
+      });
+    }
+
+    // Admin/manager/staff: require analytics:view permission
     const permissionError = await requirePermission(user, "analytics:view");
     if (permissionError) {
       return permissionError;
     }
-
-    await connectToDatabase();
 
     const [
       totalUsers,

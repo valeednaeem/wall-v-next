@@ -76,6 +76,10 @@ export async function GET(request: Request) {
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(limit)
+      .populate("stages")
+      .populate("requirements")
+      .populate("changeRequests")
+      .populate("clientRef", "name email phone company")
       .lean();
 
     // Resolve client references - if client is a string (ObjectId), look up the Client

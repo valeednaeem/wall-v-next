@@ -25,6 +25,8 @@ interface Stats {
   totalAgentConversations: number;
   totalProjectRequests: number;
   pendingProjectRequests: number;
+  recentProjects?: any[];
+  role?: string;
 }
 
 export default function DashboardPage() {
@@ -89,6 +91,72 @@ export default function DashboardPage() {
     );
   }
 
+  // Customer view
+  if (data?.role === "customer") {
+    return (
+      <div className="space-y-6">
+        <h2 className="text-2xl font-bold">My Dashboard</h2>
+
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {[
+            { label: "My Projects", value: data?.totalProjects || 0, icon: "📁", color: "text-blue-500" },
+            { label: "Active Projects", value: data?.activeProjects || 0, icon: "🔄", color: "text-green-500" },
+            { label: "Completed", value: data?.completedProjects || 0, icon: "✅", color: "text-emerald-500" },
+          ].map((stat) => (
+            <div key={stat.label} className="rounded-lg border p-6">
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-muted-foreground">{stat.label}</p>
+                <span className={`text-2xl ${stat.color}`}>{stat.icon}</span>
+              </div>
+              <p className="mt-2 text-3xl font-bold">{stat.value}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="rounded-lg border p-6">
+          <h3 className="text-lg font-semibold mb-4">Recent Projects</h3>
+          {data?.recentProjects?.length ? (
+            <div className="space-y-3">
+              {data.recentProjects.map((project: any) => (
+                <Link
+                  key={project._id}
+                  href={`/dashboard/client-portal?project=${project._id}`}
+                  className="flex items-center justify-between border-b pb-3 last:border-0 hover:bg-accent/50 -mx-2 px-2 py-1 rounded transition-colors"
+                >
+                  <div>
+                    <p className="font-medium text-sm">{project.name}</p>
+                    <p className="text-xs text-muted-foreground capitalize">{project.projectType?.replace(/-/g, " ")}</p>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full capitalize">{project.status?.replace(/-/g, " ")}</span>
+                    {project.budget > 0 && (
+                      <p className="text-xs text-muted-foreground mt-1">${project.budget.toLocaleString()}</p>
+                    )}
+                  </div>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">No projects yet. <Link href="/#contact" className="text-primary underline">Start your first project</Link></p>
+          )}
+        </div>
+
+        <div className="rounded-lg border p-6">
+          <h3 className="text-lg font-semibold mb-4">Quick Actions</h3>
+          <div className="space-y-2">
+            <Link href="/dashboard/client-portal" className="block rounded-lg border p-3 text-sm hover:bg-accent transition-colors">
+              View All My Projects
+            </Link>
+            <Link href="/#contact" className="block rounded-lg border p-3 text-sm hover:bg-accent transition-colors">
+              Start a New Project
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Admin view
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold">Dashboard Overview</h2>
