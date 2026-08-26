@@ -1,1 +1,1 @@
-export { JsonLd, SEOHead } from "./json-ld";
+export { JsonLd } from "./json-ld";

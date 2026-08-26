@@ -8,6 +8,8 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/react";
 import { connectToDatabase } from "@/lib/mongodb";
 import SiteSettings from "@/models/site-settings";
+import { JsonLd } from "@/components/seo";
+import { generateOrganizationSchema } from "@/lib/seo";
 
 const inter = Inter({
   weight: ["400", "500", "600", "700"],
@@ -26,6 +28,7 @@ async function getGoogleVerification(): Promise<string> {
 
 export async function generateMetadata(): Promise<Metadata> {
   const googleVerification = await getGoogleVerification();
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.wall-v.com";
   return {
     title: {
       default: "Wall-V | AI-Powered Software Agency",
@@ -54,14 +57,18 @@ export async function generateMetadata(): Promise<Metadata> {
       title: "Wall-V | AI-Powered Software Agency",
       description:
         "AI-powered software agency providing custom software development, AI automation, ERP/CRM solutions, web hosting, and digital products.",
-      images: [{ url: "/og-default.png", width: 1200, height: 630 }],
+      url: baseUrl,
+      images: [{ url: `${baseUrl}/og-default.png`, width: 1200, height: 630 }],
     },
     twitter: {
       card: "summary_large_image",
       title: "Wall-V | AI-Powered Software Agency",
       description:
         "AI-powered software agency providing custom software development, AI automation, ERP/CRM solutions, web hosting, and digital products.",
-      images: ["/og-default.png"],
+      images: [`${baseUrl}/og-default.png`],
+    },
+    alternates: {
+      canonical: baseUrl,
     },
     robots: { index: true, follow: true },
     verification: {
@@ -83,6 +90,7 @@ export default function RootLayout({
   return (
     <html lang="en" data-scroll-behavior="smooth" className={cn("scroll-smooth antialiased", inter.className)}>
       <body className="min-h-screen bg-white">
+        <JsonLd data={generateOrganizationSchema()} />
         <Providers>{children}</Providers>
         <CookieConsent />
         <SpeedInsights />

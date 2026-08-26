@@ -4,11 +4,14 @@ import { connectToDatabase } from "@/lib/mongodb";
 import LegalPage from "@/models/legal-page";
 import Post from "@/models/blog-post";
 import Product from "@/models/product";
+import { generateSEO } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Sitemap | Wall-V",
+export const metadata: Metadata = generateSEO({
+  title: "Sitemap",
   description: "Complete sitemap of Wall-V website. Find all pages, services, products, and resources.",
-};
+  url: "/sitemap",
+  noindex: true,
+});
 
 interface SitemapSection {
   title: string;

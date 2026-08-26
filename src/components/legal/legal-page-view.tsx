@@ -2,6 +2,7 @@ import { Metadata } from "next";
 import { connectToDatabase } from "@/lib/mongodb";
 import LegalPage from "@/models/legal-page";
 import LegalPageContent from "./legal-page-content";
+import { JsonLd } from "@/components/seo";
 
 interface LegalPageData {
   title: string;
@@ -95,8 +96,17 @@ export async function generateLegalMetadata(slug: string, fallbackTitle: string)
 }
 
 export default function LegalPageView({ data }: LegalPageViewProps) {
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.wall-v.com";
   return (
     <div className="min-h-screen bg-background">
+      <JsonLd data={{
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        name: data.title,
+        description: data.title,
+        url: `${baseUrl}/${data.title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+        dateModified: data.lastUpdated || undefined,
+      }} />
       <div className="max-w-4xl mx-auto px-4 py-16 sm:px-6 lg:px-8">
         <div className="prose prose-lg max-w-none">
           <h1 className="text-3xl font-bold tracking-tight sm:text-4xl mb-8">{data.title}</h1>

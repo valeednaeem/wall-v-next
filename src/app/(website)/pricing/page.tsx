@@ -1,11 +1,16 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PricingPlans } from "@/components/pricing-plans";
+import { generateSEO } from "@/lib/seo";
+import { JsonLd } from "@/components/seo";
+import { generateFAQSchema } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = generateSEO({
   title: "Pricing",
   description: "Simple, transparent pricing for web development, AI automation, and ERP/CRM solutions. Choose the plan that fits your business.",
-};
+  url: "/pricing",
+  keywords: ["pricing", "web development pricing", "software agency pricing", "ERP CRM cost"],
+});
 
 const plans = [
   {
@@ -92,6 +97,7 @@ const faqs = [
 export default function PricingPage() {
   return (
     <div>
+      <JsonLd data={generateFAQSchema(faqs)} />
       {/* Hero */}
       <section className="relative overflow-hidden bg-gradient-to-br from-violet-50 via-white to-indigo-50 py-20 md:py-32">
         <div className="container mx-auto px-4">

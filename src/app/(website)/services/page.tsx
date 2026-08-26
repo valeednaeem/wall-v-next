@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { generateSEO } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = generateSEO({
   title: "Services",
   description: "AI-powered digital agency services — custom software development, AI automation, ERP/CRM, web hosting, mobile apps, and digital marketing.",
-};
+  url: "/services",
+  keywords: ["software development", "AI automation", "ERP CRM", "web hosting", "mobile apps", "digital marketing"],
+});
 
 const services = [
   {

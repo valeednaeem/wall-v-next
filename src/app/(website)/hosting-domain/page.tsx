@@ -1,12 +1,17 @@
 import type { Metadata } from "next";
 import { HostingPlans } from "@/components/hosting/hosting-plans";
 import { DomainSearch } from "@/components/domains/domain-search";
+import { generateSEO } from "@/lib/seo";
+import { JsonLd } from "@/components/seo";
+import { generateFAQSchema } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = generateSEO({
   title: "Web Hosting & Domain Services",
   description:
     "Reliable web hosting with 99.9% uptime. Shared, VPS, and cloud hosting plans. Free SSL, daily backups, 24/7 support. Register domains at competitive prices.",
-};
+  url: "/hosting-domain",
+  keywords: ["web hosting", "domain registration", "VPS hosting", "cloud hosting", "SSL certificate", "99.9 uptime"],
+});
 
 const faqs = [
   {
@@ -34,6 +39,7 @@ const faqs = [
 export default function HostingDomainPage() {
   return (
     <div className="container mx-auto px-4 py-16">
+      <JsonLd data={generateFAQSchema(faqs)} />
       {/* Hero */}
       <div className="text-center mb-16">
         <h1 className="text-4xl md:text-5xl font-bold mb-4">

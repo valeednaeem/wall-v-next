@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
 import { InlineVoicePanel } from "@/components/ai/inline-voice-panel";
+import { generateSEO } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = generateSEO({
   title: "Voice Assistant",
   description: "Talk to Wall-V AI voice assistant. Get instant answers about our services, pricing, and project estimates.",
-};
+  url: "/voice-agent",
+  keywords: ["AI voice assistant", "voice agent", "AI chatbot", "project estimate", "voice consultation"],
+});
 
 export default function VoiceAgentPage() {
   return (

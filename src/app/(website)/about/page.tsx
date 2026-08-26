@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { generateSEO } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = generateSEO({
   title: "About Us",
   description: "Learn about Wall-V — an AI-powered digital agency based in Pakistan, building innovative software solutions for businesses worldwide.",
-};
+  url: "/about",
+  keywords: ["about wall-v", "software agency pakistan", "AI agency", "digital agency", "team"],
+});
 
 const stats = [
   { value: "150+", label: "Projects Completed" },
