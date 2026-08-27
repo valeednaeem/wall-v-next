@@ -2,18 +2,30 @@ import mongoose from "mongoose";
 import dotenv from "dotenv";
 dotenv.config({ path: ".env.local" });
 
-async function check() {
+async function main() {
   await mongoose.connect(process.env.MONGODB_URI!);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const Agent = (await import("@/models/agent")).default as any;
-  const count = await Agent.countDocuments();
-  const active = await Agent.countDocuments({ status: "active" });
-  const master = await Agent.findOne({ isMasterAgent: true }).select("name slug status isMasterAgent isClientFacing").lean();
-  const firstActive = await Agent.findOne({ status: "active" }).select("name slug status isMasterAgent isClientFacing").lean();
-  console.log("Total agents:", count);
-  console.log("Active:", active);
-  console.log("Master agent:", master || "NOT FOUND");
-  console.log("First active:", firstActive || "NOT FOUND");
-  process.exit(0);
+  const db = mongoose.connection.db!;
+
+  const agents = await db.collection("agents").find({}, { projection: { name: 1, slug: 1, status: 1, skills: 1, permissions: 1, isMasterAgent: 1, isClientFacing: 1 } }).toArray();
+  console.log("=== ALL AGENTS ===");
+  for (const a of agents as any[]) {
+    console.log(`  ${a.slug} | ${a.name} | skills=${(a.skills?.length || 0)} | perms=${(a.permissions?.length || 0)} | master=${a.isMasterAgent} | client=${a.isClientFacing} | ${a.status}`);
+  }
+
+  // Check old agents for references
+  const oldSlugs = ["admin-agent", "staff-agent", "developer-agent", "designer-agent", "customer-agent"];
+  console.log("\n=== OLD AGENTS CHECK ===");
+  for (const slug of oldSlugs) {
+    const agent = await db.collection("agents").findOne({ slug });
+    if (agent) {
+      const convCount = await db.collection("agentconversations").countDocuments({ agent: agent._id });
+      console.log(`  ${slug}: exists, ${convCount} conversations`);
+    } else {
+      console.log(`  ${slug}: not found (already cleaned up)`);
+    }
+  }
+
+  await mongoose.disconnect();
 }
-check();
+
+main().catch(console.error);

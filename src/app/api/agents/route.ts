@@ -33,6 +33,11 @@ export async function GET(request: NextRequest) {
     if (role) query.role = role;
     if (type) query.type = type;
     if (division) query.division = division;
+
+    // Exclude superseded old agents (replaced by v2 role-based agents)
+    const DEPRECATED_SLUGS = ["admin-agent", "staff-agent", "developer-agent", "designer-agent", "customer-agent"];
+    query.slug = { $nin: DEPRECATED_SLUGS };
+
     if (search) {
       query.$or = [
         { name: { $regex: search, $options: "i" } },
