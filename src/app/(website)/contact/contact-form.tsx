@@ -1,9 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 
+interface ContactSettings {
+  email: string;
+  phone: string;
+  address: string;
+}
+
 export function ContactForm() {
+  const [contactInfo, setContactInfo] = useState<ContactSettings>({
+    email: "",
+    phone: "",
+    address: "",
+  });
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -15,6 +26,17 @@ export function ContactForm() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    fetch("/api/settings/public")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && data.data.contact) {
+          setContactInfo(data.data.contact);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -154,21 +176,24 @@ export function ContactForm() {
           <div>
             <h2 className="text-2xl font-semibold mb-6">Get in touch</h2>
             <div className="space-y-6">
-              <div>
-                <h3 className="font-medium">Email</h3>
-                <p className="text-muted-foreground">info@wall-v.com</p>
-              </div>
-              <div>
-                <h3 className="font-medium">Phone</h3>
-                <p className="text-muted-foreground">+92 300 1234567</p>
-              </div>
-              <div>
-                <h3 className="font-medium">Address</h3>
-                <p className="text-muted-foreground">
-                  Wall-V Technologies<br />
-                  Karachi, Pakistan
-                </p>
-              </div>
+              {contactInfo.email && (
+                <div>
+                  <h3 className="font-medium">Email</h3>
+                  <p className="text-muted-foreground">{contactInfo.email}</p>
+                </div>
+              )}
+              {contactInfo.phone && (
+                <div>
+                  <h3 className="font-medium">Phone</h3>
+                  <p className="text-muted-foreground">{contactInfo.phone}</p>
+                </div>
+              )}
+              {contactInfo.address && (
+                <div>
+                  <h3 className="font-medium">Address</h3>
+                  <p className="text-muted-foreground whitespace-pre-line">{contactInfo.address}</p>
+                </div>
+              )}
               <div>
                 <h3 className="font-medium">Business Hours</h3>
                 <p className="text-muted-foreground">
