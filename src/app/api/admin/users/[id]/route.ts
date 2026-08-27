@@ -3,6 +3,7 @@ import { connectToDatabase } from "@/lib/mongodb";
 import User from "@/models/user";
 import { auth } from "@/lib/auth";
 import bcrypt from "bcryptjs";
+import { validateRoleAssignment, sanitizeString, validateEmail, validateName, validatePassword, logSecurityEvent, getClientIp } from "@/lib/security";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -33,6 +34,9 @@ export async function GET(_request: Request, { params }: RouteParams) {
 }
 
 export async function PUT(request: Request, { params }: RouteParams) {
+  const ip = getClientIp(request);
+  const userAgent = request.headers.get("user-agent") || "unknown";
+
   try {
     const session = await auth();
     if (!session?.user) {
@@ -52,17 +56,39 @@ export async function PUT(request: Request, { params }: RouteParams) {
       return NextResponse.json({ success: false, error: "User not found" }, { status: 404 });
     }
 
-    if (body.name) user.name = body.name;
-    if (body.email) user.email = body.email.toLowerCase();
+    if (body.name) {
+      const name = sanitizeString(String(body.name), 100);
+      if (!validateName(name)) {
+        return NextResponse.json({ success: false, error: "Invalid name format" }, { status: 400 });
+      }
+      user.name = name;
+    }
+    if (body.email) {
+      const email = sanitizeString(String(body.email), 254).toLowerCase();
+      if (!validateEmail(email)) {
+        return NextResponse.json({ success: false, error: "Invalid email format" }, { status: 400 });
+      }
+      user.email = email;
+    }
     if (body.role) {
-      // Role assignment security
-      if (role !== "super-admin" && body.role === "super-admin") {
-        return NextResponse.json({ success: false, error: "Only super-admin can assign super-admin role" }, { status: 403 });
+      const targetRole = sanitizeString(String(body.role), 50);
+      const roleCheck = validateRoleAssignment(targetRole, role || "");
+      if (!roleCheck.allowed) {
+        await logSecurityEvent({
+          type: "privilege_escalation_attempt",
+          severity: "high",
+          userId: session.user.id,
+          email: session.user.email || undefined,
+          ip,
+          userAgent,
+          path: `/api/admin/users/${id}`,
+          method: "PUT",
+          details: { requestorRole: role, targetRole, reason: roleCheck.reason },
+          blocked: true,
+        });
+        return NextResponse.json({ success: false, error: roleCheck.reason }, { status: 403 });
       }
-      if (!["super-admin", "admin"].includes(role || "") && body.role !== "customer") {
-        return NextResponse.json({ success: false, error: "You can only assign the customer role" }, { status: 403 });
-      }
-      user.role = body.role;
+      user.role = targetRole;
     }
     if (typeof body.isActive === "boolean") user.isActive = body.isActive;
     if (body.phone !== undefined) user.phone = body.phone;
@@ -71,7 +97,11 @@ export async function PUT(request: Request, { params }: RouteParams) {
     if (body.jobTitle !== undefined) user.jobTitle = body.jobTitle;
 
     if (body.password && body.password.length > 0) {
-      user.password = await bcrypt.hash(body.password, 12);
+      const pwCheck = validatePassword(String(body.password));
+      if (!pwCheck.valid) {
+        return NextResponse.json({ success: false, error: pwCheck.reason }, { status: 400 });
+      }
+      user.password = await bcrypt.hash(String(body.password), 12);
     }
 
     await user.save();

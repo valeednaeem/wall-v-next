@@ -80,6 +80,7 @@ const sidebarItems: SidebarItem[] = [
     { label: "Legal & Compliance", href: "/dashboard/settings/legal", permission: "settings:manage" },
   ]},
   { label: "Error Logs", href: "/dashboard/errors", icon: <AlertTriangle className="h-4 w-4" />, permission: "settings:view" },
+  { label: "Security", href: "/dashboard/security", icon: <Shield className="h-4 w-4" />, permission: "settings:manage" },
 ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {

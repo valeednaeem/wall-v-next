@@ -3,6 +3,7 @@ import { connectToDatabase } from "@/lib/mongodb";
 import User from "@/models/user";
 import { auth } from "@/lib/auth";
 import bcrypt from "bcryptjs";
+import { validateRoleAssignment, sanitizeString, validateEmail, validateName, validatePassword, logSecurityEvent, getClientIp } from "@/lib/security";
 
 export async function GET() {
   try {
@@ -37,6 +38,9 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const ip = getClientIp(request);
+  const userAgent = request.headers.get("user-agent") || "unknown";
+
   try {
     const session = await auth();
     if (!session?.user) {
@@ -54,34 +58,71 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: "Name, email, and password are required" }, { status: 400 });
     }
 
-    // Role assignment security: prevent unauthorized privilege escalation
-    const targetRole = userRole || "customer";
-    if (role !== "super-admin" && targetRole === "super-admin") {
-      return NextResponse.json({ success: false, error: "Only super-admin can assign super-admin role" }, { status: 403 });
+    // ─── Input Validation ──────────────────────────────────────────────
+    const sanitizedName = sanitizeString(String(name), 100);
+    const sanitizedEmail = sanitizeString(String(email), 254).toLowerCase();
+    const targetRole = sanitizeString(String(userRole || "customer"), 50);
+
+    if (!validateName(sanitizedName)) {
+      return NextResponse.json({ success: false, error: "Invalid name format" }, { status: 400 });
     }
-    if (!["super-admin", "admin"].includes(role || "") && !["customer"].includes(targetRole)) {
-      return NextResponse.json({ success: false, error: "You can only assign the customer role" }, { status: 403 });
+    if (!validateEmail(sanitizedEmail)) {
+      return NextResponse.json({ success: false, error: "Invalid email format" }, { status: 400 });
+    }
+    const pwCheck = validatePassword(String(password));
+    if (!pwCheck.valid) {
+      return NextResponse.json({ success: false, error: pwCheck.reason }, { status: 400 });
+    }
+
+    // ─── Role Assignment Security ──────────────────────────────────────
+    const roleCheck = validateRoleAssignment(targetRole, role || "");
+    if (!roleCheck.allowed) {
+      await logSecurityEvent({
+        type: "privilege_escalation_attempt",
+        severity: "high",
+        userId: session.user.id,
+        email: session.user.email || undefined,
+        ip,
+        userAgent,
+        path: "/api/admin/users",
+        method: "POST",
+        details: { requestorRole: role, targetRole, reason: roleCheck.reason },
+        blocked: true,
+      });
+      return NextResponse.json({ success: false, error: roleCheck.reason }, { status: 403 });
     }
 
     await connectToDatabase();
 
-    const existing = await User.findOne({ email: email.toLowerCase() });
+    const existing = await User.findOne({ email: sanitizedEmail });
     if (existing) {
       return NextResponse.json({ success: false, error: "A user with this email already exists" }, { status: 409 });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 12);
-    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") + "-" + Date.now();
+    const hashedPassword = await bcrypt.hash(String(password), 12);
+    const slug = sanitizedName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") + "-" + Date.now();
 
     const user = await User.create({
-      name,
-      email: email.toLowerCase(),
+      name: sanitizedName,
+      email: sanitizedEmail,
       password: hashedPassword,
       slug,
-      role: userRole || "customer",
+      role: targetRole,
       isActive: isActive !== false,
       isEmailVerified: false,
       provider: "credentials",
+    });
+
+    await logSecurityEvent({
+      type: "signup_success",
+      severity: "low",
+      userId: user._id.toString(),
+      email: sanitizedEmail,
+      ip,
+      userAgent,
+      path: "/api/admin/users",
+      method: "POST",
+      details: { createdBy: session.user.id, role: targetRole },
     });
 
     return NextResponse.json({

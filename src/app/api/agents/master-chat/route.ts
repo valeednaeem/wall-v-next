@@ -23,6 +23,7 @@ import {
   saveSatisfaction,
   estimateTokens,
 } from "@/lib/agent-conversation-enhancements";
+import { checkRateLimit, getClientIp, RATE_LIMITS, logSecurityEvent, sanitizeString, validateEmail } from "@/lib/security";
 
 interface ConversationState {
   step: string;
@@ -252,7 +253,29 @@ function parseConversationState(messages: { role: string; content: string }[]): 
 }
 
 export async function POST(request: NextRequest) {
+  const ip = getClientIp(request);
+  const userAgent = request.headers.get("user-agent") || "unknown";
+
   try {
+    // ─── Rate Limit ────────────────────────────────────────────────────
+    const rateLimit = checkRateLimit(`master-chat:${ip}`, RATE_LIMITS.MASTER_CHAT.maxRequests, RATE_LIMITS.MASTER_CHAT.windowMs);
+    if (!rateLimit.allowed) {
+      await logSecurityEvent({
+        type: "rate_limit_triggered",
+        severity: "medium",
+        ip,
+        userAgent,
+        path: "/api/agents/master-chat",
+        method: "POST",
+        details: { limit: "master_chat" },
+        blocked: true,
+      });
+      return NextResponse.json(
+        { error: "Too many requests. Please try again later." },
+        { status: 429 }
+      );
+    }
+
     await connectToDatabase();
     const { message, agentId, sessionId, visitor, context } = await request.json();
 
@@ -704,34 +727,39 @@ This helps us create your project brief.`,
             const pdBudget = (pdReqs.budget || {}) as { min?: number; max?: number; currency?: string };
 
             // === STEP 1: Find or create User account ===
-            let user = await User.findOne({ email: clientEmail.toLowerCase() });
+            const safeClientName = sanitizeString(clientName, 100);
+            const safeClientEmail = sanitizeString(clientEmail, 254).toLowerCase();
+            if (!safeClientName || !safeClientEmail || !validateEmail(safeClientEmail)) {
+              responseText = "I need a valid name and email address to create your account. Could you please provide them?";
+            } else {
+            let user = await User.findOne({ email: safeClientEmail });
             const isNewUser = !user;
             if (!user) {
               const bcrypt = (await import("bcryptjs")).default;
               const tempPassword = await bcrypt.hash("WallV@" + Date.now(), 12);
-              const baseSlug = clientName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+              const baseSlug = safeClientName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
               user = await User.create({
-                name: clientName,
-                email: clientEmail.toLowerCase(),
+                name: safeClientName,
+                email: safeClientEmail,
                 password: tempPassword,
                 slug: `${baseSlug}-${Date.now()}`,
                 role: "customer",
                 isActive: true,
                 isEmailVerified: false,
-                phone: pdClient.phone || visitor?.phone || "",
-                company: pdClient.company || "",
+                phone: sanitizeString(pdClient.phone || visitor?.phone || "", 20),
+                company: sanitizeString(pdClient.company || "", 100),
               });
             }
 
             // === STEP 2: Find or create Client record ===
-            let client = await Client.findOne({ email: clientEmail.toLowerCase() });
+            let client = await Client.findOne({ email: safeClientEmail });
             if (!client) {
               client = await Client.create({
                 user: user._id,
-                name: clientName,
-                email: clientEmail.toLowerCase(),
-                phone: pdClient.phone || visitor?.phone || "",
-                company: pdClient.company || "",
+                name: safeClientName,
+                email: safeClientEmail,
+                phone: sanitizeString(pdClient.phone || visitor?.phone || "", 20),
+                company: sanitizeString(pdClient.company || "", 100),
                 source: "ai-agent",
                 status: "active",
                 type: pdClient.company ? "business" : "individual",
@@ -760,14 +788,14 @@ This helps us create your project brief.`,
             };
             const projectType = projectTypeMap[projectTypeRaw.toLowerCase()] || "other";
 
-            const projectName = `${projectTypeRaw} - ${clientName}`;
+            const projectName = `${projectTypeRaw} - ${safeClientName}`;
             const projectSlug = projectName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
             const project = await Project.create({
               name: projectName,
               slug: `${projectSlug}-${Date.now()}`,
-              description: (pdReqs.objective as string) || state?.objective || `${projectTypeRaw} project for ${clientName}`,
-              client: { name: clientName, email: clientEmail.toLowerCase(), phone: pdClient.phone || "" },
+              description: (pdReqs.objective as string) || state?.objective || `${projectTypeRaw} project for ${safeClientName}`,
+              client: { name: safeClientName, email: safeClientEmail, phone: sanitizeString(pdClient.phone || "", 20) },
               clientRef: client._id,
               projectType: projectType as "web-development" | "mobile-app" | "ai-solution" | "e-commerce" | "hosting" | "other",
               status: "new",
@@ -832,8 +860,8 @@ This helps us create your project brief.`,
               dueDate,
               notes: `Project: ${projectName}`,
               billingAddress: {
-                name: clientName,
-                email: clientEmail.toLowerCase(),
+                name: safeClientName,
+                email: safeClientEmail,
                 address: "",
                 city: "",
                 country: "",
@@ -851,9 +879,9 @@ This helps us create your project brief.`,
               agent: agent._id,
               conversation: conversation._id,
               client: {
-                name: clientName,
-                email: clientEmail.toLowerCase(),
-                phone: pdClient.phone || "",
+                name: safeClientName,
+                email: safeClientEmail,
+                phone: sanitizeString(pdClient.phone || "", 20),
                 company: pdClient.company || "",
               },
               requirements: pdReqs as Record<string, unknown>,
@@ -881,6 +909,7 @@ This helps us create your project brief.`,
 
             // Build confirmation message
             responseText = `Your project has been created successfully.\n\n**Project:** ${projectName}\n**Invoice:** ${invoiceNumber} — $${budgetMax.toLocaleString()}\n**Status:** Pending Payment\n\n${isNewUser ? `An account has been created for you. You can log in at wall-v.com using your email and the temporary password that will be sent to you.\n\n` : ""}You can track your project and make payment from your dashboard at wall-v.com/dashboard.\n\nIs there anything else you'd like help with?`;
+            } // end inner else (valid email)
           }
       } catch (err) {
         console.error("Project creation error:", err);
