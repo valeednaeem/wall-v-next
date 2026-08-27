@@ -4,7 +4,7 @@ import { connectToDatabase } from "@/lib/mongodb";
 import User from "@/models/user";
 import PasswordResetToken from "@/models/password-reset-token";
 import { sendEmail, generatePasswordResetEmail } from "@/lib/mail";
-import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
+import { checkRateLimit, getClientIp } from "@/lib/security";
 
 export async function POST(request: Request) {
   try {

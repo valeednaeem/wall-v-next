@@ -16,6 +16,7 @@ import {
   sanitizeString,
   detectRegistrationAbuse,
   logSecurityEvent,
+  verifyCaptcha,
 } from "@/lib/security";
 
 export async function POST(request: Request) {
@@ -59,6 +60,23 @@ export async function POST(request: Request) {
         blocked: true,
       });
       return NextResponse.json({ error: "Registration failed" }, { status: 400 });
+    }
+
+    // ─── CAPTCHA Verification ──────────────────────────────────────────
+    const captchaToken = body["cf-turnstile-response"] || body.captchaToken;
+    const captchaResult = await verifyCaptcha(captchaToken, ip);
+    if (!captchaResult.success) {
+      await logSecurityEvent({
+        type: "captcha_failed",
+        severity: "medium",
+        ip,
+        userAgent,
+        path: "/api/auth/signup",
+        method: "POST",
+        details: { email: email || "unknown", error: captchaResult.error },
+        blocked: true,
+      });
+      return NextResponse.json({ error: "CAPTCHA verification failed" }, { status: 400 });
     }
 
     // ─── Rate Limiting ─────────────────────────────────────────────────

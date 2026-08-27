@@ -11,6 +11,8 @@ import { generateDemoHTML } from "@/lib/demo-generator";
 import { sendEmail, projectCreatedEmail } from "@/services/email";
 import { corsHeaders, handleOPTIONS } from "@/lib/cors";
 import { logError } from "@/lib/error-logger";
+import { checkRateLimit, getClientIp, logSecurityEvent } from "@/lib/security";
+import crypto from "crypto";
 
 function slugify(text: string): string {
   return text
@@ -416,7 +418,40 @@ function extractVoicePayload(body: Record<string, unknown>): NormalizedVoicePayl
 
 export async function POST(request: Request) {
   const headers = corsHeaders(request);
+  const ip = getClientIp(request);
+
   try {
+    // Rate limit: 30 requests per minute per IP
+    const rl = checkRateLimit("webhook:dograh:" + ip, 30, 60 * 1000);
+    if (!rl.allowed) {
+      await logSecurityEvent({
+        type: "webhook_rate_limit",
+        severity: "medium",
+        ip,
+        path: "/api/webhooks/dograh",
+        method: "POST",
+        blocked: true,
+      });
+      return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429, headers });
+    }
+
+    // Shared secret verification (optional — configure DOGRAH_WEBHOOK_SECRET env var)
+    const webhookSecret = process.env.DOGRAH_WEBHOOK_SECRET;
+    if (webhookSecret) {
+      const providedSecret = request.headers.get("x-webhook-secret") || request.headers.get("authorization")?.replace("Bearer ", "");
+      if (!providedSecret || !crypto.timingSafeEqual(Buffer.from(providedSecret), Buffer.from(webhookSecret))) {
+        await logSecurityEvent({
+          type: "webhook_signature_invalid",
+          severity: "critical",
+          ip,
+          path: "/api/webhooks/dograh",
+          method: "POST",
+          blocked: true,
+        });
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers });
+      }
+    }
+
     const rawBody = await request.json();
     console.log("[Dograh Webhook] VOICE_WEBHOOK_RECEIVED:", JSON.stringify(rawBody).slice(0, 800));
 

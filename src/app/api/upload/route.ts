@@ -1,14 +1,16 @@
 import { NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
 import { getAuthUser } from "@/lib/auth";
+import { checkRateLimit, validateFileType, sanitizeFilename, logSecurityEvent } from "@/lib/security";
 
 const ALLOWED_TYPES = [
-  "image/jpeg", "image/png", "image/gif", "image/webp", "image/svg+xml",
+  "image/jpeg", "image/png", "image/gif", "image/webp",
   "application/pdf",
   "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   "application/vnd.ms-excel", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   "text/plain", "text/csv",
 ];
+// SVG removed from allowed types — poses stored XSS risk when rendered by consumers
 const MAX_SIZE = 10 * 1024 * 1024; // 10MB
 
 export async function POST(request: Request) {
@@ -22,6 +24,22 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Forbidden: insufficient permissions" }, { status: 403 });
     }
 
+    // Rate limit: 10 uploads per hour per user
+    const rl = checkRateLimit("file-upload:" + user.userId, 10, 60 * 60 * 1000);
+    if (!rl.allowed) {
+      await logSecurityEvent({
+        type: "file_upload_blocked",
+        severity: "medium",
+        userId: user.userId,
+        ip: request.headers.get("x-forwarded-for")?.split(",")[0] || "unknown",
+        path: "/api/upload",
+        method: "POST",
+        details: { reason: "Rate limit exceeded" },
+        blocked: true,
+      });
+      return NextResponse.json({ error: "Upload limit exceeded. Try again later." }, { status: 429 });
+    }
+
     const formData = await request.formData();
     const file = formData.get("file") as File;
 
@@ -29,7 +47,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
     }
 
+    // Validate MIME type against allowlist
     if (!ALLOWED_TYPES.includes(file.type)) {
+      await logSecurityEvent({
+        type: "file_upload_blocked",
+        severity: "medium",
+        userId: user.userId,
+        ip: request.headers.get("x-forwarded-for")?.split(",")[0] || "unknown",
+        path: "/api/upload",
+        method: "POST",
+        details: { reason: "Disallowed MIME type", mimeType: file.type, filename: file.name },
+        blocked: true,
+      });
       return NextResponse.json({ error: "File type not allowed" }, { status: 400 });
     }
 
@@ -37,10 +66,30 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "File too large (max 10MB)" }, { status: 400 });
     }
 
+    // Read file bytes for magic-byte validation
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
+    const uint8 = new Uint8Array(buffer);
 
-    const ext = file.name.split(".").pop();
+    // Validate file content matches declared MIME type
+    const typeValidation = validateFileType(file.type, uint8);
+    if (!typeValidation.valid) {
+      await logSecurityEvent({
+        type: "file_upload_blocked",
+        severity: "high",
+        userId: user.userId,
+        ip: request.headers.get("x-forwarded-for")?.split(",")[0] || "unknown",
+        path: "/api/upload",
+        method: "POST",
+        details: { reason: typeValidation.reason, declaredType: file.type, filename: file.name },
+        blocked: true,
+      });
+      return NextResponse.json({ error: "File content does not match declared type" }, { status: 400 });
+    }
+
+    // Sanitize filename and use UUID for storage
+    const safeOriginalName = sanitizeFilename(file.name);
+    const ext = safeOriginalName.split(".").pop() || "bin";
     const filename = `${uuidv4()}.${ext}`;
 
     const base64 = buffer.toString("base64");
@@ -51,7 +100,7 @@ export async function POST(request: Request) {
       data: {
         url: dataUrl,
         filename,
-        originalName: file.name,
+        originalName: safeOriginalName,
         size: file.size,
         type: file.type,
       },

@@ -7,9 +7,29 @@ import Payment from "@/models/payment";
 import PaymentGateway from "@/models/payment-gateway";
 import PaymentAuditLog from "@/models/payment-audit-log";
 import { verifyIpnHash, generateIpnResponse, generateIpnErrorResponse } from "@/services/2checkout";
+import { checkRateLimit, getClientIp, logSecurityEvent } from "@/lib/security";
 
 export async function POST(request: Request) {
   try {
+    const ip = getClientIp(request);
+
+    // Rate limit webhooks: 30 per minute per IP
+    const rl = checkRateLimit("webhook:2checkout:" + ip, 30, 60 * 1000);
+    if (!rl.allowed) {
+      await logSecurityEvent({
+        type: "webhook_rate_limit",
+        severity: "medium",
+        ip,
+        path: "/api/webhooks/2checkout",
+        method: "POST",
+        blocked: true,
+      });
+      return new NextResponse(generateIpnErrorResponse(), {
+        status: 429,
+        headers: { "Content-Type": "text/xml" },
+      });
+    }
+
     const text = await request.text();
     const params = new URLSearchParams(text);
 
@@ -25,16 +45,41 @@ export async function POST(request: Request) {
       refnoext: ipnParams.REFNOEXT,
     }));
 
+    // Require HMAC verification — never skip
     const receivedHash = ipnParams.HASH || ipnParams.HASH_SHA3 || "";
-    if (receivedHash) {
-      const isValid = verifyIpnHash(ipnParams, receivedHash);
-      if (!isValid) {
-        console.error("[2Checkout IPN] Invalid HMAC signature");
-        return new NextResponse(generateIpnErrorResponse(), {
-          status: 400,
-          headers: { "Content-Type": "text/xml" },
-        });
-      }
+    if (!receivedHash) {
+      console.error("[2Checkout IPN] Missing HMAC hash — rejecting webhook");
+      await logSecurityEvent({
+        type: "webhook_signature_invalid",
+        severity: "high",
+        ip,
+        path: "/api/webhooks/2checkout",
+        method: "POST",
+        details: { reason: "Missing HASH and HASH_SHA3" },
+        blocked: true,
+      });
+      return new NextResponse(generateIpnErrorResponse(), {
+        status: 400,
+        headers: { "Content-Type": "text/xml" },
+      });
+    }
+
+    const isValid = verifyIpnHash(ipnParams, receivedHash);
+    if (!isValid) {
+      console.error("[2Checkout IPN] Invalid HMAC signature");
+      await logSecurityEvent({
+        type: "webhook_signature_invalid",
+        severity: "high",
+        ip,
+        path: "/api/webhooks/2checkout",
+        method: "POST",
+        details: { refno: ipnParams.REFNO },
+        blocked: true,
+      });
+      return new NextResponse(generateIpnErrorResponse(), {
+        status: 400,
+        headers: { "Content-Type": "text/xml" },
+      });
     }
 
     await connectToDatabase();
