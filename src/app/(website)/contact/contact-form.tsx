@@ -187,6 +187,18 @@ export function ContactForm() {
                 Book a Call
               </Link>
             </div>
+
+            <div className="mt-8 rounded-xl border overflow-hidden">
+              <iframe
+                src="https://storage.googleapis.com/maps-solutions-6u16u38so4/locator-plus/ofmi/locator-plus.html"
+                width="100%"
+                height="300"
+                style={{ border: 0 }}
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                title="Wall-V Office Location"
+              />
+            </div>
           </div>
         </div>
       </div>
