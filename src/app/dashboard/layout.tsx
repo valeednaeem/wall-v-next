@@ -32,6 +32,8 @@ const sidebarItems: SidebarItem[] = [
     { label: "Products", href: "/dashboard/ecommerce/products", permission: "products:view" },
     { label: "Categories", href: "/dashboard/ecommerce/products/categories", permission: "categories:view" },
     { label: "Orders", href: "/dashboard/orders", permission: "orders:view" },
+    { label: "Invoices", href: "/dashboard/invoices", permission: "finance:view" },
+    { label: "Payments", href: "/dashboard/payments", permission: "finance:view" },
   ]},
   { label: "Blog", href: "/dashboard/blog", icon: <FileText className="h-4 w-4" />, permission: "blog:view", children: [
     { label: "All Posts", href: "/dashboard/blog", permission: "blog:view" },
@@ -76,7 +78,8 @@ const sidebarItems: SidebarItem[] = [
     { label: "Pricing", href: "/dashboard/settings/pricing", permission: "settings:manage" },
     { label: "Profile", href: "/dashboard/settings/profile" },
     { label: "Security", href: "/dashboard/settings/auth" },
-    { label: "Payment", href: "/dashboard/settings/payment", permission: "settings:manage" },
+    { label: "Payment Gateway", href: "/dashboard/settings/payments", permission: "settings:manage" },
+    { label: "Payment Stats", href: "/dashboard/settings/payment", permission: "settings:manage" },
     { label: "Legal & Compliance", href: "/dashboard/settings/legal", permission: "settings:manage" },
   ]},
   { label: "Error Logs", href: "/dashboard/errors", icon: <AlertTriangle className="h-4 w-4" />, permission: "settings:view" },
