@@ -28,8 +28,13 @@ interface Role {
 const ROLE_COLORS: Record<string, string> = {
   "super-admin": "bg-red-100 text-red-700",
   "admin": "bg-orange-100 text-orange-700",
-  "manager": "bg-blue-100 text-blue-700",
+  "project-manager": "bg-blue-100 text-blue-700",
   "staff": "bg-green-100 text-green-700",
+  "developer": "bg-purple-100 text-purple-700",
+  "designer": "bg-pink-100 text-pink-700",
+  "marketing": "bg-indigo-100 text-indigo-700",
+  "sales": "bg-yellow-100 text-yellow-700",
+  "support": "bg-teal-100 text-teal-700",
   "customer": "bg-gray-100 text-gray-700",
 };
 
@@ -248,8 +253,13 @@ export default function UsersPage() {
           <option value="">All Roles</option>
           <option value="super-admin">Super Admin</option>
           <option value="admin">Admin</option>
-          <option value="manager">Manager</option>
+          <option value="project-manager">Project Manager</option>
           <option value="staff">Staff</option>
+          <option value="developer">Developer</option>
+          <option value="designer">Designer</option>
+          <option value="marketing">Marketing</option>
+          <option value="sales">Sales</option>
+          <option value="support">Support</option>
           <option value="customer">Customer</option>
         </select>
       </div>

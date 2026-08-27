@@ -54,7 +54,16 @@ export async function PUT(request: Request, { params }: RouteParams) {
 
     if (body.name) user.name = body.name;
     if (body.email) user.email = body.email.toLowerCase();
-    if (body.role) user.role = body.role;
+    if (body.role) {
+      // Role assignment security
+      if (role !== "super-admin" && body.role === "super-admin") {
+        return NextResponse.json({ success: false, error: "Only super-admin can assign super-admin role" }, { status: 403 });
+      }
+      if (!["super-admin", "admin"].includes(role || "") && body.role !== "customer") {
+        return NextResponse.json({ success: false, error: "You can only assign the customer role" }, { status: 403 });
+      }
+      user.role = body.role;
+    }
     if (typeof body.isActive === "boolean") user.isActive = body.isActive;
     if (body.phone !== undefined) user.phone = body.phone;
     if (body.company !== undefined) user.company = body.company;

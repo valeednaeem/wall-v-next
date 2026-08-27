@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import User from "@/models/user";
-import Role from "@/models/role";
 import { auth } from "@/lib/auth";
 import bcrypt from "bcryptjs";
 
@@ -53,6 +52,15 @@ export async function POST(request: Request) {
 
     if (!name || !email || !password) {
       return NextResponse.json({ success: false, error: "Name, email, and password are required" }, { status: 400 });
+    }
+
+    // Role assignment security: prevent unauthorized privilege escalation
+    const targetRole = userRole || "customer";
+    if (role !== "super-admin" && targetRole === "super-admin") {
+      return NextResponse.json({ success: false, error: "Only super-admin can assign super-admin role" }, { status: 403 });
+    }
+    if (!["super-admin", "admin"].includes(role || "") && !["customer"].includes(targetRole)) {
+      return NextResponse.json({ success: false, error: "You can only assign the customer role" }, { status: 403 });
     }
 
     await connectToDatabase();

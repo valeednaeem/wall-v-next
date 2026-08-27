@@ -14,7 +14,7 @@ import {
 interface SidebarChild {
   label: string;
   href: string;
-  roles?: string[];
+  permission?: string;
 }
 
 interface SidebarItem {
@@ -22,64 +22,64 @@ interface SidebarItem {
   href: string;
   icon: React.ReactNode;
   children?: SidebarChild[];
-  roles?: string[];
+  permission?: string;
 }
 
 const sidebarItems: SidebarItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: <LayoutDashboard className="h-4 w-4" /> },
-  { label: "Projects", href: "/dashboard/projects", icon: <FolderKanban className="h-4 w-4" /> },
-  { label: "E-Commerce", href: "/dashboard/ecommerce/products", icon: <ShoppingBag className="h-4 w-4" />, roles: ["super-admin", "admin", "manager", "staff"], children: [
-    { label: "Products", href: "/dashboard/ecommerce/products" },
-    { label: "Categories", href: "/dashboard/ecommerce/products/categories" },
-    { label: "Orders", href: "/dashboard/orders" },
+  { label: "Projects", href: "/dashboard/projects", icon: <FolderKanban className="h-4 w-4" />, permission: "projects:view" },
+  { label: "E-Commerce", href: "/dashboard/ecommerce/products", icon: <ShoppingBag className="h-4 w-4" />, permission: "products:view", children: [
+    { label: "Products", href: "/dashboard/ecommerce/products", permission: "products:view" },
+    { label: "Categories", href: "/dashboard/ecommerce/products/categories", permission: "categories:view" },
+    { label: "Orders", href: "/dashboard/orders", permission: "orders:view" },
   ]},
-  { label: "Blog", href: "/dashboard/blog", icon: <FileText className="h-4 w-4" />, roles: ["super-admin", "admin", "manager"], children: [
-    { label: "All Posts", href: "/dashboard/blog" },
-    { label: "New Post", href: "/dashboard/blog/new" },
+  { label: "Blog", href: "/dashboard/blog", icon: <FileText className="h-4 w-4" />, permission: "blog:view", children: [
+    { label: "All Posts", href: "/dashboard/blog", permission: "blog:view" },
+    { label: "New Post", href: "/dashboard/blog/new", permission: "blog:create" },
   ]},
-  { label: "AI", href: "/dashboard/ai-conversations", icon: <Bot className="h-4 w-4" />, roles: ["super-admin", "admin", "manager"], children: [
-    { label: "Conversations", href: "/dashboard/ai-conversations" },
-    { label: "All Agents", href: "/dashboard/agents" },
-    { label: "New Agent", href: "/dashboard/agents/new", roles: ["super-admin", "admin"] },
-    { label: "Project Requests", href: "/dashboard/agents/project-requests", roles: ["super-admin", "admin", "manager"] },
-    { label: "Approvals", href: "/dashboard/agents/approvals", roles: ["super-admin", "admin"] },
-    { label: "Audit Logs", href: "/dashboard/agents/audit-logs", roles: ["super-admin", "admin"] },
+  { label: "AI", href: "/dashboard/ai-conversations", icon: <Bot className="h-4 w-4" />, permission: "ai:access", children: [
+    { label: "Conversations", href: "/dashboard/ai-conversations", permission: "ai:access" },
+    { label: "All Agents", href: "/dashboard/agents", permission: "agents:view" },
+    { label: "New Agent", href: "/dashboard/agents/new", permission: "agents:create" },
+    { label: "Project Requests", href: "/dashboard/agents/project-requests", permission: "agents:view" },
+    { label: "Approvals", href: "/dashboard/agents/approvals", permission: "agents:approve" },
+    { label: "Audit Logs", href: "/dashboard/agents/audit-logs", permission: "agents:monitor" },
   ]},
-  { label: "CRM", href: "/dashboard/crm", icon: <Users className="h-4 w-4" />, roles: ["super-admin", "admin", "manager", "staff"], children: [
-    { label: "Overview", href: "/dashboard/crm" },
-    { label: "Leads", href: "/dashboard/crm/leads" },
-    { label: "Clients", href: "/dashboard/crm/clients" },
-    { label: "Inquiries", href: "/dashboard/crm/inquiries" },
+  { label: "CRM", href: "/dashboard/crm", icon: <Users className="h-4 w-4" />, permission: "crm:view", children: [
+    { label: "Overview", href: "/dashboard/crm", permission: "crm:view" },
+    { label: "Leads", href: "/dashboard/crm/leads", permission: "crm:leads" },
+    { label: "Clients", href: "/dashboard/crm/clients", permission: "crm:clients" },
+    { label: "Inquiries", href: "/dashboard/crm/inquiries", permission: "crm:inquiries" },
   ]},
-  { label: "Marketing", href: "/dashboard/marketing", icon: <BarChart3 className="h-4 w-4" />, roles: ["super-admin", "admin", "manager"], children: [
-    { label: "Overview", href: "/dashboard/marketing" },
-    { label: "Google Services", href: "/dashboard/marketing/google" },
-    { label: "SEO", href: "/dashboard/marketing/seo" },
-    { label: "Tracking", href: "/dashboard/marketing/tracking" },
-    { label: "Social Sharing", href: "/dashboard/marketing/social" },
-    { label: "Diagnostics", href: "/dashboard/marketing/diagnostics" },
+  { label: "Marketing", href: "/dashboard/marketing", icon: <BarChart3 className="h-4 w-4" />, permission: "marketing:view", children: [
+    { label: "Overview", href: "/dashboard/marketing", permission: "marketing:view" },
+    { label: "Google Services", href: "/dashboard/marketing/google", permission: "google:analytics:view" },
+    { label: "SEO", href: "/dashboard/marketing/seo", permission: "seo:view" },
+    { label: "Tracking", href: "/dashboard/marketing/tracking", permission: "tracking:view" },
+    { label: "Social Sharing", href: "/dashboard/marketing/social", permission: "marketing:view" },
+    { label: "Diagnostics", href: "/dashboard/marketing/diagnostics", permission: "marketing:view" },
   ]},
-  { label: "Hosting", href: "/dashboard/hosting", icon: <Cloud className="h-4 w-4" />, roles: ["super-admin", "admin", "manager"], children: [
-    { label: "Hosting Plans", href: "/dashboard/hosting" },
-    { label: "Hosting Offers", href: "/dashboard/hosting/offers" },
+  { label: "Hosting", href: "/dashboard/hosting", icon: <Cloud className="h-4 w-4" />, permission: "hosting:view", children: [
+    { label: "Hosting Plans", href: "/dashboard/hosting", permission: "hosting:view" },
+    { label: "Hosting Offers", href: "/dashboard/hosting/offers", permission: "hosting:manage" },
   ]},
-  { label: "Domains", href: "/dashboard/domains", icon: <Globe className="h-4 w-4" />, roles: ["super-admin", "admin", "manager"], children: [
-    { label: "Domain TLDs", href: "/dashboard/domains" },
-    { label: "Domain Offers", href: "/dashboard/domains/offers" },
+  { label: "Domains", href: "/dashboard/domains", icon: <Globe className="h-4 w-4" />, permission: "domains:view", children: [
+    { label: "Domain TLDs", href: "/dashboard/domains", permission: "domains:view" },
+    { label: "Domain Offers", href: "/dashboard/domains/offers", permission: "domains:manage" },
   ]},
-  { label: "Users", href: "/dashboard/users", icon: <Users className="h-4 w-4" />, roles: ["super-admin", "admin"], children: [
-    { label: "All Users", href: "/dashboard/users" },
-    { label: "Roles", href: "/dashboard/users/roles" },
+  { label: "Users", href: "/dashboard/users", icon: <Users className="h-4 w-4" />, permission: "users:view", children: [
+    { label: "All Users", href: "/dashboard/users", permission: "users:view" },
+    { label: "Roles", href: "/dashboard/users/roles", permission: "roles:view" },
   ]},
   { label: "Settings", href: "/dashboard/settings", icon: <Settings className="h-4 w-4" />, children: [
-    { label: "General", href: "/dashboard/settings", roles: ["super-admin", "admin"] },
-    { label: "Pricing", href: "/dashboard/settings/pricing", roles: ["super-admin", "admin"] },
+    { label: "General", href: "/dashboard/settings", permission: "settings:manage" },
+    { label: "Pricing", href: "/dashboard/settings/pricing", permission: "settings:manage" },
     { label: "Profile", href: "/dashboard/settings/profile" },
     { label: "Security", href: "/dashboard/settings/auth" },
-    { label: "Payment", href: "/dashboard/settings/payment", roles: ["super-admin", "admin"] },
-    { label: "Legal & Compliance", href: "/dashboard/settings/legal", roles: ["super-admin", "admin"] },
+    { label: "Payment", href: "/dashboard/settings/payment", permission: "settings:manage" },
+    { label: "Legal & Compliance", href: "/dashboard/settings/legal", permission: "settings:manage" },
   ]},
-  { label: "Error Logs", href: "/dashboard/errors", icon: <AlertTriangle className="h-4 w-4" />, roles: ["super-admin", "admin"] },
+  { label: "Error Logs", href: "/dashboard/errors", icon: <AlertTriangle className="h-4 w-4" />, permission: "settings:view" },
 ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -92,25 +92,32 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const user = session?.user;
   const userRole = (user as { role?: string })?.role || "customer";
+  const userPermissions = (user as { permissions?: string[] })?.permissions || [];
   const userName = user?.name || "User";
   const userEmail = user?.email || "";
   const userInitial = userName.charAt(0).toUpperCase();
+  const isSuperAdmin = userPermissions.includes("*");
+
+  function hasPermission(permission?: string): boolean {
+    if (!permission) return true;
+    if (isSuperAdmin) return true;
+    return userPermissions.includes(permission);
+  }
 
   function hasAccess(item: SidebarItem): boolean {
-    if (!item.roles) return true;
-    return item.roles.includes(userRole);
+    return hasPermission(item.permission);
   }
 
   const filteredSidebarItems = sidebarItems.filter((item) => {
     if (!hasAccess(item)) return false;
     if (item.children) {
-      const filteredChildren = item.children.filter((child) => !child.roles || child.roles.includes(userRole));
+      const filteredChildren = item.children.filter((child) => hasPermission(child.permission));
       if (filteredChildren.length === 0) return false;
     }
     return true;
   }).map((item) => {
     if (item.children) {
-      return { ...item, children: item.children.filter((child) => !child.roles || child.roles.includes(userRole)) };
+      return { ...item, children: item.children.filter((child) => hasPermission(child.permission)) };
     }
     return item;
   });
@@ -196,6 +203,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <div className="flex-1 text-left min-w-0">
               <p className="text-sm font-medium truncate">{userName}</p>
               <p className="text-xs text-muted-foreground truncate">{userEmail}</p>
+              <p className="text-[10px] text-muted-foreground truncate capitalize">{userRole.replace(/-/g, " ")}</p>
             </div>
           </button>
 
@@ -216,7 +224,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <hr className="my-1" />
               <button
                 onClick={() => {
-                  // Clear custom JWT cookie before signing out via NextAuth
                   document.cookie = "token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
                   signOut({ callbackUrl: "/" });
                   setUserMenuOpen(false);

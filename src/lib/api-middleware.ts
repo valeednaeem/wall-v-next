@@ -4,6 +4,7 @@ import { getAuthUserFromCookie } from "./auth-cookie";
 import type { JWTPayload } from "./jwt";
 import Role from "@/models/role";
 import { connectToDatabase } from "@/lib/mongodb";
+import { hasAnyPermission, getRolePermissions } from "./permissions";
 
 export interface AuthContext {
   user: JWTPayload;
@@ -19,8 +20,10 @@ function jsonError(message: string, status: number): NextResponse {
   );
 }
 
+// ─── Core Auth ───────────────────────────────────────────────────────────────
+
 export async function requireAuth(
-  request: NextRequest
+  _request: NextRequest
 ): Promise<{ auth: AuthContext; error?: NextResponse }> {
   const user = await getAuthUser();
   if (!user) {
@@ -31,7 +34,7 @@ export async function requireAuth(
 }
 
 export async function requireAuthFromCookie(
-  request: NextRequest
+  _request: NextRequest
 ): Promise<{ auth: AuthContext; error?: NextResponse }> {
   const user = await getAuthUserFromCookie();
   if (!user) {
@@ -41,10 +44,13 @@ export async function requireAuthFromCookie(
   return { auth: { user, fullUser } };
 }
 
+// ─── Role-Based Access ───────────────────────────────────────────────────────
+// Use these for simple role-gating where permission granularity isn't needed.
+
 const SUPER_ADMIN_ROLES = ["super-admin"];
 const ADMIN_ROLES = ["super-admin", "admin"];
-const MANAGER_ROLES = ["super-admin", "admin", "manager"];
-const STAFF_ROLES = ["super-admin", "admin", "manager", "staff"];
+const INTERNAL_ROLES = ["super-admin", "admin", "project-manager", "staff", "developer", "designer", "marketing", "sales", "support"];
+const ALL_AUTHENTICATED = ["super-admin", "admin", "project-manager", "staff", "developer", "designer", "marketing", "sales", "support", "customer"];
 
 export function requireRole(
   user: JWTPayload,
@@ -55,6 +61,33 @@ export function requireRole(
   }
   return null;
 }
+
+export function requireSuperAdmin(user: JWTPayload): NextResponse | null {
+  return requireRole(user, SUPER_ADMIN_ROLES);
+}
+
+export function requireAdmin(user: JWTPayload): NextResponse | null {
+  return requireRole(user, ADMIN_ROLES);
+}
+
+export function requireInternal(user: JWTPayload): NextResponse | null {
+  return requireRole(user, INTERNAL_ROLES);
+}
+
+export function requireAuthenticated(user: JWTPayload): NextResponse | null {
+  return requireRole(user, ALL_AUTHENTICATED);
+}
+
+export function isAdmin(user: JWTPayload): boolean {
+  return ADMIN_ROLES.includes(user.role);
+}
+
+export function isInternal(user: JWTPayload): boolean {
+  return INTERNAL_ROLES.includes(user.role);
+}
+
+// ─── Permission-Based Access ─────────────────────────────────────────────────
+// Use these for fine-grained resource access control. Preferred over role checks.
 
 export async function requirePermission(
   user: JWTPayload,
@@ -69,29 +102,30 @@ export async function requirePermission(
   return null;
 }
 
-export function requireSuperAdmin(user: JWTPayload): NextResponse | null {
-  return requireRole(user, SUPER_ADMIN_ROLES);
+export async function requireAnyPermission(
+  user: JWTPayload,
+  permissions: string[]
+): Promise<NextResponse | null> {
+  await connectToDatabase();
+  const role = await Role.findOne({ slug: user.role }).select("permissions").lean();
+  const userPerms = role?.permissions || (user.role === "super-admin" ? ["*"] : []);
+  if (!userPerms.includes("*") && !hasAnyPermission(userPerms, permissions)) {
+    return jsonError("You do not have permission to perform this action.", 403);
+  }
+  return null;
 }
 
-export function requireAdmin(user: JWTPayload): NextResponse | null {
-  return requireRole(user, ADMIN_ROLES);
+// ─── Resolve permissions for a user (from DB or hierarchy) ───────────────────
+
+export async function resolveUserPermissions(user: JWTPayload): Promise<string[]> {
+  await connectToDatabase();
+  const role = await Role.findOne({ slug: user.role }).select("permissions").lean();
+  if (role?.permissions) return role.permissions;
+  // Fallback to hierarchy
+  return getRolePermissions(user.role);
 }
 
-export function requireManager(user: JWTPayload): NextResponse | null {
-  return requireRole(user, MANAGER_ROLES);
-}
-
-export function requireStaff(user: JWTPayload): NextResponse | null {
-  return requireRole(user, STAFF_ROLES);
-}
-
-export function isAdmin(user: JWTPayload): boolean {
-  return ADMIN_ROLES.includes(user.role);
-}
-
-export function isStaff(user: JWTPayload): boolean {
-  return STAFF_ROLES.includes(user.role);
-}
+// ─── Combined Auth + Role/Permission ─────────────────────────────────────────
 
 export async function requireAuthAndRole(
   request: NextRequest,
@@ -110,17 +144,13 @@ export async function requireAdminAuth(
   return requireAuthAndRole(request, ADMIN_ROLES);
 }
 
-export async function requireManagerAuth(
+export async function requireSuperAdminAuth(
   request: NextRequest
 ): Promise<{ auth: AuthContext; error?: NextResponse }> {
-  return requireAuthAndRole(request, MANAGER_ROLES);
+  return requireAuthAndRole(request, SUPER_ADMIN_ROLES);
 }
 
-export async function requireStaffAuth(
-  request: NextRequest
-): Promise<{ auth: AuthContext; error?: NextResponse }> {
-  return requireAuthAndRole(request, STAFF_ROLES);
-}
+// ─── Convenience Response Helpers ────────────────────────────────────────────
 
 export function successResponse(data: Record<string, unknown>, status = 200): NextResponse {
   return NextResponse.json(data, { status });

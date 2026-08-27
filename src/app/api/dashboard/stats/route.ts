@@ -10,7 +10,6 @@ import Lead from "@/models/lead";
 import Order from "@/models/order";
 import Agent from "@/models/agent";
 import AgentConversation from "@/models/agent-conversation";
-import AgentExecution from "@/models/agent-execution";
 import ProjectRequest from "@/models/project-request";
 import { getAuthUser } from "@/lib/auth";
 import { requirePermission } from "@/lib/api-middleware";
@@ -27,9 +26,8 @@ export async function GET() {
 
     await connectToDatabase();
 
-    // Customer/Client role: return their own data only
-    const customerRoles = ["customer", "CLIENT", "client"];
-    if (customerRoles.includes(user.role)) {
+    // Customer role: return their own data only
+    if (user.role === "customer") {
       // Find client records linked to this user
       const linkedClients = await Client.find({
         $or: [

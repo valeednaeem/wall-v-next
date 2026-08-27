@@ -95,7 +95,7 @@ const UserSchema = new Schema<IUser>(
       tags: [String],
       featured: { type: Boolean, default: false },
     }],
-    role: { type: String, default: "customer", enum: ["super-admin", "admin", "manager", "staff", "customer"] },
+    role: { type: String, default: "customer", enum: ["super-admin", "admin", "project-manager", "staff", "developer", "designer", "marketing", "sales", "support", "customer"] },
     emailVerified: Date,
     isEmailVerified: { type: Boolean, default: false },
     isActive: { type: Boolean, default: true },
