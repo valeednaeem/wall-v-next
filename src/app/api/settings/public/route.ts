@@ -43,9 +43,10 @@ export async function GET() {
           apiUrl: grouped.voice?.apiUrl || process.env.DOGRAH_API_URL || "",
         },
         contact: {
-          email: grouped.contact?.email || "",
-          phone: grouped.contact?.phone || "",
-          address: grouped.contact?.address || "",
+          email: grouped.contact?.email || "info@wall-v.com",
+          phone: grouped.contact?.phone || "+92 300 1234567",
+          address: grouped.contact?.address || "Wall-V Technologies\nKarachi, Pakistan",
+          businessHours: grouped.contact?.businessHours || "Monday - Friday: 9:00 AM - 6:00 PM\nSaturday: 10:00 AM - 2:00 PM",
         },
       },
     });

@@ -7,6 +7,7 @@ interface ContactSettings {
   email: string;
   phone: string;
   address: string;
+  businessHours: string;
 }
 
 export function ContactForm() {
@@ -14,6 +15,7 @@ export function ContactForm() {
     email: "",
     phone: "",
     address: "",
+    businessHours: "",
   });
   const [form, setForm] = useState({
     name: "",
@@ -194,13 +196,12 @@ export function ContactForm() {
                   <p className="text-muted-foreground whitespace-pre-line">{contactInfo.address}</p>
                 </div>
               )}
-              <div>
-                <h3 className="font-medium">Business Hours</h3>
-                <p className="text-muted-foreground">
-                  Monday - Friday: 9:00 AM - 6:00 PM<br />
-                  Saturday: 10:00 AM - 2:00 PM
-                </p>
-              </div>
+              {contactInfo.businessHours && (
+                <div>
+                  <h3 className="font-medium">Business Hours</h3>
+                  <p className="text-muted-foreground whitespace-pre-line">{contactInfo.businessHours}</p>
+                </div>
+              )}
             </div>
 
             <div className="mt-8 rounded-xl border bg-muted/30 p-6">
