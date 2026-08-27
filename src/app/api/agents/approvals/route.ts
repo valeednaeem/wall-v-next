@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthUser } from "@/lib/auth";
+import { PERMISSIONS, hasPermission } from "@/lib/permissions";
 import AgentApproval from "@/models/agent-approval";
 import AgentAuditLog from "@/models/agent-audit-log";
 import connectToDatabase from "@/lib/mongodb";
@@ -8,6 +9,9 @@ export async function GET(request: NextRequest) {
   try {
     const user = await getAuthUser();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!hasPermission(user.permissions || [], PERMISSIONS.AGENTS_APPROVE)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
 
     await connectToDatabase();
     const { searchParams } = new URL(request.url);
@@ -43,6 +47,9 @@ export async function PUT(request: NextRequest) {
   try {
     const user = await getAuthUser();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!hasPermission(user.permissions || [], PERMISSIONS.AGENTS_APPROVE)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
 
     await connectToDatabase();
     const body = await request.json();

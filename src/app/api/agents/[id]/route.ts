@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthUser } from "@/lib/auth";
+import { PERMISSIONS, hasPermission } from "@/lib/permissions";
 import Agent from "@/models/agent";
 import AgentConversation from "@/models/agent-conversation";
 import AgentExecution from "@/models/agent-execution";
@@ -12,6 +13,9 @@ export async function GET(
   try {
     const user = await getAuthUser();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!hasPermission(user.permissions || [], PERMISSIONS.AGENTS_VIEW)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
 
     await connectToDatabase();
     const { id } = await params;
@@ -52,6 +56,9 @@ export async function PUT(
   try {
     const user = await getAuthUser();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!hasPermission(user.permissions || [], PERMISSIONS.AGENTS_EDIT)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
 
     await connectToDatabase();
     const { id } = await params;
@@ -89,6 +96,9 @@ export async function DELETE(
   try {
     const user = await getAuthUser();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!hasPermission(user.permissions || [], PERMISSIONS.AGENTS_DELETE)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
 
     await connectToDatabase();
     const { id } = await params;

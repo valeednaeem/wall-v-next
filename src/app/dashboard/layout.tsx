@@ -1,14 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
 import { useSession, signOut } from "next-auth/react";
 import {
-  LayoutDashboard, Package, FileText, FolderKanban, Users, Receipt,
-  Cloud, Globe, Headphones, Settings, ShoppingBag, Tags, ChevronRight,
-  Menu, X, LogOut, User, CreditCard, Shield, Search, Bell, MessageSquare, Phone, AlertTriangle, Eye,
-  BarChart3, Globe2, SearchCheck, Store, Target, Share2, LineChart, Zap, Bot
+  LayoutDashboard, FileText, FolderKanban, Users,
+  Cloud, Globe, Settings, ShoppingBag, ChevronRight,
+  Menu, X, LogOut, User, CreditCard, Shield, Search, Bell, AlertTriangle,
+  BarChart3, Bot
 } from "lucide-react";
 
 interface SidebarChild {
@@ -27,6 +27,7 @@ interface SidebarItem {
 
 const sidebarItems: SidebarItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: <LayoutDashboard className="h-4 w-4" /> },
+  { label: "Projects", href: "/dashboard/projects", icon: <FolderKanban className="h-4 w-4" /> },
   { label: "E-Commerce", href: "/dashboard/ecommerce/products", icon: <ShoppingBag className="h-4 w-4" />, roles: ["super-admin", "admin", "manager", "staff"], children: [
     { label: "Products", href: "/dashboard/ecommerce/products" },
     { label: "Categories", href: "/dashboard/ecommerce/products/categories" },
@@ -36,14 +37,10 @@ const sidebarItems: SidebarItem[] = [
     { label: "All Posts", href: "/dashboard/blog" },
     { label: "New Post", href: "/dashboard/blog/new" },
   ]},
-  { label: "Projects", href: "/dashboard/projects", icon: <FolderKanban className="h-4 w-4" /> },
-  { label: "Production", href: "/dashboard/production", icon: <Package className="h-4 w-4" />, roles: ["super-admin", "admin", "manager"] },
-  { label: "AI Conversations", href: "/dashboard/ai-conversations", icon: <MessageSquare className="h-4 w-4" />, roles: ["super-admin", "admin", "manager"] },
-  { label: "Voice Agent Calls", href: "/dashboard/voice-agent-conversations", icon: <Phone className="h-4 w-4" />, roles: ["super-admin", "admin", "manager"] },
-  { label: "AI Agents", href: "/dashboard/agents", icon: <Bot className="h-4 w-4" />, roles: ["super-admin", "admin", "manager", "staff"], children: [
+  { label: "AI", href: "/dashboard/ai-conversations", icon: <Bot className="h-4 w-4" />, roles: ["super-admin", "admin", "manager"], children: [
+    { label: "Conversations", href: "/dashboard/ai-conversations" },
     { label: "All Agents", href: "/dashboard/agents" },
     { label: "New Agent", href: "/dashboard/agents/new", roles: ["super-admin", "admin"] },
-    { label: "Conversations", href: "/dashboard/agents/conversations", roles: ["super-admin", "admin", "manager"] },
     { label: "Project Requests", href: "/dashboard/agents/project-requests", roles: ["super-admin", "admin", "manager"] },
     { label: "Approvals", href: "/dashboard/agents/approvals", roles: ["super-admin", "admin"] },
     { label: "Audit Logs", href: "/dashboard/agents/audit-logs", roles: ["super-admin", "admin"] },
@@ -62,7 +59,6 @@ const sidebarItems: SidebarItem[] = [
     { label: "Social Sharing", href: "/dashboard/marketing/social" },
     { label: "Diagnostics", href: "/dashboard/marketing/diagnostics" },
   ]},
-  { label: "Invoices", href: "/dashboard/invoices", icon: <Receipt className="h-4 w-4" /> },
   { label: "Hosting", href: "/dashboard/hosting", icon: <Cloud className="h-4 w-4" />, roles: ["super-admin", "admin", "manager"], children: [
     { label: "Hosting Plans", href: "/dashboard/hosting" },
     { label: "Hosting Offers", href: "/dashboard/hosting/offers" },
@@ -71,10 +67,6 @@ const sidebarItems: SidebarItem[] = [
     { label: "Domain TLDs", href: "/dashboard/domains" },
     { label: "Domain Offers", href: "/dashboard/domains/offers" },
   ]},
-  { label: "Support", href: "/dashboard/support", icon: <Headphones className="h-4 w-4" /> },
-  { label: "Client Portal", href: "/dashboard/client-portal", icon: <Users className="h-4 w-4" /> },
-  { label: "Error Logs", href: "/dashboard/errors", icon: <AlertTriangle className="h-4 w-4" />, roles: ["super-admin", "admin"] },
-  { label: "Previews", href: "/dashboard/previews", icon: <Eye className="h-4 w-4" />, roles: ["super-admin", "admin", "manager"] },
   { label: "Users", href: "/dashboard/users", icon: <Users className="h-4 w-4" />, roles: ["super-admin", "admin"], children: [
     { label: "All Users", href: "/dashboard/users" },
     { label: "Roles", href: "/dashboard/users/roles" },
@@ -87,11 +79,11 @@ const sidebarItems: SidebarItem[] = [
     { label: "Payment", href: "/dashboard/settings/payment", roles: ["super-admin", "admin"] },
     { label: "Legal & Compliance", href: "/dashboard/settings/legal", roles: ["super-admin", "admin"] },
   ]},
+  { label: "Error Logs", href: "/dashboard/errors", icon: <AlertTriangle className="h-4 w-4" />, roles: ["super-admin", "admin"] },
 ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const router = useRouter();
   const { data: session } = useSession();
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -104,18 +96,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const userEmail = user?.email || "";
   const userInitial = userName.charAt(0).toUpperCase();
 
-  const ADMIN_ROLES = ["super-admin", "admin"];
-  const MANAGER_ROLES = ["super-admin", "admin", "manager"];
-  const STAFF_ROLES = ["super-admin", "admin", "manager", "staff"];
-
   function hasAccess(item: SidebarItem): boolean {
     if (!item.roles) return true;
     return item.roles.includes(userRole);
-  }
-
-  function hasChildAccess(item: SidebarItem): boolean {
-    if (!item.children) return true;
-    return item.children.some((child) => !child.roles || child.roles.includes(userRole));
   }
 
   const filteredSidebarItems = sidebarItems.filter((item) => {

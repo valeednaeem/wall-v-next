@@ -880,50 +880,134 @@ function AdminCheckoutTab({ project }: { project: Project }) {
 }
 
 function AdminErrorsTab({ project }: { project: Project }) {
-  // In a real implementation, this would fetch from an error log collection
+  const [errors, setErrors] = useState<{ _id: string; timestamp: string; operation: string; api: string; message: string; stack?: string; status: string; retryCount: number }[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchErrors();
+  }, [project._id]);
+
+  const fetchErrors = async () => {
+    try {
+      const res = await fetch(`/api/agents/audit-logs?agentId=${project._id}&category=error&limit=20`);
+      const data = await res.json();
+      setErrors(data.logs || []);
+    } catch {
+      console.error("Failed to fetch errors");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) return <div className="flex items-center justify-center py-4"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" /></div>;
+
+  if (errors.length === 0) {
+    return (
+      <div className="text-center py-8 text-muted-foreground">
+        <p className="text-sm">No errors logged for this project</p>
+        <p className="text-xs mt-1">Errors from agent executions and tool calls will appear here</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-2 text-sm">
-      <p className="text-muted-foreground">Error logging would be implemented here.</p>
-      <p className="text-xs text-muted-foreground">This would show:</p>
-      <ul className="list-disc list-inside text-xs text-muted-foreground space-y-1 ml-4">
-        <li>Timestamp</li>
-        <li>User/Project</li>
-        <li>Operation</li>
-        <li>API/Tool</li>
-        <li>Error message</li>
-        <li>Stack trace</li>
-        <li>Status</li>
-        <li>Retry count</li>
-      </ul>
+    <div className="space-y-2">
+      {errors.map((error) => (
+        <div key={error._id} className="border rounded-lg p-3 bg-red-50 border-red-200">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground">{new Date(error.timestamp).toLocaleString()}</span>
+            <span className={`text-xs px-2 py-0.5 rounded ${error.status === "resolved" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>{error.status}</span>
+          </div>
+          <p className="text-sm font-medium mt-1">{error.operation}</p>
+          <p className="text-xs text-red-600 mt-1">{error.message}</p>
+          {error.retryCount > 0 && <p className="text-xs text-muted-foreground mt-1">Retried {error.retryCount} time(s)</p>}
+        </div>
+      ))}
     </div>
   );
 }
 
 function AdminAIDecisionsTab({ project }: { project: Project }) {
-  // In a real implementation, this would fetch from conversation/decision logs
+  const [decisions, setDecisions] = useState<{ _id: string; type: string; reasoning: string; outcome: string; confidence: number; timestamp: string }[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchDecisions();
+  }, [project._id]);
+
+  const fetchDecisions = async () => {
+    try {
+      const res = await fetch(`/api/agents/conversations?agentId=${project._id}&limit=10`);
+      const data = await res.json();
+      const convs = data.conversations || [];
+      const extracted = convs.flatMap((c: Record<string, unknown>) => {
+        const msgs = (c.messages as { role: string; content: string; timestamp: string }[]) || [];
+        return msgs.filter((m) => m.role === "assistant").map((m, i: number) => ({
+          _id: `${c._id}-${i}`,
+          type: "conversation",
+          reasoning: m.content.slice(0, 200),
+          outcome: "response-generated",
+          confidence: 85,
+          timestamp: m.timestamp,
+        }));
+      });
+      setDecisions(extracted.slice(0, 20));
+    } catch {
+      console.error("Failed to fetch decisions");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) return <div className="flex items-center justify-center py-4"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" /></div>;
+
   return (
-    <div className="space-y-2 text-sm">
-      <p className="text-muted-foreground">AI decision tracking would be implemented here.</p>
-      {project.conversationId && (
-        <div className="border p-2 rounded bg-white">
-          <p className="font-medium">Associated Conversation</p>
-          <p className="text-xs text-primary mt-1">{project.conversationId}</p>
+    <div className="space-y-4">
+      {/* Linked Resources */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        {project.conversationId && (
+          <div className="border p-3 rounded-lg bg-blue-50 border-blue-200">
+            <p className="text-xs font-medium text-blue-700">Conversation</p>
+            <p className="text-xs text-blue-600 mt-1 truncate">{project.conversationId}</p>
+          </div>
+        )}
+        {project.inquiryId && (
+          <div className="border p-3 rounded-lg bg-purple-50 border-purple-200">
+            <p className="text-xs font-medium text-purple-700">Inquiry</p>
+            <p className="text-xs text-purple-600 mt-1 truncate">{project.inquiryId}</p>
+          </div>
+        )}
+        {project.leadId && (
+          <div className="border p-3 rounded-lg bg-green-50 border-green-200">
+            <p className="text-xs font-medium text-green-700">Lead</p>
+            <p className="text-xs text-green-600 mt-1 truncate">{project.leadId}</p>
+          </div>
+        )}
+      </div>
+
+      {/* AI Decisions Log */}
+      {decisions.length === 0 ? (
+        <div className="text-center py-8 text-muted-foreground">
+          <p className="text-sm">No AI decisions logged yet</p>
+          <p className="text-xs mt-1">AI reasoning from conversations will appear here</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {decisions.map((d) => (
+            <div key={d._id} className="border rounded-lg p-3 bg-white">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium capitalize">{d.type}</span>
+                <span className="text-xs text-muted-foreground">{new Date(d.timestamp).toLocaleDateString()}</span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-2 line-clamp-3">{d.reasoning}</p>
+              <div className="flex items-center gap-2 mt-2">
+                <span className="text-xs bg-muted px-2 py-0.5 rounded">{d.outcome}</span>
+                <span className="text-xs text-muted-foreground">Confidence: {d.confidence}%</span>
+              </div>
+            </div>
+          ))}
         </div>
       )}
-      {project.inquiryId && (
-        <div className="border p-2 rounded bg-white mt-2">
-          <p className="font-medium">Associated Inquiry</p>
-          <p className="text-xs text-primary mt-1">{project.inquiryId}</p>
-        </div>
-      )}
-      <p className="text-xs text-muted-foreground mt-4">This would show:</p>
-      <ul className="list-disc list-inside text-xs text-muted-foreground space-y-1 ml-4">
-        <li>AI reasoning for requirements</li>
-        <li>Tool execution results</li>
-        <li>Production analysis decisions</li>
-        <li>Cost estimation methodology</li>
-        <li>Milestone generation logic</li>
-      </ul>
     </div>
   );
 }

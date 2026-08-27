@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import Agent from "@/models/agent";
+import AgentSkill from "@/models/agent-skill";
+import AgentTool from "@/models/agent-tool";
 import AgentConversation from "@/models/agent-conversation";
 import AgentExecution from "@/models/agent-execution";
-import AgentMemory from "@/models/agent-memory";
+
 import ProjectRequest from "@/models/project-request";
 import User from "@/models/user";
 import Client from "@/models/client";
@@ -12,11 +14,11 @@ import connectToDatabase from "@/lib/mongodb";
 import { findMatchingSkills, buildSkillContext } from "@/lib/agent-skills";
 import { processHooks } from "@/lib/agent-hooks";
 import { captureMemoriesFromMessage } from "@/lib/agent-memory";
+import { executeTool } from "@/lib/agent-tools";
 import {
   analyzeSentiment,
   checkBlockedTopics,
   shouldEscalate,
-  getSatisfactionSurvey,
   parseSatisfactionResponse,
   saveSatisfaction,
   estimateTokens,
@@ -421,6 +423,35 @@ Guide the conversation naturally based on what information is still missing.`;
     const matchedSkills = await findMatchingSkills(agent._id.toString(), message);
     const skillContext = buildSkillContext(matchedSkills);
 
+    // Fetch agent's registered tools and skills from DB for richer context
+    let agentToolsContext = "";
+    try {
+      const [agentTools, agentSkills] = await Promise.all([
+        AgentTool.find({ status: "active" }).lean(),
+        AgentSkill.find({ agent: agent._id, status: "active" }).lean(),
+      ]);
+
+      if (agentTools.length > 0) {
+        const toolDefs = agentTools.map((t: Record<string, unknown>) => {
+          const params = (t.parameters as { name: string; type: string; required: boolean; description: string }[]) || [];
+          const paramStr = params.map((p) => `${p.name}:${p.type}${p.required ? "*" : ""}`).join(", ");
+          return `- ${t.name}(${paramStr}): ${t.description}`;
+        }).join("\n");
+        agentToolsContext += `\n\n## Available Tools (you may invoke these when appropriate):\n${toolDefs}`;
+      }
+
+      if (agentSkills.length > 0) {
+        const skillDefs = agentSkills.map((s: Record<string, unknown>) => {
+          const caps = (s.capabilities as string[]) || [];
+          const instr = Array.isArray(s.instructions) ? s.instructions[0] : "";
+          return `- ${s.name} [${s.category}]: ${instr || ""} (capabilities: ${caps.join(", ")})`;
+        }).join("\n");
+        agentToolsContext += `\n\n## Agent Skills:\n${skillDefs}`;
+      }
+    } catch {
+      // Non-critical — continue without tool context
+    }
+
     const apiKey = process.env.OPENAI_API_KEY;
     let responseText = "";
 
@@ -437,7 +468,7 @@ Guide the conversation naturally based on what information is still missing.`;
             messages: [
               {
                 role: "system",
-                content: `Your name is "${agent.name}". Always introduce yourself by this exact name. Never use placeholder names like "[Your Name]".\n\n${agent.systemPrompt || MASTER_AGENT_SYSTEM_PROMPT}` + stateContext + (skillContext ? `\n\n${skillContext}` : ""),
+                content: `Your name is "${agent.name}". Always introduce yourself by this exact name. Never use placeholder names like "[Your Name]".\n\n${agent.systemPrompt || MASTER_AGENT_SYSTEM_PROMPT}` + stateContext + (skillContext ? `\n\n${skillContext}` : "") + agentToolsContext,
               },
               ...conversation.messages.slice(-20).map((m: { role: string; content: string }) => ({
                 role: m.role as "user" | "assistant",
@@ -476,6 +507,55 @@ Guide the conversation naturally based on what information is still missing.`;
         }
       } catch {
         // Fall through to default response
+      }
+    }
+
+    // ─── TOOL INVOCATION DETECTION ───
+    // If AI response contains tool invocation pattern, execute the tool and append result
+    const toolInvocationMatch = responseText.match(/TOOL:invoke:(\w+)\(([^)]*)\)/i);
+    if (toolInvocationMatch) {
+      const [, toolName, argsStr] = toolInvocationMatch;
+      try {
+        const args: Record<string, unknown> = {};
+        if (argsStr) {
+          argsStr.split(",").forEach((pair: string) => {
+            const [key, ...val] = pair.split(":");
+            if (key) args[key.trim()] = val.join(":").trim().replace(/^["']|["']$/g, "");
+          });
+        }
+        args.agentId = agent._id.toString();
+        args.conversationId = conversation._id.toString();
+
+        const toolResult = await executeTool(toolName, args) as Record<string, unknown> | null;
+        // Remove the TOOL:invoke pattern from response and append tool result
+        responseText = responseText.replace(/TOOL:invoke:\w+\([^)]*\)/i, "").trim();
+        if (toolResult && !toolResult.error) {
+          responseText += `\n\n_(Tool "${toolName}" executed successfully)_`;
+        } else if (toolResult?.error) {
+          responseText += `\n\n_(Tool "${toolName}" encountered an issue: ${String(toolResult.error)})_`;
+        }
+      } catch {
+        responseText = responseText.replace(/TOOL:invoke:\w+\([^)]*\)/i, "").trim();
+      }
+    }
+
+    // Detect skill invocation pattern
+    const skillInvocationMatch = responseText.match(/SKILL:invoke:(\w+)/i);
+    if (skillInvocationMatch) {
+      const skillName = skillInvocationMatch[1];
+      try {
+        const skillResult = await executeTool("execute_skill", {
+          skillId: skillName,
+          agentId: agent._id.toString(),
+          conversationId: conversation._id.toString(),
+          message,
+        }) as Record<string, unknown> | null;
+        responseText = responseText.replace(/SKILL:invoke:\w+/i, "").trim();
+        if (skillResult && !skillResult.error) {
+          responseText += `\n\n_(Skill "${skillName}" applied)_`;
+        }
+      } catch {
+        responseText = responseText.replace(/SKILL:invoke:\w+/i, "").trim();
       }
     }
 

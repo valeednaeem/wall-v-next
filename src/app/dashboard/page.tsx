@@ -120,7 +120,7 @@ export default function DashboardPage() {
               {data.recentProjects.map((project: any) => (
                 <Link
                   key={project._id}
-                  href={`/dashboard/client-portal?project=${project._id}`}
+                  href={`/dashboard/projects/${project._id}/edit`}
                   className="flex items-center justify-between border-b pb-3 last:border-0 hover:bg-accent/50 -mx-2 px-2 py-1 rounded transition-colors"
                 >
                   <div>
@@ -144,7 +144,7 @@ export default function DashboardPage() {
         <div className="rounded-lg border p-6">
           <h3 className="text-lg font-semibold mb-4">Quick Actions</h3>
           <div className="space-y-2">
-            <Link href="/dashboard/client-portal" className="block rounded-lg border p-3 text-sm hover:bg-accent transition-colors">
+            <Link href="/dashboard/projects" className="block rounded-lg border p-3 text-sm hover:bg-accent transition-colors">
               View All My Projects
             </Link>
             <Link href="/#contact" className="block rounded-lg border p-3 text-sm hover:bg-accent transition-colors">

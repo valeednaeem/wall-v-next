@@ -7,6 +7,7 @@ export interface IAgent extends Document {
   type: "conversational" | "task" | "hybrid";
   role: "sales" | "support" | "technical" | "marketing" | "operations" | "custom";
   status: "active" | "inactive" | "draft" | "testing";
+  version: number;
   avatar?: string;
   division?: string;
   divisionLabel?: string;
@@ -26,6 +27,7 @@ export interface IAgent extends Document {
   skills: mongoose.Types.ObjectId[];
   tools: mongoose.Types.ObjectId[];
   hooks: mongoose.Types.ObjectId[];
+  workflows: mongoose.Types.ObjectId[];
   memory: {
     type: "none" | "conversation" | "persistent" | "global";
     maxItems?: number;
@@ -48,6 +50,16 @@ export interface IAgent extends Document {
     dashboard: boolean;
     voice: boolean;
   };
+  contexts: {
+    visitor: boolean;
+    lead: boolean;
+    customer: boolean;
+    client: boolean;
+    admin: boolean;
+    staff: boolean;
+    system: boolean;
+  };
+  permissions: string[];
   integrations: {
     crm: boolean;
     projects: boolean;
@@ -64,7 +76,15 @@ export interface IAgent extends Document {
     requirementSteps: string[];
     approvalRequired: boolean;
     autoAssignManager?: mongoose.Types.ObjectId;
+    orchestrates: mongoose.Types.ObjectId[];
   };
+  triggerTypes: string[];
+  versionHistory: {
+    version: number;
+    changedBy: mongoose.Types.ObjectId;
+    changedAt: Date;
+    changes: string;
+  }[];
   stats: {
     totalConversations: number;
     totalMessages: number;
@@ -74,6 +94,9 @@ export interface IAgent extends Document {
     lastActive?: Date;
     avgResponseTime: number;
     resolutionRate: number;
+    totalExecutions: number;
+    successfulExecutions: number;
+    failedExecutions: number;
   };
   createdBy: mongoose.Types.ObjectId;
   createdAt: Date;
@@ -88,6 +111,7 @@ const AgentSchema = new Schema<IAgent>(
     type: { type: String, enum: ["conversational", "task", "hybrid"], default: "conversational" },
     role: { type: String, enum: ["sales", "support", "technical", "marketing", "operations", "custom"], default: "custom" },
     status: { type: String, enum: ["active", "inactive", "draft", "testing"], default: "draft" },
+    version: { type: Number, default: 1 },
     avatar: String,
     division: { type: String, index: true },
     divisionLabel: String,
@@ -107,6 +131,7 @@ const AgentSchema = new Schema<IAgent>(
     skills: [{ type: Schema.Types.ObjectId, ref: "AgentSkill" }],
     tools: [{ type: Schema.Types.ObjectId, ref: "AgentTool" }],
     hooks: [{ type: Schema.Types.ObjectId, ref: "AgentHook" }],
+    workflows: [{ type: Schema.Types.ObjectId, ref: "AgentWorkflow" }],
     memory: {
       memoryType: { type: String, enum: ["none", "conversation", "persistent", "global"], default: "conversation" },
       maxItems: { type: Number, default: 50 },
@@ -129,6 +154,16 @@ const AgentSchema = new Schema<IAgent>(
       dashboard: { type: Boolean, default: true },
       voice: { type: Boolean, default: false },
     },
+    contexts: {
+      visitor: { type: Boolean, default: true },
+      lead: { type: Boolean, default: true },
+      customer: { type: Boolean, default: true },
+      client: { type: Boolean, default: true },
+      admin: { type: Boolean, default: true },
+      staff: { type: Boolean, default: true },
+      system: { type: Boolean, default: false },
+    },
+    permissions: [String],
     integrations: {
       crm: { type: Boolean, default: true },
       projects: { type: Boolean, default: true },
@@ -145,7 +180,15 @@ const AgentSchema = new Schema<IAgent>(
       requirementSteps: [String],
       approvalRequired: { type: Boolean, default: true },
       autoAssignManager: { type: Schema.Types.ObjectId, ref: "User" },
+      orchestrates: [{ type: Schema.Types.ObjectId, ref: "Agent" }],
     },
+    triggerTypes: [String],
+    versionHistory: [{
+      version: Number,
+      changedBy: { type: Schema.Types.ObjectId, ref: "User" },
+      changedAt: Date,
+      changes: String,
+    }],
     stats: {
       totalConversations: { type: Number, default: 0 },
       totalMessages: { type: Number, default: 0 },
@@ -155,6 +198,9 @@ const AgentSchema = new Schema<IAgent>(
       lastActive: Date,
       avgResponseTime: { type: Number, default: 0 },
       resolutionRate: { type: Number, default: 0 },
+      totalExecutions: { type: Number, default: 0 },
+      successfulExecutions: { type: Number, default: 0 },
+      failedExecutions: { type: Number, default: 0 },
     },
     createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
   },

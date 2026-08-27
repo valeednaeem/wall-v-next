@@ -23,7 +23,7 @@ export interface IOrder extends Document {
   currency: string;
   status: "pending" | "confirmed" | "processing" | "completed" | "cancelled" | "refunded";
   paymentStatus: "unpaid" | "paid" | "failed" | "refunded";
-  paymentMethod: "stripe" | "paypal" | "manual";
+  paymentMethod: "stripe" | "paypal" | "2checkout" | "manual";
   paymentReference?: string;
   billingAddress: {
     name?: string;

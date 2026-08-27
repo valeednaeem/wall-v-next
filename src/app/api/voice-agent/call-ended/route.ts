@@ -20,7 +20,8 @@ export async function POST(request: Request) {
     }
 
     if (!conversation) {
-      // Create new conversation record
+      // Create placeholder record — the Dograh server webhook will claim this
+      // record (via orphan-claim matching) and attach transcript/messages.
       conversation = await Conversation.create({
         sessionId: `voice_${Date.now()}`,
         agentType: "voice-agent",
@@ -36,12 +37,17 @@ export async function POST(request: Request) {
           callStatus: status || "completed",
         },
       });
+      console.log("[Voice Agent] VOICE_SESSION_CREATED (placeholder, awaiting webhook):", {
+        conversationId: conversation._id,
+        workflowRunId,
+      });
     } else {
       // Update existing conversation
       conversation.endedAt = new Date();
       if (durationSeconds) conversation.voiceAgent.durationSeconds = durationSeconds;
       if (status) conversation.voiceAgent.callStatus = status;
       await conversation.save();
+      console.log("[Voice Agent] VOICE_CONVERSATION_UPDATED:", { conversationId: conversation._id });
     }
 
     // Try to find the project (may have been created by the Dograh webhook)

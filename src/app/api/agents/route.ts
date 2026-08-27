@@ -6,7 +6,6 @@ import AgentSkill from "@/models/agent-skill";
 import AgentHook from "@/models/agent-hook";
 import connectToDatabase from "@/lib/mongodb";
 
-// Ensure all referenced models are registered
 void AgentTool;
 void AgentSkill;
 void AgentHook;
@@ -21,26 +20,64 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get("status");
     const role = searchParams.get("role");
     const type = searchParams.get("type");
+    const division = searchParams.get("division");
     const search = searchParams.get("search");
+    const page = parseInt(searchParams.get("page") || "1");
+    const limit = parseInt(searchParams.get("limit") || "50");
+    const sort = searchParams.get("sort") || "createdAt";
+    const order = searchParams.get("order") || "desc";
+    const statsOnly = searchParams.get("statsOnly") === "true";
 
     const query: Record<string, unknown> = {};
     if (status) query.status = status;
     if (role) query.role = role;
     if (type) query.type = type;
+    if (division) query.division = division;
     if (search) {
       query.$or = [
         { name: { $regex: search, $options: "i" } },
         { description: { $regex: search, $options: "i" } },
+        { division: { $regex: search, $options: "i" } },
       ];
     }
 
-    const agents = await Agent.find(query)
-      .populate("skills", "name slug category")
-      .populate("tools", "name slug category type")
-      .populate("createdBy", "name email")
-      .sort({ createdAt: -1 });
+    if (statsOnly) {
+      const [total, active, inactive, draft, testing, clientFacing, masterAgent, divisions] = await Promise.all([
+        Agent.countDocuments({}),
+        Agent.countDocuments({ status: "active" }),
+        Agent.countDocuments({ status: "inactive" }),
+        Agent.countDocuments({ status: "draft" }),
+        Agent.countDocuments({ status: "testing" }),
+        Agent.countDocuments({ isClientFacing: true }),
+        Agent.countDocuments({ isMasterAgent: true }),
+        Agent.distinct("division"),
+      ]);
 
-    return NextResponse.json({ agents });
+      const divisionCounts = await Agent.aggregate([
+        { $group: { _id: "$division", count: { $sum: 1 }, active: { $sum: { $cond: [{ $eq: ["$status", "active"] }, 1, 0] } } } },
+        { $sort: { count: -1 } },
+      ]);
+
+      return NextResponse.json({
+        stats: { total, active, inactive, draft, testing, clientFacing, masterAgent, divisions: divisions.filter(Boolean).length, divisionCounts },
+      });
+    }
+
+    const [agents, total] = await Promise.all([
+      Agent.find(query)
+        .populate("skills", "name slug category")
+        .populate("tools", "name slug category type")
+        .populate("createdBy", "name email")
+        .sort({ [sort]: order === "asc" ? 1 : -1 })
+        .skip((page - 1) * limit)
+        .limit(limit),
+      Agent.countDocuments(query),
+    ]);
+
+    return NextResponse.json({
+      agents,
+      pagination: { page, limit, total, pages: Math.ceil(total / limit) },
+    });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Failed to fetch agents";
     return NextResponse.json({ error: message }, { status: 500 });
@@ -57,7 +94,7 @@ export async function POST(request: NextRequest) {
     const {
       name, description, type, role, systemPrompt, instructions,
       model, temperature, maxTokens, personality, memory, guardrails,
-      channels, integrations, skills, tools, isClientFacing, isMasterAgent, masterConfig,
+      channels, integrations, skills, tools, isClientFacing, isMasterAgent, masterConfig, division,
     } = body;
 
     if (!name || !systemPrompt) {
@@ -77,6 +114,7 @@ export async function POST(request: NextRequest) {
       description: description || "",
       type: type || "conversational",
       role: role || "custom",
+      division: division || "",
       systemPrompt,
       instructions: instructions || [],
       aiModel: model || "gpt-4o",

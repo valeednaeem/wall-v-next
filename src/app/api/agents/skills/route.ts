@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthUser } from "@/lib/auth";
+import { PERMISSIONS, hasPermission } from "@/lib/permissions";
 import AgentSkill from "@/models/agent-skill";
 import connectToDatabase from "@/lib/mongodb";
 
@@ -7,6 +8,9 @@ export async function GET() {
   try {
     const user = await getAuthUser();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!hasPermission(user.permissions || [], PERMISSIONS.SKILLS_VIEW)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
 
     await connectToDatabase();
     const skills = await AgentSkill.find({}).populate("createdBy", "name email").sort({ createdAt: -1 });
@@ -21,6 +25,9 @@ export async function POST(request: NextRequest) {
   try {
     const user = await getAuthUser();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!hasPermission(user.permissions || [], PERMISSIONS.SKILLS_CREATE)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
 
     await connectToDatabase();
     const body = await request.json();

@@ -97,7 +97,7 @@ export async function POST(request: Request) {
       const emailData = milestonePaidEmail(project.name, milestoneName, amount, invoiceNumber);
       sendEmail({ ...emailData, to: project.client.email }).catch(() => {});
     }
-    notifyAdmins("Payment Received", `${project.client?.name || "Client"} paid $${amount} for "${project.name}" — ${milestoneName}`, "success", `/dashboard/invoices`).catch(() => {});
+    notifyAdmins("Payment Received", `${project.client?.name || "Client"} paid $${amount} for "${project.name}" — ${milestoneName}`, "success", `/dashboard/projects`).catch(() => {});
 
     let redirectUrl = "";
 

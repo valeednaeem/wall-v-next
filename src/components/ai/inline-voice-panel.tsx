@@ -1,6 +1,6 @@
 "use client";
 
-import { useId } from "react";
+import { useId, useCallback } from "react";
 import { useDograh } from "./voice-agent";
 import { Mic, PhoneOff, Loader2, Phone, Volume2, AlertCircle, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -19,6 +19,24 @@ export function InlineVoicePanel({
   className,
 }: InlineVoicePanelProps) {
   const containerId = useId();
+
+  const handleCallDisconnected = useCallback(
+    (data: { agentId: string; workflowRunId: string; durationSeconds: number }) => {
+      console.log("[Inline Voice] VOICE_CONVERSATION_COMPLETED:", data.workflowRunId);
+      fetch("/api/voice-agent/call-ended", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          agentId: data.agentId,
+          workflowRunId: data.workflowRunId,
+          durationSeconds: data.durationSeconds,
+          status: "completed",
+        }),
+      }).catch((err) => console.error("[Inline Voice] VOICE_PERSISTENCE_ERROR:", err));
+    },
+    []
+  );
+
   const {
     status,
     scriptLoaded,
@@ -33,6 +51,7 @@ export function InlineVoicePanel({
   } = useDograh({
     mode: "inline",
     inlineContainerId: containerId,
+    onCallDisconnected: handleCallDisconnected,
   });
 
   const formatDuration = (seconds: number) => {

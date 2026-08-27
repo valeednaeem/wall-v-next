@@ -89,7 +89,7 @@ export function generateProjectStageEmail(opts: {
             : `<p style="color: #2563eb; font-weight: bold;">🔄 Stage In Progress</p>`
           }
           <p style="color: #6b7280; font-size: 14px; margin-top: 24px;">
-            You can track progress in your <a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard/client-portal" style="color: #7c3aed;">Client Portal</a>.
+            You can track progress in your <a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard/projects" style="color: #7c3aed;">Client Portal</a>.
           </p>
         </div>
         <div style="text-align: center; padding: 16px; color: #9ca3af; font-size: 12px;">
@@ -141,7 +141,7 @@ export function generateInvoiceEmail(opts: {
               ` : ""}
             </table>
           </div>
-          <a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard/client-portal" style="display: inline-block; background: #7c3aed; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; margin: 16px 0;">
+          <a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard/projects" style="display: inline-block; background: #7c3aed; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; margin: 16px 0;">
             View in Portal
           </a>
         </div>
@@ -195,7 +195,7 @@ export function generateQuotationEmail(opts: {
           </div>
           <p style="color: #6b7280; font-size: 14px;">
             Please review the quotation and let us know if you have any questions.
-            You can approve or discuss changes through your <a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard/client-portal" style="color: #7c3aed;">Client Portal</a>.
+            You can approve or discuss changes through your <a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard/projects" style="color: #7c3aed;">Client Portal</a>.
           </p>
         </div>
         <div style="text-align: center; padding: 16px; color: #9ca3af; font-size: 12px;">
@@ -240,7 +240,7 @@ export function generatePaymentConfirmationEmail(opts: {
             </table>
           </div>
           <p style="color: #6b7280; font-size: 14px;">
-            Thank you for your payment! You can view your payment history in the <a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard/client-portal" style="color: #7c3aed;">Client Portal</a>.
+            Thank you for your payment! You can view your payment history in the <a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard/projects" style="color: #7c3aed;">Client Portal</a>.
           </p>
         </div>
         <div style="text-align: center; padding: 16px; color: #9ca3af; font-size: 12px;">
@@ -280,7 +280,7 @@ export function generateChangeRequestEmail(opts: {
             <p style="margin: 4px 0 0; color: #6b7280; font-size: 13px;">Type: ${opts.changeType}</p>
           </div>
           <p style="color: #6b7280; font-size: 14px;">
-            View details in your <a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard/client-portal" style="color: #7c3aed;">Client Portal</a>.
+            View details in your <a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard/projects" style="color: #7c3aed;">Client Portal</a>.
           </p>
         </div>
         <div style="text-align: center; padding: 16px; color: #9ca3af; font-size: 12px;">

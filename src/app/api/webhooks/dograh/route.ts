@@ -286,62 +286,241 @@ export async function OPTIONS() {
   return handleOPTIONS();
 }
 
+// ─── Defensive payload extraction ────────────────────────────────────────────
+// Dograh (and provider upgrades) may nest fields or use alternate names.
+// Extract from: top-level, data.*, payload.*, call.* — with common aliases.
+
+interface NormalizedVoicePayload {
+  agentId: string;
+  workflowRunId: string;
+  sessionId: string;
+  status: string;
+  duration: number;
+  transcript: string;
+  summary: string;
+  messages: { role: "user" | "assistant"; content: string; timestamp?: string }[];
+}
+
+function pick(obj: Record<string, unknown> | undefined, keys: string[]): unknown {
+  if (!obj) return undefined;
+  for (const k of keys) {
+    const v = obj[k];
+    if (v !== undefined && v !== null && v !== "") return v;
+  }
+  return undefined;
+}
+
+function normalizeMessages(rawMessages: unknown): NormalizedVoicePayload["messages"] {
+  // Accepts: [{role,content,timestamp}], [{speaker,text}], [[role,content]], {user:"..",assistant:".."}
+  if (!rawMessages) return [];
+  if (Array.isArray(rawMessages)) {
+    const out: NormalizedVoicePayload["messages"] = [];
+    for (const m of rawMessages) {
+      if (Array.isArray(m) && m.length >= 2) {
+        const role = String(m[0]).toLowerCase().includes("user") || String(m[0]).toLowerCase().includes("caller") ? "user" : "assistant";
+        out.push({ role, content: String(m[1]) });
+        continue;
+      }
+      if (m && typeof m === "object") {
+        const mo = m as Record<string, unknown>;
+        const content = String(pick(mo, ["content", "text", "message", "transcript"]) ?? "").trim();
+        if (!content) continue;
+        const rawRole = String(pick(mo, ["role", "speaker", "from", "sender"]) ?? "assistant").toLowerCase();
+        const isUser = rawRole.includes("user") || rawRole.includes("caller") || rawRole.includes("human") || rawRole.includes("customer");
+        out.push({
+          role: isUser ? "user" : "assistant",
+          content,
+          timestamp: typeof mo.timestamp === "string" ? mo.timestamp : undefined,
+        });
+      }
+    }
+    return out;
+  }
+  if (typeof rawMessages === "object") {
+    const mo = rawMessages as Record<string, unknown>;
+    const out: NormalizedVoicePayload["messages"] = [];
+    const user = pick(mo, ["user", "caller", "human"]);
+    const assistant = pick(mo, ["assistant", "agent", "ai"]);
+    if (typeof user === "string" && user.trim()) out.push({ role: "user", content: user.trim() });
+    if (typeof assistant === "string" && assistant.trim()) out.push({ role: "assistant", content: assistant.trim() });
+    return out;
+  }
+  return [];
+}
+
+function transcriptToMessages(transcript: string): NormalizedVoicePayload["messages"] {
+  // Parse "USER:"/"AGENT:"/"Caller:"/"AI:" prefixed lines into structured messages
+  const out: NormalizedVoicePayload["messages"] = [];
+  if (!transcript || !transcript.trim()) return out;
+
+  const linePattern = /^\s*(user|caller|visitor|customer|human|agent|assistant|ai|bot|system)\s*[:\-]\s*/gim;
+  const matches: { role: "user" | "assistant"; start: number; end: number }[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = linePattern.exec(transcript)) !== null) {
+    const label = m[1].toLowerCase();
+    const isUser = ["user", "caller", "visitor", "customer", "human"].includes(label);
+    matches.push({ role: isUser ? "user" : "assistant", start: m.index + m[0].length, end: m.index });
+  }
+
+  if (matches.length === 0) return out; // unstructured text — keep as transcript only
+
+  for (let i = 0; i < matches.length; i++) {
+    const segStart = matches[i].start;
+    const segEnd = i + 1 < matches.length ? matches[i + 1].end : transcript.length;
+    const content = transcript.slice(segStart, segEnd).trim();
+    if (content) out.push({ role: matches[i].role, content });
+  }
+  return out;
+}
+
+function messagesToTranscript(messages: NormalizedVoicePayload["messages"]): string {
+  return messages
+    .map((msg) => `${msg.role === "user" ? "USER" : "AGENT"}: ${msg.content}`)
+    .join("\n\n");
+}
+
+function extractVoicePayload(body: Record<string, unknown>): NormalizedVoicePayload {
+  const data = (body.data && typeof body.data === "object" ? body.data : undefined) as Record<string, unknown> | undefined;
+  const payload = (body.payload && typeof body.payload === "object" ? body.payload : undefined) as Record<string, unknown> | undefined;
+  const call = (body.call && typeof body.call === "object" ? body.call : undefined) as Record<string, unknown> | undefined;
+  // Unwrap nested: payload.call.*, data.call.*, payload.data.*
+  const nestedPayload = payload?.payload && typeof payload.payload === "object" ? payload.payload as Record<string, unknown> : undefined;
+  const payloadCall = payload?.call && typeof payload.call === "object" ? payload.call as Record<string, unknown> : undefined;
+  const dataCall = data?.call && typeof data.call === "object" ? data.call as Record<string, unknown> : undefined;
+  const nestedData = data?.data && typeof data.data === "object" ? data.data as Record<string, unknown> : undefined;
+  const merged: Record<string, unknown> = { ...nestedData, ...dataCall, ...nestedPayload, ...payloadCall, ...call, ...payload, ...data, ...body };
+
+  const agentId = String(pick(merged, ["agentId", "agent_id", "dograhAgentId", "assistantId"]) ?? "");
+  const workflowRunId = String(pick(merged, ["workflowRunId", "workflow_run_id", "runId", "run_id"]) ?? "");
+  const sessionId = String(pick(merged, ["sessionId", "session_id", "conversationId", "conversation_id"]) ?? "");
+  const status = String(pick(merged, ["status", "callStatus", "call_status", "state"]) ?? "completed");
+  const durationRaw = pick(merged, ["duration", "durationSeconds", "duration_seconds", "callDuration", "call_duration"]);
+  const duration = typeof durationRaw === "number" ? durationRaw : parseFloat(String(durationRaw ?? "0")) || 0;
+  const summary = String(pick(merged, ["summary", "callSummary", "call_summary", "recap"]) ?? "");
+
+  let messages = normalizeMessages(
+    pick(merged, ["messages", "transcript_segments", "transcriptSegments", "segments", "history", "conversation_history", "conversationHistory"])
+  );
+
+  let transcript = String(pick(merged, ["transcript", "transcription", "full_transcript", "fullTranscript", "conversation_transcript", "text"]) ?? "");
+
+  // Bidirectional normalization — never lose content
+  if (!transcript && messages.length > 0) {
+    transcript = messagesToTranscript(messages);
+  } else if (transcript && messages.length === 0) {
+    messages = transcriptToMessages(transcript);
+  }
+
+  return { agentId, workflowRunId, sessionId, status, duration, transcript, summary, messages };
+}
+
 export async function POST(request: Request) {
   const headers = corsHeaders(request);
   try {
-    const body = await request.json();
-    console.log("[Dograh Webhook] Received:", JSON.stringify(body).slice(0, 500));
+    const rawBody = await request.json();
+    console.log("[Dograh Webhook] VOICE_WEBHOOK_RECEIVED:", JSON.stringify(rawBody).slice(0, 800));
 
+    const body = rawBody as Record<string, unknown>;
     const {
       agentId,
       workflowRunId,
+      sessionId,
       status,
       duration,
       transcript,
       summary,
-      sessionId,
       messages,
-      callerInfo,
-      context_variables,
-      initial_context,
-    } = body;
+    } = extractVoicePayload(body);
+
+    console.log("[Dograh Webhook] VOICE_PAYLOAD_NORMALIZED:", JSON.stringify({
+      workflowRunId,
+      sessionId,
+      status,
+      duration,
+      transcriptLength: transcript?.length || 0,
+      messageCount: messages.length,
+    }));
 
     await connectToDatabase();
 
-    // Find or create conversation
-    const filter = workflowRunId
-      ? { "voiceAgent.workflowRunId": workflowRunId }
-      : sessionId
-        ? { sessionId }
-        : null;
+    // Find conversation by workflowRunId → sessionId → recent orphaned placeholder
+    let filter: Record<string, unknown> | null = null;
+    let orphanClaimed = false;
+
+    if (workflowRunId) {
+      const byRun = await Conversation.findOne({ "voiceAgent.workflowRunId": workflowRunId });
+      if (byRun) filter = { _id: byRun._id };
+    }
+    if (!filter && sessionId) {
+      const bySession = await Conversation.findOne({ sessionId });
+      if (bySession) filter = { _id: bySession._id };
+    }
+    if (!filter) {
+      // Claim the most recent empty voice placeholder for this agent created in the last 6 hours
+      // (browser call-ended fires BEFORE the server webhook arrives)
+      const orphan = await Conversation.findOne({
+        channel: "voice",
+        "voiceAgent.transcript": { $in: ["", null] },
+        messages: { $size: 0 },
+        createdAt: { $gte: new Date(Date.now() - 6 * 60 * 60 * 1000) },
+      }).sort({ createdAt: -1 });
+
+      if (orphan) {
+        filter = { _id: orphan._id };
+        orphanClaimed = true;
+        console.log("[Dograh Webhook] VOICE_ORPHAN_CLAIMED: attached webhook data to browser-created record", orphan._id);
+      }
+    }
 
     if (!filter) {
-      return NextResponse.json({ error: "Missing sessionId or workflowRunId" }, { status: 400 });
+      if (!sessionId && !workflowRunId) {
+        return NextResponse.json({ error: "Missing sessionId or workflowRunId" }, { status: 400 });
+      }
+      filter = {}; // upsert will create a new doc
+    }
+
+    // Never overwrite existing content with empties (idempotency + retry safety)
+    const existing = await Conversation.findOne(filter).catch(() => null);
+    const hasExistingContent = existing && ((existing.messages?.length || 0) > 0 || !!existing.voiceAgent?.transcript);
+    if (hasExistingContent && !transcript && messages.length === 0) {
+      console.log("[Dograh Webhook] Skipping update — existing content present and incoming payload empty");
+      return NextResponse.json({ success: true, conversationId: existing._id }, { headers });
     }
 
     const conversationData: Record<string, unknown> = {
-      sessionId: sessionId || `dograh_${workflowRunId || Date.now()}`,
+      sessionId: sessionId || existing?.sessionId || `dograh_${workflowRunId || Date.now()}`,
       agentType: "voice-agent",
       channel: "voice",
       endedAt: new Date(),
       voiceAgent: {
-        dograhAgentId: agentId || "",
-        workflowRunId: workflowRunId || "",
-        durationSeconds: duration || 0,
-        callStatus: status || "completed",
-        transcript: transcript || "",
-        summary: summary || "",
+        dograhAgentId: agentId || existing?.voiceAgent?.dograhAgentId || "",
+        workflowRunId: workflowRunId || existing?.voiceAgent?.workflowRunId || "",
+        durationSeconds: duration || existing?.voiceAgent?.durationSeconds || 0,
+        callStatus: status || existing?.voiceAgent?.callStatus || "completed",
+        transcript: transcript || existing?.voiceAgent?.transcript || "",
+        summary: summary || existing?.voiceAgent?.summary || "",
       },
     };
 
-    if (messages && Array.isArray(messages)) {
-      conversationData.messages = messages.map((m: { role: string; content: string; timestamp?: string }) => ({
-        role: m.role === "user" ? "user" : "assistant",
+    if (messages.length > 0) {
+      conversationData.messages = messages.map((m) => ({
+        role: m.role,
         content: m.content,
         timestamp: m.timestamp ? new Date(m.timestamp) : new Date(),
       }));
       conversationData.messageCount = messages.length;
+    } else if (existing && (existing.messages?.length || 0) > 0) {
+      // preserve existing messages on retries
+      conversationData.messages = existing.messages;
+      conversationData.messageCount = existing.messageCount || existing.messages.length;
     }
+
+    console.log("[Dograh Webhook] VOICE_CONVERSATION_SAVING:", JSON.stringify({
+      filterKeys: Object.keys(filter),
+      orphanClaimed,
+      savingMessages: Array.isArray(conversationData.messages) ? (conversationData.messages as unknown[]).length : 0,
+      savingTranscriptLength: ((conversationData.voiceAgent as Record<string, unknown>).transcript as string)?.length || 0,
+    }));
 
     const conversation = await Conversation.findOneAndUpdate(
       filter,
@@ -350,17 +529,19 @@ export async function POST(request: Request) {
     );
 
     // Merge callerInfo with transcript extraction and context variables
+    const callerInfo = (pick(body, ["callerInfo", "caller_info", "caller"]) || {}) as Record<string, unknown>;
+    const ctxRaw = pick(body, ["context_variables", "contextVariables", "initial_context", "initialContext"]);
+    const ctx = (ctxRaw && typeof ctxRaw === "object" ? ctxRaw : {}) as Record<string, unknown>;
     const extracted = extractCallerInfoFromTranscript(transcript || "", messages);
-    const ctx = context_variables || initial_context || {};
     const mergedCaller = {
-      name: callerInfo?.name || ctx.client_name || ctx.customer_name || extracted.name || "",
-      email: callerInfo?.email || ctx.client_email || ctx.customer_email || extracted.email || "",
-      phone: callerInfo?.phone || ctx.client_phone || ctx.customer_phone || extracted.phone || "",
-      company: callerInfo?.company || ctx.company || ctx.client_company || extracted.company || "",
+      name: String(callerInfo.name || ctx.client_name || ctx.customer_name || extracted.name || ""),
+      email: String(callerInfo.email || ctx.client_email || ctx.customer_email || extracted.email || ""),
+      phone: String(callerInfo.phone || ctx.client_phone || ctx.customer_phone || extracted.phone || ""),
+      company: String(callerInfo.company || ctx.company || ctx.client_company || extracted.company || ""),
       budget: extracted.budget || "",
       timeline: extracted.timeline || "",
       projectType: extracted.projectType || "",
-      selectedOption: ctx.selected_option || "",
+      selectedOption: String(ctx.selected_option || ""),
     };
 
     // Auto-create lead, inquiry, client, and project if we have any caller info

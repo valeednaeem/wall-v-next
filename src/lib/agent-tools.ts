@@ -1,5 +1,3 @@
-import mongoose from "mongoose";
-
 // Tool definition for OpenAI function calling
 export interface AgentToolDefinition {
   type: "function";
@@ -142,6 +140,219 @@ export const AGENT_TOOL_DEFINITIONS: AgentToolDefinition[] = [
           status: { type: "string", description: "Filter by status: collecting, requirements-gathered, quoted, approved, project-created, rejected" },
           limit: { type: "number", description: "Max results (default 10)" },
         },
+      },
+    },
+  },
+  // WRITE TOOLS
+  {
+    type: "function",
+    function: {
+      name: "create_inquiry",
+      description: "Create a new inquiry from a potential client. Use this when a visitor or lead expresses interest in services.",
+      parameters: {
+        type: "object",
+        properties: {
+          name: { type: "string", description: "Contact name" },
+          email: { type: "string", description: "Contact email" },
+          phone: { type: "string", description: "Contact phone" },
+          company: { type: "string", description: "Company name" },
+          subject: { type: "string", description: "Inquiry subject" },
+          message: { type: "string", description: "Inquiry message" },
+          type: { type: "string", description: "Inquiry type: contact, support, sales, partnership" },
+          estimatedBudget: { type: "number", description: "Budget estimate in USD" },
+          estimatedTimeline: { type: "string", description: "Timeline estimate" },
+        },
+        required: ["name", "email", "subject", "message"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "create_lead",
+      description: "Create a new sales lead from a potential client interaction.",
+      parameters: {
+        type: "object",
+        properties: {
+          name: { type: "string", description: "Lead name" },
+          email: { type: "string", description: "Lead email" },
+          source: { type: "string", description: "Lead source: website, referral, chat, email, phone" },
+          budget: { type: "number", description: "Budget estimate" },
+          serviceInterest: { type: "array", items: { type: "string" }, description: "Services of interest" },
+          notes: { type: "string", description: "Additional notes" },
+        },
+        required: ["name", "email", "source"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "update_project",
+      description: "Update an existing project's details. Use this to modify project status, progress, or other fields.",
+      parameters: {
+        type: "object",
+        properties: {
+          projectId: { type: "string", description: "The project ID" },
+          status: { type: "string", description: "New status" },
+          progress: { type: "number", description: "Progress percentage (0-100)" },
+          priority: { type: "string", description: "New priority: low, medium, high, urgent" },
+          description: { type: "string", description: "Updated description" },
+        },
+        required: ["projectId"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "create_notification",
+      description: "Create a notification for a user or admin. Use this to alert staff about important events.",
+      parameters: {
+        type: "object",
+        properties: {
+          userId: { type: "string", description: "Target user ID (optional, defaults to admins)" },
+          title: { type: "string", description: "Notification title" },
+          message: { type: "string", description: "Notification message" },
+          type: { type: "string", description: "Notification type: info, success, warning, error" },
+          link: { type: "string", description: "Link to related page" },
+        },
+        required: ["title", "message"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "execute_skill",
+      description: "Execute a specific skill by its slug. Use this to invoke a reusable capability like generating an SEO audit or preparing a proposal.",
+      parameters: {
+        type: "object",
+        properties: {
+          skillSlug: { type: "string", description: "The skill slug to execute" },
+          input: { type: "object", description: "Input parameters for the skill" },
+          context: { type: "object", description: "Execution context (projectId, clientId, etc.)" },
+        },
+        required: ["skillSlug"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "delegate_to_agent",
+      description: "Delegate a task to another specialized agent. Use this when the master agent needs to invoke a specialized agent for domain-specific work.",
+      parameters: {
+        type: "object",
+        properties: {
+          agentId: { type: "string", description: "The target agent ID or slug" },
+          message: { type: "string", description: "The message/task to delegate" },
+          context: { type: "object", description: "Context to pass (projectId, clientId, etc.)" },
+        },
+        required: ["agentId", "message"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_invoice",
+      description: "Get detailed invoice information including payment status, amount due, and line items. Use when a client asks about a specific invoice.",
+      parameters: {
+        type: "object",
+        properties: {
+          invoiceId: { type: "string", description: "Invoice ID or invoice number (e.g., INV-20250101-ABC123)" },
+        },
+        required: ["invoiceId"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_customer_balance",
+      description: "Get the outstanding balance and payment history for a customer. Use when a client asks about their balance, outstanding amount, or payment history.",
+      parameters: {
+        type: "object",
+        properties: {
+          customerEmail: { type: "string", description: "Customer email address" },
+        },
+        required: ["customerEmail"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_project_balance",
+      description: "Get the payment status and balance for a specific project including deposits, milestones, and total paid/owed.",
+      parameters: {
+        type: "object",
+        properties: {
+          projectId: { type: "string", description: "Project ID or slug" },
+        },
+        required: ["projectId"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "create_payment_request",
+      description: "Create a payment request/invoice for a project or service. This prepares an invoice that can be sent to the client. Requires permission for financial operations.",
+      parameters: {
+        type: "object",
+        properties: {
+          projectId: { type: "string", description: "Project ID to invoice" },
+          amount: { type: "number", description: "Amount to invoice" },
+          description: { type: "string", description: "Description of the charge" },
+          type: { type: "string", description: "Type: deposit, milestone, final, standard" },
+        },
+        required: ["amount", "description"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_transaction",
+      description: "Get payment transaction details including status, gateway reference, and associated invoice/project.",
+      parameters: {
+        type: "object",
+        properties: {
+          paymentId: { type: "string", description: "Payment ID or payment number" },
+        },
+        required: ["paymentId"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_payment_status",
+      description: "Check the payment status of an invoice or order. Returns whether payment was confirmed by the gateway.",
+      parameters: {
+        type: "object",
+        properties: {
+          invoiceId: { type: "string", description: "Invoice ID" },
+          orderId: { type: "string", description: "Order ID" },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "prepare_refund_request",
+      description: "Prepare a refund request for a payment. This creates a pending refund that requires admin approval before processing.",
+      parameters: {
+        type: "object",
+        properties: {
+          paymentId: { type: "string", description: "Payment ID to refund" },
+          amount: { type: "number", description: "Refund amount" },
+          reason: { type: "string", description: "Reason for refund" },
+        },
+        required: ["paymentId", "amount", "reason"],
       },
     },
   },
@@ -383,6 +594,324 @@ async function executeGetProjectRequests(args: Record<string, unknown>) {
   });
 }
 
+// WRITE TOOL IMPLEMENTATIONS
+
+async function executeCreateInquiry(args: Record<string, unknown>) {
+  const Inquiry = (await import("@/models/inquiry")).default as any;
+  const inquiry = await Inquiry.create({
+    name: args.name,
+    email: args.email,
+    phone: args.phone || undefined,
+    company: args.company || undefined,
+    subject: args.subject,
+    message: args.message,
+    type: args.type || "sales",
+    status: "new",
+    priority: "medium",
+    source: "ai-agent",
+    estimatedBudget: args.estimatedBudget || undefined,
+    estimatedTimeline: args.estimatedTimeline || undefined,
+  });
+  return { id: inquiry._id, status: inquiry.status, message: "Inquiry created successfully" };
+}
+
+async function executeCreateLead(args: Record<string, unknown>) {
+  const Lead = (await import("@/models/lead")).default as any;
+  const lead = await Lead.create({
+    name: args.name,
+    email: args.email,
+    source: args.source,
+    status: "new",
+    budget: args.budget || undefined,
+    serviceInterest: args.serviceInterest || [],
+    notes: args.notes || undefined,
+  });
+  return { id: lead._id, status: lead.status, message: "Lead created successfully" };
+}
+
+async function executeUpdateProject(args: Record<string, unknown>) {
+  const Project = (await import("@/models/project")).default as any;
+  const update: Record<string, unknown> = {};
+  if (args.status) update.status = args.status;
+  if (args.progress !== undefined) update.progress = args.progress;
+  if (args.priority) update.priority = args.priority;
+  if (args.description) update.description = args.description;
+  const project = await Project.findByIdAndUpdate(args.projectId, update, { new: true }).lean();
+  if (!project) return { error: "Project not found" };
+  return { id: project._id, name: project.name, status: project.status, message: "Project updated" };
+}
+
+async function executeCreateNotification(args: Record<string, unknown>) {
+  // Store notification in a simple format — actual notification delivery handled by caller
+  return {
+    notification: {
+      userId: args.userId || "admins",
+      title: args.title,
+      message: args.message,
+      type: args.type || "info",
+      link: args.link || undefined,
+      createdAt: new Date().toISOString(),
+    },
+    message: "Notification prepared",
+  };
+}
+
+async function executeSkill(args: Record<string, unknown>) {
+  const AgentSkill = (await import("@/models/agent-skill")).default as any;
+  const skill = await AgentSkill.findOne({ slug: args.skillSlug, status: "active" }).lean();
+  if (!skill) return { error: `Skill '${args.skillSlug}' not found or inactive` };
+  // Track usage
+  await AgentSkill.findByIdAndUpdate(skill._id, {
+    $inc: { "usage.totalInvocations": 1 },
+    $set: { "usage.lastUsed": new Date() },
+  });
+  return {
+    skillId: skill._id,
+    name: skill.name,
+    instructions: skill.instructions,
+    capabilities: skill.capabilities,
+    message: "Skill located and ready for execution",
+  };
+}
+
+async function executeDelegateToAgent(args: Record<string, unknown>) {
+  const Agent = (await import("@/models/agent")).default as any;
+  const agentId = String(args.agentId || "");
+  let agent;
+  if (agentId.match(/^[0-9a-fA-F]{24}$/)) {
+    agent = await Agent.findById(agentId).lean();
+  } else {
+    agent = await Agent.findOne({ slug: agentId, status: "active" }).lean();
+  }
+  if (!agent) return { error: `Agent '${agentId}' not found or inactive` };
+  return {
+    agentId: agent._id,
+    name: agent.name,
+    type: agent.type,
+    role: agent.role,
+    message: `Delegation prepared to ${agent.name}`,
+    delegatedMessage: args.message,
+    context: args.context || {},
+  };
+}
+
+async function executeGetInvoice(args: Record<string, unknown>) {
+  const Invoice = (await import("@/models/invoice")).default;
+  const invoiceId = args.invoiceId as string;
+  if (!invoiceId) return { error: "invoiceId is required" };
+
+  const invoice = await Invoice.findOne({
+    $or: [{ _id: invoiceId }, { invoiceNumber: invoiceId }],
+  }).populate("project", "name slug").lean();
+
+  if (!invoice) return { error: "Invoice not found" };
+  return { invoice };
+}
+
+async function executeGetCustomerBalance(args: Record<string, unknown>) {
+  const Payment = (await import("@/models/payment")).default;
+  const Invoice = (await import("@/models/invoice")).default;
+  const email = args.customerEmail as string;
+  if (!email) return { error: "customerEmail is required" };
+
+  const payments = await Payment.find({ customerEmail: email, status: "completed" }).lean();
+  const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
+
+  const invoices = await Invoice.find({ "client.email": email }).lean();
+  const unpaid = invoices.filter((i: Record<string, unknown>) => i.status !== "paid" && i.status !== "cancelled");
+  const totalOwed = unpaid.reduce((sum: number, i: Record<string, unknown>) => sum + ((i.amountDue as number) || (i.total as number) || 0), 0);
+
+  return {
+    customerEmail: email,
+    totalPaid,
+    totalOwed,
+    balance: totalPaid - totalOwed,
+    totalPayments: payments.length,
+    totalInvoices: invoices.length,
+    unpaidInvoices: unpaid.map((i: Record<string, unknown>) => ({
+      invoiceNumber: i.invoiceNumber,
+      total: i.total,
+      amountDue: i.amountDue || i.total,
+      status: i.status,
+      dueDate: i.dueDate,
+    })),
+  };
+}
+
+async function executeGetProjectBalance(args: Record<string, unknown>) {
+  const Payment = (await import("@/models/payment")).default;
+  const Invoice = (await import("@/models/invoice")).default;
+  const Project = (await import("@/models/project")).default;
+  const projectId = args.projectId as string;
+  if (!projectId) return { error: "projectId is required" };
+
+  const project = await Project.findOne({
+    $or: [{ _id: projectId }, { slug: projectId }],
+  }).lean() as Record<string, unknown> | null;
+
+  if (!project) return { error: "Project not found" };
+
+  const payments = await Payment.find({ project: project._id, status: "completed" }).lean();
+  const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
+
+  const invoices = await Invoice.find({ project: project._id }).lean();
+  const totalInvoiced = invoices.reduce((sum: number, i: Record<string, unknown>) => sum + ((i.total as number) || 0), 0);
+  const totalDue = invoices.reduce((sum: number, i: Record<string, unknown>) => sum + ((i.amountDue as number) || 0), 0);
+
+  const financial = project.financial as Record<string, unknown> | undefined;
+
+  return {
+    projectId: project._id,
+    name: project.name,
+    totalPaid,
+    totalInvoiced,
+    totalDue,
+    balance: totalPaid - totalInvoiced,
+    depositAmount: financial?.depositAmount || 0,
+    depositPaid: financial?.depositPaid || false,
+    totalAmount: project.totalAmount || 0,
+    payments: payments.length,
+    invoices: invoices.length,
+  };
+}
+
+async function executeCreatePaymentRequest(args: Record<string, unknown>) {
+  const Invoice = (await import("@/models/invoice")).default;
+  const amount = args.amount as number;
+  const description = args.description as string;
+  const projectId = args.projectId as string;
+  const type = (args.type as string) || "standard";
+
+  if (!amount || amount <= 0) return { error: "Valid amount is required" };
+  if (!description) return { error: "Description is required" };
+
+  const prefix = "INV";
+  const date = new Date();
+  const datePart = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, "0")}${String(date.getDate()).padStart(2, "0")}`;
+  const random = Math.random().toString(36).substring(2, 8).toUpperCase();
+  const invoiceNumber = `${prefix}-${datePart}-${random}`;
+
+  const invoice = await Invoice.create({
+    invoiceNumber,
+    project: projectId || undefined,
+    items: [{ description, quantity: 1, unitPrice: amount, total: amount, category: type }],
+    subtotal: amount,
+    total: amount,
+    amountDue: amount,
+    currency: "USD",
+    status: "draft",
+    type: type === "deposit" ? "deposit" : type === "milestone" ? "milestone" : type === "final" ? "final" : "standard",
+  });
+
+  return {
+    invoiceId: invoice._id,
+    invoiceNumber,
+    amount,
+    description,
+    type,
+    status: "draft",
+    message: "Invoice created as draft. An admin must issue it before the client can pay.",
+  };
+}
+
+async function executeGetTransaction(args: Record<string, unknown>) {
+  const Payment = (await import("@/models/payment")).default;
+  const paymentId = args.paymentId as string;
+  if (!paymentId) return { error: "paymentId is required" };
+
+  const payment = await Payment.findOne({
+    $or: [{ _id: paymentId }, { paymentNumber: paymentId }],
+  }).populate("invoice", "invoiceNumber total").populate("order", "orderNumber total").populate("project", "name").lean();
+
+  if (!payment) return { error: "Payment not found" };
+  return { payment };
+}
+
+async function executeGetPaymentStatus(args: Record<string, unknown>) {
+  const Payment = (await import("@/models/payment")).default;
+  const Invoice = (await import("@/models/invoice")).default;
+
+  if (args.invoiceId) {
+    const invoice = await Invoice.findById(args.invoiceId).lean() as Record<string, unknown> | null;
+    if (!invoice) return { error: "Invoice not found" };
+    return {
+      type: "invoice",
+      invoiceNumber: invoice.invoiceNumber,
+      status: invoice.status,
+      total: invoice.total,
+      amountPaid: invoice.amountPaid || 0,
+      amountDue: invoice.amountDue || invoice.total,
+      paid: invoice.status === "paid",
+    };
+  }
+
+  if (args.orderId) {
+    const payment = await Payment.findOne({ order: args.orderId }).lean();
+    return {
+      type: "order",
+      orderId: args.orderId,
+      paymentStatus: payment?.status || "no payment found",
+      paid: payment?.status === "completed",
+    };
+  }
+
+  return { error: "invoiceId or orderId is required" };
+}
+
+async function executePrepareRefundRequest(args: Record<string, unknown>) {
+  const Refund = (await import("@/models/refund")).default;
+  const Payment = (await import("@/models/payment")).default;
+  const PaymentAuditLog = (await import("@/models/payment-audit-log")).default;
+
+  const paymentId = args.paymentId as string;
+  const amount = args.amount as number;
+  const reason = args.reason as string;
+
+  if (!paymentId || !amount || !reason) {
+    return { error: "paymentId, amount, and reason are required" };
+  }
+
+  const payment = await Payment.findById(paymentId);
+  if (!payment) return { error: "Payment not found" };
+  if (payment.status !== "completed") return { error: "Can only refund completed payments" };
+  if (amount > payment.amount) return { error: "Refund exceeds payment amount" };
+
+  const ts = Date.now().toString(36).toUpperCase();
+  const rand = Math.random().toString(36).substring(2, 6).toUpperCase();
+  const refundNumber = `REF-${ts}-${rand}`;
+
+  const refund = await Refund.create({
+    refundNumber,
+    payment: paymentId,
+    customer: payment.customer,
+    customerEmail: payment.customerEmail,
+    amount,
+    currency: payment.currency,
+    reason,
+    status: "pending",
+  });
+
+  await PaymentAuditLog.create({
+    action: "refund_requested",
+    entity: "Refund",
+    entityId: refund._id,
+    payment: paymentId,
+    gateway: payment.gateway,
+    amount,
+    currency: payment.currency,
+    details: { refundNumber, reason },
+  });
+
+  return {
+    refundId: refund._id,
+    refundNumber,
+    amount,
+    reason,
+    status: "pending",
+    message: "Refund request created. Requires admin approval before processing.",
+  };
+}
+
 // Main executor
 export async function executeTool(
   toolName: string,
@@ -407,6 +936,32 @@ export async function executeTool(
       return { info: COMPANY_INFO };
     case "get_project_requests":
       return executeGetProjectRequests(args);
+    case "create_inquiry":
+      return executeCreateInquiry(args);
+    case "create_lead":
+      return executeCreateLead(args);
+    case "update_project":
+      return executeUpdateProject(args);
+    case "create_notification":
+      return executeCreateNotification(args);
+    case "execute_skill":
+      return executeSkill(args);
+    case "delegate_to_agent":
+      return executeDelegateToAgent(args);
+    case "get_invoice":
+      return executeGetInvoice(args);
+    case "get_customer_balance":
+      return executeGetCustomerBalance(args);
+    case "get_project_balance":
+      return executeGetProjectBalance(args);
+    case "create_payment_request":
+      return executeCreatePaymentRequest(args);
+    case "get_transaction":
+      return executeGetTransaction(args);
+    case "get_payment_status":
+      return executeGetPaymentStatus(args);
+    case "prepare_refund_request":
+      return executePrepareRefundRequest(args);
     default:
       return { error: `Unknown tool: ${toolName}` };
   }

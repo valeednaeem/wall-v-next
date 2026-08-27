@@ -107,6 +107,45 @@ export const PERMISSIONS = {
   AGENTS_APPROVE: "agents:approve",
   AGENTS_MONITOR: "agents:monitor",
   AGENTS_CONFIGURE: "agents:configure",
+
+  // Skills
+  SKILLS_VIEW: "skills:view",
+  SKILLS_CREATE: "skills:create",
+  SKILLS_EDIT: "skills:edit",
+  SKILLS_DELETE: "skills:delete",
+  SKILLS_EXECUTE: "skills:execute",
+  SKILLS_MANAGE: "skills:manage",
+
+  // Tools
+  TOOLS_VIEW: "tools:view",
+  TOOLS_CREATE: "tools:create",
+  TOOLS_EDIT: "tools:edit",
+  TOOLS_DELETE: "tools:delete",
+  TOOLS_EXECUTE: "tools:execute",
+
+  // Workflows
+  WORKFLOWS_VIEW: "workflows:view",
+  WORKFLOWS_CREATE: "workflows:create",
+  WORKFLOWS_EDIT: "workflows:edit",
+  WORKFLOWS_DELETE: "workflows:delete",
+  WORKFLOWS_EXECUTE: "workflows:execute",
+
+  // Finance
+  FINANCE_VIEW: "finance:view",
+  FINANCE_READ: "finance:read",
+  FINANCE_EDIT: "finance:edit",
+  FINANCE_CREATE_INVOICE: "finance:create_invoice",
+  FINANCE_CREATE_QUOTATION: "finance:create_quotation",
+  FINANCE_PROCESS_PAYMENT: "finance:process_payment",
+  FINANCE_REFUND: "finance:refund",
+  FINANCE_RECONCILE: "finance:reconcile",
+
+  // Settings
+  SETTINGS_EDIT: "settings:edit",
+
+  // Communications
+  COMMUNICATIONS_PREPARE: "communications:prepare",
+  COMMUNICATIONS_SEND: "communications:send",
 } as const;
 
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];

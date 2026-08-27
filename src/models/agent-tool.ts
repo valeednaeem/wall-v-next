@@ -4,9 +4,11 @@ export interface IAgentTool extends Document {
   name: string;
   slug: string;
   description: string;
-  category: "system" | "custom" | "integration";
+  category: "system" | "custom" | "integration" | "crm" | "project" | "finance" | "content" | "notification" | "agent";
   type: "function" | "api" | "database" | "webhook" | "internal";
   status: "active" | "inactive" | "deprecated";
+  isWriteOperation: boolean;
+  riskLevel: "low" | "medium" | "high" | "critical";
   config: {
     endpoint?: string;
     method?: "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
@@ -25,6 +27,7 @@ export interface IAgentTool extends Document {
     enum?: string[];
   }[];
   permissions: string[];
+  requiredRole?: string[];
   rateLimit?: {
     maxCalls: number;
     windowMs: number;
@@ -45,9 +48,11 @@ const AgentToolSchema = new Schema<IAgentTool>(
     name: { type: String, required: true, trim: true },
     slug: { type: String, required: true, unique: true, lowercase: true },
     description: { type: String, required: true },
-    category: { type: String, enum: ["system", "custom", "integration"], default: "custom" },
+    category: { type: String, enum: ["system", "custom", "integration", "crm", "project", "finance", "content", "notification", "agent"], default: "custom" },
     type: { type: String, enum: ["function", "api", "database", "webhook", "internal"], required: true },
     status: { type: String, enum: ["active", "inactive", "deprecated"], default: "active" },
+    isWriteOperation: { type: Boolean, default: false },
+    riskLevel: { type: String, enum: ["low", "medium", "high", "critical"], default: "low" },
     config: {
       endpoint: String,
       method: { type: String, enum: ["GET", "POST", "PUT", "DELETE", "PATCH"] },
@@ -68,6 +73,7 @@ const AgentToolSchema = new Schema<IAgentTool>(
       },
     ],
     permissions: [String],
+    requiredRole: [String],
     rateLimit: {
       maxCalls: { type: Number, default: 100 },
       windowMs: { type: Number, default: 60000 },

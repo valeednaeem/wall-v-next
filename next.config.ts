@@ -45,6 +45,27 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  redirects: async () => [
+    { source: "/dashboard/voice-agent-conversations", destination: "/dashboard/ai-conversations", permanent: true },
+    { source: "/dashboard/invoices", destination: "/dashboard/projects", permanent: true },
+    { source: "/dashboard/sales", destination: "/dashboard/projects", permanent: true },
+    { source: "/dashboard/project-manager", destination: "/dashboard/projects", permanent: true },
+    { source: "/dashboard/production", destination: "/dashboard/projects", permanent: true },
+    { source: "/dashboard/client-portal", destination: "/dashboard/projects", permanent: true },
+    { source: "/dashboard/previews", destination: "/dashboard/projects", permanent: true },
+    { source: "/dashboard/billing", destination: "/dashboard/settings", permanent: true },
+    { source: "/dashboard/contacts", destination: "/dashboard/crm", permanent: true },
+    { source: "/dashboard/gdpr", destination: "/dashboard/settings", permanent: true },
+    { source: "/dashboard/notifications", destination: "/dashboard/settings", permanent: true },
+    { source: "/dashboard/pages", destination: "/dashboard/blog", permanent: true },
+    { source: "/dashboard/resellerspanel", destination: "/dashboard/settings", permanent: true },
+    { source: "/dashboard/services", destination: "/dashboard/marketing", permanent: true },
+    { source: "/dashboard/support", destination: "/dashboard", permanent: true },
+    { source: "/dashboard/tags", destination: "/dashboard/ecommerce/products", permanent: true },
+    { source: "/dashboard/teams", destination: "/dashboard/users", permanent: true },
+    { source: "/dashboard/contentManagement", destination: "/dashboard/blog", permanent: true },
+    { source: "/dashboard/marketing/overview", destination: "/dashboard/marketing", permanent: true },
+  ],
   headers: async () => [
     {
       source: "/(.*)",

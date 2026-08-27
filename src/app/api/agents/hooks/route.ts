@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthUser } from "@/lib/auth";
+import { PERMISSIONS, hasPermission } from "@/lib/permissions";
 import AgentHook from "@/models/agent-hook";
 import connectToDatabase from "@/lib/mongodb";
 
@@ -7,6 +8,9 @@ export async function GET() {
   try {
     const user = await getAuthUser();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!hasPermission(user.permissions || [], PERMISSIONS.AGENTS_VIEW)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
 
     await connectToDatabase();
     const hooks = await AgentHook.find({}).populate("agent", "name slug").populate("createdBy", "name email").sort({ createdAt: -1 });
@@ -21,6 +25,9 @@ export async function POST(request: NextRequest) {
   try {
     const user = await getAuthUser();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!hasPermission(user.permissions || [], PERMISSIONS.AGENTS_CREATE)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
 
     await connectToDatabase();
     const body = await request.json();

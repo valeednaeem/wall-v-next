@@ -99,6 +99,8 @@ export async function GET() {
       topServices,
       topLandingPages,
       topTrafficSources,
+      visitorCount,
+      prevVisitorCount,
     ] = await Promise.all([
       // Leads
       getPreviousPeriodData(Lead, "createdAt", startDate, endDate),
@@ -136,10 +138,34 @@ export async function GET() {
             .sort((a, b) => b.inquiries - a.inquiries)
             .slice(0, 10)
         ) : Promise.resolve([]),
-      // Top landing pages - placeholder for now
-      Promise.resolve([]),
-      // Top traffic sources - placeholder for now
-      Promise.resolve([]),
+      // Top landing pages from Lead sources
+      Lead.aggregate([
+        { $match: { createdAt: { $gte: startDate, $lte: endDate }, source: { $exists: true, $ne: "" } } },
+        { $group: { _id: "$source", count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+        { $limit: 10 },
+        { $project: { name: "$_id", views: "$count", _id: 0 } },
+      ]),
+      // Top traffic sources from Lead referralData
+      Lead.aggregate([
+        { $match: { createdAt: { $gte: startDate, $lte: endDate } } },
+        { $group: { _id: "$referralData.source || 'direct'", count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+        { $limit: 10 },
+        { $project: { name: "$_id", visitors: "$count", _id: 0 } },
+      ]),
+      // Visitor engagement count (leads + orders + conversations as proxy)
+      Promise.all([
+        Lead.countDocuments({ createdAt: { $gte: startDate, $lte: endDate } }),
+        Order.countDocuments({ createdAt: { $gte: startDate, $lte: endDate } }),
+        AIConversation ? AIConversation.countDocuments({ createdAt: { $gte: startDate, $lte: endDate } }) : 0,
+      ]).then(([l, o, c]) => l + o + c),
+      // Previous period visitor count
+      Promise.all([
+        Lead.countDocuments({ createdAt: { $gte: new Date(startDate.getTime() - 30 * 24 * 60 * 60 * 1000), $lte: startDate } }),
+        Order.countDocuments({ createdAt: { $gte: new Date(startDate.getTime() - 30 * 24 * 60 * 60 * 1000), $lte: startDate } }),
+        AIConversation ? AIConversation.countDocuments({ createdAt: { $gte: new Date(startDate.getTime() - 30 * 24 * 60 * 60 * 1000), $lte: startDate } }) : 0,
+      ]).then(([l, o, c]) => l + o + c),
     ]);
 
     // Calculate changes
@@ -162,9 +188,9 @@ export async function GET() {
 
     const stats = {
       visitors: {
-        current: 0, // Would come from GA
-        previous: 0,
-        change: 0,
+        current: visitorCount,
+        previous: prevVisitorCount,
+        change: calculateChange(visitorCount, prevVisitorCount),
       },
       leads: {
         current: leadsData.current,
