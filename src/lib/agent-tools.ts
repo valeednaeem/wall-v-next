@@ -684,15 +684,46 @@ async function executeDelegateToAgent(args: Record<string, unknown>) {
     agent = await Agent.findOne({ slug: agentId, status: "active" }).lean();
   }
   if (!agent) return { error: `Agent '${agentId}' not found or inactive` };
-  return {
-    agentId: agent._id,
-    name: agent.name,
-    type: agent.type,
-    role: agent.role,
-    message: `Delegation prepared to ${agent.name}`,
-    delegatedMessage: args.message,
-    context: args.context || {},
-  };
+
+  // Actually execute the delegated agent
+  const delegatedMessage = String(args.message || args.delegatedMessage || "");
+  if (!delegatedMessage) {
+    return { error: "No message provided for delegation" };
+  }
+
+  try {
+    const result = await runAgentWithTools({
+      systemPrompt: agent.systemPrompt || `You are ${agent.name}, a ${agent.role} agent for Wall-V.`,
+      messages: [
+        { role: "user", content: delegatedMessage },
+      ],
+      model: agent.aiModel || "gpt-4o",
+      temperature: agent.temperature || 0.7,
+      maxTokens: agent.maxTokens || 4000,
+      maxIterations: 3,
+    });
+
+    return {
+      agentId: agent._id,
+      name: agent.name,
+      type: agent.type,
+      role: agent.role,
+      message: `Delegated to ${agent.name} — execution completed`,
+      delegatedMessage,
+      response: result.response,
+      toolCalls: result.toolCalls,
+    };
+  } catch (error) {
+    return {
+      agentId: agent._id,
+      name: agent.name,
+      type: agent.type,
+      role: agent.role,
+      message: `Delegation to ${agent.name} failed`,
+      delegatedMessage,
+      error: String(error),
+    };
+  }
 }
 
 async function executeGetInvoice(args: Record<string, unknown>) {

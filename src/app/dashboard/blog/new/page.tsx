@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import HtmlEditor from "@/components/editor/html-editor";
+import AIAssist from "@/components/ai/ai-assist";
 
 interface Category {
   _id: string;
@@ -104,6 +105,13 @@ export default function NewBlogPostPage() {
           {loading ? "Publishing..." : "Publish"}
         </button>
       </div>
+
+      <AIAssist
+        context="blog-editor"
+        resourceType="blog-post"
+        currentContent={form.content}
+        onApplySuggestion={(s) => setForm({ ...form, content: form.content + "\n\n" + s })}
+      />
     </div>
   );
 }

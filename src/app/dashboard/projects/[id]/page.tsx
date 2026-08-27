@@ -9,6 +9,7 @@ import {
   Calendar, TrendingUp, AlertTriangle, ChevronRight, Plus, Loader2,
   Send, Check, X, MessageSquare, Bot, Settings, Edit2, Eye,
 } from "lucide-react";
+import AIAssist from "@/components/ai/ai-assist";
 
 interface Stage {
   _id: string;
@@ -794,6 +795,13 @@ export default function ProjectDetailPage() {
           )}
         </div>
       )}
+
+      <AIAssist
+        context="project-detail"
+        resourceType="project"
+        resourceId={project?._id}
+        currentContent={project?.description}
+      />
     </div>
   );
 }

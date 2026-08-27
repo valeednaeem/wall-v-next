@@ -42,10 +42,6 @@ export default function InvoicesPage() {
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
 
-  useEffect(() => {
-    fetchInvoices();
-  }, [fetchInvoices]);
-
   const fetchInvoices = useCallback(async () => {
     setLoading(true);
     try {
@@ -63,6 +59,10 @@ export default function InvoicesPage() {
       setLoading(false);
     }
   }, [statusFilter, page]);
+
+  useEffect(() => {
+    fetchInvoices();
+  }, [fetchInvoices]);
 
   return (
     <div className="space-y-6">
