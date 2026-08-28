@@ -27,6 +27,7 @@ interface SidebarItem {
 
 const sidebarItems: SidebarItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: <LayoutDashboard className="h-4 w-4" /> },
+  { label: "Client Portal", href: "/client", icon: <User className="h-4 w-4" /> },
   { label: "Projects", href: "/dashboard/projects", icon: <FolderKanban className="h-4 w-4" />, permission: "projects:view" },
   { label: "E-Commerce", href: "/dashboard/ecommerce/products", icon: <ShoppingBag className="h-4 w-4" />, permission: "products:view", children: [
     { label: "Products", href: "/dashboard/ecommerce/products", permission: "products:view" },
