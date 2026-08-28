@@ -32,7 +32,13 @@ export async function GET(request: NextRequest) {
     if (status) query.status = status;
     if (role) query.role = role;
     if (type) query.type = type;
-    if (division) query.division = division;
+    if (division === "__clientFacing__") {
+      query.isClientFacing = true;
+    } else if (division === "__internal__") {
+      query.isClientFacing = false;
+    } else if (division) {
+      query.division = division;
+    }
 
     const hideDeprecated = searchParams.get("hideDeprecated") !== "false";
     if (hideDeprecated) {

@@ -379,6 +379,16 @@ export default function AgentsPage() {
             <option value="operations">Operations</option>
             <option value="custom">Custom</option>
           </select>
+          <select onChange={(e) => {
+            const val = e.target.value;
+            if (val === "all") setFilterDivision("all");
+            else if (val === "client-facing") setFilterDivision("__clientFacing__");
+            else setFilterDivision(val);
+          }} className="rounded-lg border bg-background px-3 py-2 text-sm">
+            <option value="all">All Types</option>
+            <option value="client-facing">Client-Facing</option>
+            <option value="internal">Internal Only</option>
+          </select>
           <div className="flex items-center gap-1 border rounded-lg">
             <button onClick={() => setViewMode("grid")} className={cn("p-2", viewMode === "grid" && "bg-muted")}>
               <LayoutGrid className="h-4 w-4" /></button>
