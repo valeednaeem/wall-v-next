@@ -79,12 +79,12 @@ const REQUEST_PATTERNS: Record<RequestType, { keywords: string[]; patterns: RegE
   },
   "image-generation": {
     keywords: ["image", "picture", "photo", "illustration", "generate image", "ai image", "artwork", "digital art", "concept art"],
-    patterns: [/\b(generate|create|make)\b.*\b(image|picture|photo|artwork|illustration)\b/i, /\b(ai|digital)\s*(image|art|illustration)\b/i],
+    patterns: [/\b(generate|create|make|design|need|want)\b.*\b(image|picture|photo|artwork|illustration)\b/i, /\b(ai|digital)\s*(image|art|illustration)\b/i, /\b(image|picture|photo|artwork)\b/i],
     complexity: "simple",
   },
   "video-production": {
     keywords: ["video", "animation", "motion graphics", "promo video", "explainer video", "commercial", "advertisement video", "youtube"],
-    patterns: [/\b(video|animation|motion\s*graphic)\b/i, /\b(create|produce|make)\b.*\b(video|animation)\b/i],
+    patterns: [/\b(video|animation|motion\s*graphic)\b/i, /\b(create|produce|make|need|want)\b.*\b(video|animation)\b/i, /\b(promo|explainer|advertisement)\s*(video)?\b/i],
     complexity: "complex",
   },
   "content-writing": {
@@ -128,8 +128,8 @@ const REQUEST_PATTERNS: Record<RequestType, { keywords: string[]; patterns: RegE
     complexity: "complex",
   },
   "saas-development": {
-    keywords: ["saas", "software as a service", "subscription platform", "multi-tenant", "saas app"],
-    patterns: [/\b(saas|software.as.a.service|subscription\s*platform)\b/i],
+    keywords: ["saas", "software as a service", "subscription platform", "multi-tenant", "saas app", "software product", "product idea", "saas idea"],
+    patterns: [/\b(saas|software.as.a.service|subscription\s*platform)\b/i, /\b(software|product|saas)\b.*\b(idea|build|create|develop)\b/i, /\b(build|create|develop)\b.*\b(software|product|saas)\b/i, /\b(idea|have)\b.*\b(software|product|saas)\b/i],
     complexity: "complex",
   },
   "api-development": {
