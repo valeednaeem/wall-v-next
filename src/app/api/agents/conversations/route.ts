@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthUser } from "@/lib/auth";
 import AgentConversation from "@/models/agent-conversation";
 import connectToDatabase from "@/lib/mongodb";
+import { getDataScope, applyUserScope } from "@/lib/data-isolation";
 
 export async function GET(request: NextRequest) {
   try {
@@ -16,10 +17,13 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "20");
 
-    const query: Record<string, unknown> = {};
+    const scope = getDataScope(user);
+    let query: Record<string, unknown> = {};
     if (agentId) query.agent = agentId;
     if (status) query.status = status;
     if (channel) query.channel = channel;
+
+    query = applyUserScope(query, scope, "requestedBy");
 
     const [conversations, total] = await Promise.all([
       AgentConversation.find(query)
@@ -33,12 +37,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       conversations,
-      pagination: {
-        page,
-        limit,
-        total,
-        pages: Math.ceil(total / limit),
-      },
+      pagination: { page, limit, total, pages: Math.ceil(total / limit) },
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Failed to fetch conversations";

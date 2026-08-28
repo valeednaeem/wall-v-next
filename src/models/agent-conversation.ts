@@ -58,6 +58,7 @@ export interface IAgentConversation extends Document {
   endedAt?: Date;
   duration?: number;
   messageCount: number;
+  requestedBy?: mongoose.Types.ObjectId | null;
   tokenUsage: {
     prompt: number;
     completion: number;
@@ -74,6 +75,7 @@ const AgentConversationSchema = new Schema<IAgentConversation>(
     sessionId: { type: String, required: true },
     channel: { type: String, enum: ["website", "whatsapp", "email", "api", "dashboard", "voice"], default: "website" },
     status: { type: String, enum: ["active", "ended", "archived", "escalated"], default: "active" },
+    requestedBy: { type: Schema.Types.ObjectId, ref: "User", default: null },
     visitor: {
       id: String,
       name: String,

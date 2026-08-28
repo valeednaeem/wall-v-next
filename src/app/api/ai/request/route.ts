@@ -57,6 +57,7 @@ export async function POST(request: NextRequest) {
         channel: channel || "website",
         status: "active",
         visitor: visitorInfo,
+        requestedBy: user?.userId || null,
         context: {
           page: context?.page || "/ai-request",
           referrer: context?.referrer || "",
@@ -78,6 +79,7 @@ export async function POST(request: NextRequest) {
       conversation: conversation._id,
       type: "skill-invoke",
       status: "pending",
+      requestedBy: user?.userId || null,
       input: {
         message,
         skillId: primaryCapability.id,

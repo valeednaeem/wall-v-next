@@ -3,6 +3,7 @@ import { getAuthUser } from "@/lib/auth";
 import { PERMISSIONS, hasPermission } from "@/lib/permissions";
 import AgentExecution from "@/models/agent-execution";
 import connectToDatabase from "@/lib/mongodb";
+import { getDataScope, applyUserScope } from "@/lib/data-isolation";
 
 export async function GET(request: NextRequest) {
   try {
@@ -20,10 +21,13 @@ export async function GET(request: NextRequest) {
     const page = parseInt(url.searchParams.get("page") || "1");
     const limit = parseInt(url.searchParams.get("limit") || "50");
 
-    const query: Record<string, unknown> = {};
+    const scope = getDataScope(user);
+    let query: Record<string, unknown> = {};
     if (status) query.status = status;
     if (type) query.type = type;
     if (agentId) query.agent = agentId;
+
+    query = applyUserScope(query, scope, "requestedBy");
 
     const [executions, total, stats] = await Promise.all([
       AgentExecution.find(query)
@@ -35,7 +39,7 @@ export async function GET(request: NextRequest) {
         .lean(),
       AgentExecution.countDocuments(query),
       AgentExecution.aggregate([
-        { $match: {} },
+        { $match: query },
         { $group: {
           _id: "$status",
           count: { $sum: 1 },

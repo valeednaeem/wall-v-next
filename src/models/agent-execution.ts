@@ -35,6 +35,7 @@ export interface IAgentExecution extends Document {
     stack?: string;
   };
   metadata?: Record<string, unknown>;
+  requestedBy?: mongoose.Types.ObjectId | null;
   startedAt: Date;
   completedAt?: Date;
   createdAt: Date;
@@ -45,6 +46,7 @@ const AgentExecutionSchema = new Schema<IAgentExecution>(
   {
     agent: { type: Schema.Types.ObjectId, ref: "Agent", required: true },
     conversation: { type: Schema.Types.ObjectId, ref: "AgentConversation" },
+    requestedBy: { type: Schema.Types.ObjectId, ref: "User", default: null },
     type: {
       type: String,
       enum: ["chat", "tool-call", "hook-trigger", "skill-invoke", "batch", "scheduled"],
