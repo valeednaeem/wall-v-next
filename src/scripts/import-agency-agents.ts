@@ -367,7 +367,7 @@ async function importAgents() {
             billing: false,
             support: false,
           },
-          isClientFacing: false,
+          isClientFacing: true,
           isMasterAgent: false,
           stats: {
             totalConversations: 0,

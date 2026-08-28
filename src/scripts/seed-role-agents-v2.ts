@@ -268,7 +268,7 @@ You have broad administrative access but must follow the principle of least priv
     ],
     contexts: { visitor: false, lead: false, customer: false, client: false, admin: true, staff: true, system: false },
     integrations: { crm: true, projects: true, billing: true, support: true },
-    isClientFacing: false,
+    isClientFacing: true,
     isMasterAgent: false,
     guardrails: {
       blockedTopics: ["competitor pricing", "internal salaries", "trade secrets", "super-admin credentials", "API keys", "database passwords"],
@@ -336,7 +336,7 @@ INSTRUCTIONS:
     ],
     contexts: { visitor: false, lead: false, customer: false, client: true, admin: true, staff: true, system: false },
     integrations: { crm: true, projects: true, billing: false, support: true },
-    isClientFacing: false,
+    isClientFacing: true,
     isMasterAgent: false,
     guardrails: {
       blockedTopics: ["competitor pricing", "internal salaries"],
@@ -398,7 +398,7 @@ INSTRUCTIONS:
     ],
     contexts: { visitor: false, lead: false, customer: false, client: false, admin: true, staff: true, system: false },
     integrations: { crm: true, projects: true, billing: false, support: true },
-    isClientFacing: false,
+    isClientFacing: true,
     isMasterAgent: false,
     guardrails: {
       blockedTopics: ["competitor pricing", "internal salaries", "trade secrets"],
@@ -460,7 +460,7 @@ INSTRUCTIONS:
     ],
     contexts: { visitor: false, lead: false, customer: false, client: false, admin: true, staff: true, system: false },
     integrations: { crm: false, projects: true, billing: false, support: true },
-    isClientFacing: false,
+    isClientFacing: true,
     isMasterAgent: false,
     guardrails: {
       blockedTopics: ["competitor pricing", "internal salaries"],
@@ -518,7 +518,7 @@ INSTRUCTIONS:
     ],
     contexts: { visitor: false, lead: false, customer: false, client: false, admin: true, staff: true, system: false },
     integrations: { crm: false, projects: true, billing: false, support: false },
-    isClientFacing: false,
+    isClientFacing: true,
     isMasterAgent: false,
     guardrails: {
       blockedTopics: ["competitor pricing"],
@@ -579,7 +579,7 @@ INSTRUCTIONS:
     ],
     contexts: { visitor: false, lead: false, customer: false, client: false, admin: true, staff: true, system: false },
     integrations: { crm: true, projects: false, billing: false, support: false },
-    isClientFacing: false,
+    isClientFacing: true,
     isMasterAgent: false,
     guardrails: {
       blockedTopics: ["competitor pricing", "internal salaries"],
@@ -642,7 +642,7 @@ INSTRUCTIONS:
     ],
     contexts: { visitor: false, lead: true, customer: false, client: true, admin: true, staff: true, system: false },
     integrations: { crm: true, projects: false, billing: true, support: true },
-    isClientFacing: false,
+    isClientFacing: true,
     isMasterAgent: false,
     guardrails: {
       blockedTopics: ["competitor pricing", "internal salaries", "discount authorization"],
@@ -701,7 +701,7 @@ INSTRUCTIONS:
     ],
     contexts: { visitor: false, lead: false, customer: true, client: true, admin: true, staff: true, system: false },
     integrations: { crm: true, projects: false, billing: false, support: true },
-    isClientFacing: false,
+    isClientFacing: true,
     isMasterAgent: false,
     guardrails: {
       blockedTopics: ["competitor pricing", "internal salaries"],

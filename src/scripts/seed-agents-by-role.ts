@@ -366,7 +366,7 @@ async function seed() {
         contexts: agentDef.contexts,
         permissions: agentDef.permissions,
         integrations: { crm: true, projects: true, billing: true, support: true },
-        isClientFacing: agentDef.slug === "customer-agent",
+        isClientFacing: true,
         isMasterAgent: false,
         stats: {
           totalConversations: 0, totalMessages: 0, avgConversationLength: 0,

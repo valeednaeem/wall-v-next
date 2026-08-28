@@ -244,7 +244,7 @@ async function createAgentsFromFiles(
         },
         channels: { website: true, whatsapp: false, email: false, api: true, dashboard: true, voice: false },
         integrations: { crm: true, projects: true, billing: false, support: false },
-        isClientFacing: false,
+        isClientFacing: true,
         isMasterAgent: false,
         stats: { totalConversations: 0, totalMessages: 0, avgConversationLength: 0, satisfactionScore: 0, conversionRate: 0, avgResponseTime: 0, resolutionRate: 0 },
         createdBy: userId,
