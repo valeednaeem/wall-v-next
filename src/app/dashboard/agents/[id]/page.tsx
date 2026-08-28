@@ -84,6 +84,9 @@ export default function AgentDetailPage() {
   const [agent, setAgent] = useState<AgentDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
+  const [editing, setEditing] = useState(false);
+  const [editForm, setEditForm] = useState<Partial<AgentDetail>>({});
+  const [saving, setSaving] = useState(false);
   const [conversations, setConversations] = useState<any[]>([]);
   const [executions, setExecutions] = useState<any[]>([]);
   const [approvals, setApprovals] = useState<any[]>([]);
@@ -141,6 +144,40 @@ export default function AgentDetailPage() {
     window.location.href = "/dashboard/agents";
   };
 
+  const startEdit = () => {
+    if (!agent) return;
+    setEditForm({
+      name: agent.name,
+      description: agent.description,
+      systemPrompt: agent.systemPrompt,
+      aiModel: agent.aiModel,
+      temperature: agent.temperature,
+      maxTokens: agent.maxTokens,
+      type: agent.type,
+      role: agent.role,
+    });
+    setEditing(true);
+  };
+
+  const saveEdit = async () => {
+    if (!agent) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/agents/${agent._id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editForm),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAgent(data.agent || { ...agent, ...editForm });
+        setEditing(false);
+      }
+    } catch { console.error("Failed to save"); } finally { setSaving(false); }
+  };
+
+  const cancelEdit = () => { setEditing(false); setEditForm({}); };
+
   if (loading) return <div className="flex items-center justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
   if (!agent) return <div className="text-center py-12"><AlertTriangle className="w-12 h-12 text-gray-300 mx-auto mb-4" /><p>Agent not found</p><Link href="/dashboard/agents" className="text-primary hover:underline">Back to agents</Link></div>;
 
@@ -163,6 +200,10 @@ export default function AgentDetailPage() {
           <Link href={`/dashboard/agents/${agent._id}/test`} className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 text-sm">
             <MessageSquare className="w-4 h-4" />Test
           </Link>
+          <button onClick={editing ? cancelEdit : startEdit} className="flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-accent text-sm">
+            <Settings className="w-4 h-4" />
+            {editing ? "Cancel Edit" : "Edit"}
+          </button>
           <button onClick={toggleStatus} className="flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-accent text-sm">
             {agent.status === "active" ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
             {agent.status === "active" ? "Deactivate" : "Activate"}
@@ -206,20 +247,70 @@ export default function AgentDetailPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="bg-white rounded-xl border p-4">
               <h3 className="font-semibold mb-3">System Prompt</h3>
-              <pre className="text-xs bg-muted rounded-lg p-3 whitespace-pre-wrap font-mono max-h-48 overflow-y-auto">{agent.systemPrompt}</pre>
+              {editing ? (
+                <div className="space-y-3">
+                  <textarea value={editForm.systemPrompt || ""} onChange={(e) => setEditForm({ ...editForm, systemPrompt: e.target.value })}
+                    className="w-full rounded-lg border bg-muted/50 p-3 text-xs font-mono min-h-[200px]" />
+                  <div className="flex gap-2">
+                    <button onClick={saveEdit} disabled={saving}
+                      className="px-3 py-1.5 text-xs bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50">
+                      {saving ? <Loader2 className="h-3 w-3 animate-spin inline" /> : "Save"}
+                    </button>
+                    <button onClick={cancelEdit} className="px-3 py-1.5 text-xs border rounded-lg hover:bg-muted">Cancel</button>
+                  </div>
+                </div>
+              ) : (
+                <pre className="text-xs bg-muted rounded-lg p-3 whitespace-pre-wrap font-mono max-h-48 overflow-y-auto">{agent.systemPrompt}</pre>
+              )}
             </div>
             <div className="bg-white rounded-xl border p-4 space-y-3">
               <h3 className="font-semibold mb-3">Configuration</h3>
               {[
-                ["Model", agent.aiModel],
-                ["Temperature", agent.temperature],
-                ["Max Tokens", agent.maxTokens],
-                ["Type", agent.type],
-                ["Role", agent.role],
-                ["Client Facing", agent.isClientFacing ? "Yes" : "No"],
-                ["Master Agent", agent.isMasterAgent ? "Yes" : "No"],
-              ].map(([label, value]) => (
-                <div key={label} className="flex justify-between text-sm"><span className="text-muted-foreground">{label}</span><span className="font-medium">{String(value)}</span></div>
+                ["Name", agent.name, "name"],
+                ["Description", agent.description, "description"],
+                ["Model", agent.aiModel, "aiModel"],
+                ["Temperature", agent.temperature, "temperature"],
+                ["Max Tokens", agent.maxTokens, "maxTokens"],
+                ["Type", agent.type, "type"],
+                ["Role", agent.role, "role"],
+                ["Client Facing", agent.isClientFacing ? "Yes" : "No", null],
+                ["Master Agent", agent.isMasterAgent ? "Yes" : "No", null],
+              ].map(([label, value, field]) => (
+                <div key={label} className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">{label}</span>
+                  {editing && field ? (
+                    field === "temperature" || field === "maxTokens" ? (
+                      <input type="number" value={String(editForm[field as keyof AgentDetail] ?? value)}
+                        onChange={(e) => setEditForm({ ...editForm, [field]: Number(e.target.value) })}
+                        className="w-24 rounded border bg-background px-2 py-0.5 text-xs text-right" />
+                    ) : field === "type" ? (
+                      <select value={String(editForm[field] ?? value)}
+                        onChange={(e) => setEditForm({ ...editForm, [field]: e.target.value })}
+                        className="rounded border bg-background px-2 py-0.5 text-xs">
+                        <option value="conversational">Conversational</option>
+                        <option value="task">Task</option>
+                        <option value="hybrid">Hybrid</option>
+                      </select>
+                    ) : field === "role" ? (
+                      <select value={String(editForm[field] ?? value)}
+                        onChange={(e) => setEditForm({ ...editForm, [field]: e.target.value })}
+                        className="rounded border bg-background px-2 py-0.5 text-xs">
+                        <option value="sales">Sales</option>
+                        <option value="support">Support</option>
+                        <option value="technical">Technical</option>
+                        <option value="marketing">Marketing</option>
+                        <option value="operations">Operations</option>
+                        <option value="custom">Custom</option>
+                      </select>
+                    ) : (
+                      <input type="text" value={String(editForm[field as keyof AgentDetail] ?? value)}
+                        onChange={(e) => setEditForm({ ...editForm, [field]: e.target.value })}
+                        className="w-48 rounded border bg-background px-2 py-0.5 text-xs" />
+                    )
+                  ) : (
+                    <span className="font-medium">{String(value)}</span>
+                  )}
+                </div>
               ))}
             </div>
           </div>

@@ -104,6 +104,8 @@ export default function AgentsPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [expandedDivisions, setExpandedDivisions] = useState<Set<string>>(new Set());
   const [batchLoading, setBatchLoading] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<{ success: boolean; message: string; created?: number; skipped?: number } | null>(null);
   const searchTimeout = useRef<NodeJS.Timeout | null>(null);
 
   // Debounce search
@@ -193,6 +195,36 @@ export default function AgentsPage() {
     }
   };
 
+  const importAgents = async (dryRun = false) => {
+    setImporting(true);
+    setImportResult(null);
+    try {
+      const res = await fetch("/api/agents/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ dryRun }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        const msg = dryRun
+          ? `Dry run: ${data.summary.totalFound} agents found, ${data.summary.created} would be created`
+          : `Imported ${data.summary.created} agents, ${data.summary.skipped} skipped, ${data.summary.errors} errors`;
+        setImportResult({ success: true, message: msg, created: data.summary.created, skipped: data.summary.skipped });
+        if (!dryRun) {
+          fetchAgents(1);
+          fetchStats();
+        }
+      } else {
+        setImportResult({ success: false, message: data.error || "Import failed" });
+      }
+    } catch {
+      setImportResult({ success: false, message: "Network error during import" });
+    } finally {
+      setImporting(false);
+    }
+  };
+
   const toggleDivision = (div: string) => {
     setExpandedDivisions((prev) => {
       const next = new Set(prev);
@@ -222,12 +254,40 @@ export default function AgentsPage() {
         <div className="flex items-center gap-2">
           <button onClick={() => { fetchAgents(pagination.page); fetchStats(); }}
             className="p-2 border rounded-lg hover:bg-accent"><RefreshCw className="h-4 w-4" /></button>
+          <button onClick={() => importAgents(true)} disabled={importing}
+            className="flex items-center gap-2 px-3 py-2 border rounded-lg hover:bg-accent text-sm disabled:opacity-50">
+            {importing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Bot className="h-4 w-4" />}
+            Scan Agents
+          </button>
+          <button onClick={() => importAgents(false)} disabled={importing}
+            className="flex items-center gap-2 px-3 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm disabled:opacity-50">
+            {importing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+            Import Agency Agents
+          </button>
           <Link href="/dashboard/agents/new"
             className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg hover:bg-primary/90 text-sm">
             <Plus className="h-4 w-4" />New Agent
           </Link>
         </div>
       </div>
+
+      {/* Import Result Banner */}
+      {importResult && (
+        <div className={cn("rounded-xl border p-4 flex items-center justify-between",
+          importResult.success ? "bg-emerald-50 border-emerald-200" : "bg-red-50 border-red-200")}>
+          <div className="flex items-center gap-3">
+            {importResult.success ? (
+              <Bot className="h-5 w-5 text-emerald-600" />
+            ) : (
+              <span className="text-red-600 font-bold">!</span>
+            )}
+            <p className={cn("text-sm", importResult.success ? "text-emerald-700" : "text-red-700")}>
+              {importResult.message}
+            </p>
+          </div>
+          <button onClick={() => setImportResult(null)} className="text-muted-foreground hover:text-foreground text-sm">Dismiss</button>
+        </div>
+      )}
 
       {/* Stats */}
       {stats && (

@@ -34,9 +34,11 @@ export async function GET(request: NextRequest) {
     if (type) query.type = type;
     if (division) query.division = division;
 
-    // Exclude superseded old agents (replaced by v2 role-based agents)
-    const DEPRECATED_SLUGS = ["admin-agent", "staff-agent", "developer-agent", "designer-agent", "customer-agent"];
-    query.slug = { $nin: DEPRECATED_SLUGS };
+    const hideDeprecated = searchParams.get("hideDeprecated") !== "false";
+    if (hideDeprecated) {
+      const DEPRECATED_SLUGS = ["admin-agent", "staff-agent", "developer-agent", "designer-agent", "customer-agent"];
+      query.slug = { $nin: DEPRECATED_SLUGS };
+    }
 
     if (search) {
       query.$or = [
@@ -47,18 +49,27 @@ export async function GET(request: NextRequest) {
     }
 
     if (statsOnly) {
+      const statsQuery: Record<string, unknown> = {};
+      if (hideDeprecated) {
+        statsQuery.slug = { $nin: ["admin-agent", "staff-agent", "developer-agent", "designer-agent", "customer-agent"] };
+      }
+
       const [total, active, inactive, draft, testing, clientFacing, masterAgent, divisions] = await Promise.all([
-        Agent.countDocuments({}),
-        Agent.countDocuments({ status: "active" }),
-        Agent.countDocuments({ status: "inactive" }),
-        Agent.countDocuments({ status: "draft" }),
-        Agent.countDocuments({ status: "testing" }),
-        Agent.countDocuments({ isClientFacing: true }),
-        Agent.countDocuments({ isMasterAgent: true }),
-        Agent.distinct("division"),
+        Agent.countDocuments(statsQuery),
+        Agent.countDocuments({ ...statsQuery, status: "active" }),
+        Agent.countDocuments({ ...statsQuery, status: "inactive" }),
+        Agent.countDocuments({ ...statsQuery, status: "draft" }),
+        Agent.countDocuments({ ...statsQuery, status: "testing" }),
+        Agent.countDocuments({ ...statsQuery, isClientFacing: true }),
+        Agent.countDocuments({ ...statsQuery, isMasterAgent: true }),
+        Agent.distinct("division", statsQuery),
       ]);
 
+      const divisionMatch = hideDeprecated
+        ? [{ $match: { slug: { $nin: ["admin-agent", "staff-agent", "developer-agent", "designer-agent", "customer-agent"] } } }]
+        : [];
       const divisionCounts = await Agent.aggregate([
+        ...divisionMatch,
         { $group: { _id: "$division", count: { $sum: 1 }, active: { $sum: { $cond: [{ $eq: ["$status", "active"] }, 1, 0] } } } },
         { $sort: { count: -1 } },
       ]);
