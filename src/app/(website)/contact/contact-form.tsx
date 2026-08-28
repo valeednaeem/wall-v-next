@@ -218,7 +218,7 @@ export function ContactForm() {
 
         <div className="mt-12 rounded-xl border overflow-hidden">
           <iframe
-            src="https://storage.googleapis.com/maps-solutions-6u16u38so4/locator-plus/ofmi/locator-plus.html"
+            src="https://maps.google.com/maps?q=Wall-V+Technologies+Karachi+Pakistan&t=&z=15&ie=UTF8&iwloc=&output=embed"
             width="100%"
             height="400"
             style={{ border: 0 }}
