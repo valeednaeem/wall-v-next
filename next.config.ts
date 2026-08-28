@@ -28,7 +28,7 @@ const securityHeaders = [
       "img-src 'self' data: blob: https: http: https://www.google-analytics.com https://stats.g.doubleclick.net",
       "font-src 'self' https://fonts.gstatic.com",
       `connect-src 'self' https://api.openai.com https://api.anthropic.com https://dograh.vercel.app https://app.dograh.com https://api.dograh.com wss://api.dograh.com https://www.google-analytics.com https://region1.google-analytics.com https://analytics.google.com https://stats.g.doubleclick.net${devConnectSrc}`,
-      "frame-src 'self' https://js.stripe.com https://checkout.stripe.com https://www.youtube.com",
+      "frame-src 'self' https://js.stripe.com https://checkout.stripe.com https://www.youtube.com https://storage.googleapis.com https://maps.google.com",
     ].join("; "),
   },
 ];
