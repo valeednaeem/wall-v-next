@@ -6,7 +6,7 @@ import {
   Bot, Plus, Search, Play, Pause, Trash2, Loader2,
   MessageSquare, Zap, Settings, Activity, Users, BarChart3,
   Star, Globe, ChevronDown, ChevronRight, CheckSquare, Square,
-  LayoutGrid, List, RefreshCw,
+  LayoutGrid, List, RefreshCw, XCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -105,7 +105,12 @@ export default function AgentsPage() {
   const [expandedDivisions, setExpandedDivisions] = useState<Set<string>>(new Set());
   const [batchLoading, setBatchLoading] = useState(false);
   const [importing, setImporting] = useState(false);
-  const [importResult, setImportResult] = useState<{ success: boolean; message: string; created?: number; skipped?: number } | null>(null);
+  const [importResult, setImportResult] = useState<{ success: boolean; message: string; created?: number; skipped?: number; errorDetails?: string[] } | null>(null);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importTab, setImportTab] = useState<"github" | "upload">("github");
+  const [githubUrl, setGithubUrl] = useState("");
+  const [uploadFiles, setUploadFiles] = useState<File[]>([]);
+  const [dragActive, setDragActive] = useState(false);
   const searchTimeout = useRef<NodeJS.Timeout | null>(null);
 
   // Debounce search
@@ -199,22 +204,38 @@ export default function AgentsPage() {
     setImporting(true);
     setImportResult(null);
     try {
-      const res = await fetch("/api/agents/import", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ dryRun }),
-      });
+      let res: Response;
+
+      if (importTab === "github" && githubUrl) {
+        res = await fetch("/api/agents/import", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ source: "github", repoUrl: githubUrl, dryRun }),
+        });
+      } else if (importTab === "upload" && uploadFiles.length > 0) {
+        const formData = new FormData();
+        formData.set("dryRun", String(dryRun));
+        for (const file of uploadFiles) formData.append("files", file);
+        res = await fetch("/api/agents/import", {
+          method: "POST",
+          credentials: "include",
+          body: formData,
+        });
+      } else {
+        setImportResult({ success: false, message: "Please provide a source" });
+        setImporting(false);
+        return;
+      }
+
       const data = await res.json();
       if (data.success) {
+        const src = data.source === "github" ? "GitHub" : "Upload";
         const msg = dryRun
-          ? `Dry run: ${data.summary.totalFound} agents found, ${data.summary.created} would be created`
-          : `Imported ${data.summary.created} agents, ${data.summary.skipped} skipped, ${data.summary.errors} errors`;
-        setImportResult({ success: true, message: msg, created: data.summary.created, skipped: data.summary.skipped });
-        if (!dryRun) {
-          fetchAgents(1);
-          fetchStats();
-        }
+          ? `[${src}] Dry run: ${data.summary.totalFound} agents found, ${data.summary.created} would be created`
+          : `[${src}] Imported ${data.summary.created} agents, ${data.summary.skipped} skipped, ${data.summary.errors} errors`;
+        setImportResult({ success: true, message: msg, created: data.summary.created, skipped: data.summary.skipped, errorDetails: data.errorDetails });
+        if (!dryRun) { fetchAgents(1); fetchStats(); }
       } else {
         setImportResult({ success: false, message: data.error || "Import failed" });
       }
@@ -223,6 +244,17 @@ export default function AgentsPage() {
     } finally {
       setImporting(false);
     }
+  };
+
+  const handleFileDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragActive(false);
+    const files = Array.from(e.dataTransfer.files).filter((f) => f.name.endsWith(".md"));
+    if (files.length > 0) setUploadFiles(files);
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) setUploadFiles(Array.from(e.target.files));
   };
 
   const toggleDivision = (div: string) => {
@@ -254,15 +286,9 @@ export default function AgentsPage() {
         <div className="flex items-center gap-2">
           <button onClick={() => { fetchAgents(pagination.page); fetchStats(); }}
             className="p-2 border rounded-lg hover:bg-accent"><RefreshCw className="h-4 w-4" /></button>
-          <button onClick={() => importAgents(true)} disabled={importing}
-            className="flex items-center gap-2 px-3 py-2 border rounded-lg hover:bg-accent text-sm disabled:opacity-50">
-            {importing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Bot className="h-4 w-4" />}
-            Scan Agents
-          </button>
-          <button onClick={() => importAgents(false)} disabled={importing}
-            className="flex items-center gap-2 px-3 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm disabled:opacity-50">
-            {importing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-            Import Agency Agents
+          <button onClick={() => setShowImportModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm">
+            <Bot className="h-4 w-4" />Import Agents
           </button>
           <Link href="/dashboard/agents/new"
             className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg hover:bg-primary/90 text-sm">
@@ -512,6 +538,117 @@ export default function AgentsPage() {
           <span className="text-sm text-muted-foreground">Page {pagination.page} of {pagination.pages} ({pagination.total} agents)</span>
           <button disabled={pagination.page >= pagination.pages} onClick={() => fetchAgents(pagination.page + 1)}
             className="px-3 py-1.5 text-sm border rounded-lg disabled:opacity-50 hover:bg-muted">Next</button>
+        </div>
+      )}
+
+      {/* Import Modal */}
+      {showImportModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => !importing && setShowImportModal(false)}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-5 border-b">
+              <div>
+                <h2 className="text-lg font-bold">Import Agents</h2>
+                <p className="text-sm text-muted-foreground">Import AI agents from a source into your workforce</p>
+              </div>
+              <button onClick={() => !importing && setShowImportModal(false)} className="p-1 hover:bg-muted rounded-lg">
+                <XCircle className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4">
+              {/* Tab Switcher */}
+              <div className="flex gap-1 bg-muted rounded-lg p-1">
+                <button onClick={() => setImportTab("github")}
+                  className={cn("flex-1 py-2 text-sm font-medium rounded-md transition-colors",
+                    importTab === "github" ? "bg-white shadow-sm text-foreground" : "text-muted-foreground")}>
+                  <Globe className="h-4 w-4 inline mr-1.5" />GitHub Repository
+                </button>
+                <button onClick={() => setImportTab("upload")}
+                  className={cn("flex-1 py-2 text-sm font-medium rounded-md transition-colors",
+                    importTab === "upload" ? "bg-white shadow-sm text-foreground" : "text-muted-foreground")}>
+                  <Plus className="h-4 w-4 inline mr-1.5" />Upload Files
+                </button>
+              </div>
+
+              {/* GitHub Tab */}
+              {importTab === "github" && (
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-sm font-medium">Repository URL</label>
+                    <input type="url" value={githubUrl} onChange={(e) => setGithubUrl(e.target.value)}
+                      placeholder="https://github.com/owner/agency-agents"
+                      className="w-full mt-1 rounded-lg border bg-muted/50 px-3 py-2 text-sm" />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Paste a GitHub repository URL containing .md agent files with YAML frontmatter.
+                    The importer will scan all directories for files with <code>name</code> in frontmatter.
+                  </p>
+                </div>
+              )}
+
+              {/* Upload Tab */}
+              {importTab === "upload" && (
+                <div className="space-y-3">
+                  <div
+                    onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
+                    onDragLeave={() => setDragActive(false)}
+                    onDrop={handleFileDrop}
+                    className={cn("border-2 border-dashed rounded-xl p-8 text-center transition-colors cursor-pointer",
+                      dragActive ? "border-primary bg-primary/5" : "border-muted-foreground/25 hover:border-muted-foreground/50")}
+                    onClick={() => document.getElementById("agent-file-input")?.click()}>
+                    <Bot className="h-10 w-10 text-muted-foreground mx-auto mb-3 opacity-50" />
+                    <p className="text-sm font-medium">
+                      {uploadFiles.length > 0 ? `${uploadFiles.length} files selected` : "Drop .md files here or click to browse"}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">Supports .md files with YAML frontmatter</p>
+                    <input id="agent-file-input" type="file" multiple accept=".md" className="hidden" onChange={handleFileSelect} />
+                  </div>
+                  {uploadFiles.length > 0 && (
+                    <div className="space-y-1 max-h-32 overflow-y-auto">
+                      {uploadFiles.map((f, i) => (
+                        <div key={i} className="flex items-center gap-2 text-xs bg-muted/50 rounded-lg px-3 py-1.5">
+                          <Zap className="h-3 w-3 text-primary" />
+                          <span className="flex-1 truncate">{f.name}</span>
+                          <button onClick={() => setUploadFiles(uploadFiles.filter((_, idx) => idx !== i))} className="text-muted-foreground hover:text-foreground">
+                            <XCircle className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Import Result */}
+              {importResult && (
+                <div className={cn("rounded-xl border p-3 text-sm",
+                  importResult.success ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-red-50 border-red-200 text-red-700")}>
+                  <p>{importResult.message}</p>
+                  {importResult.errorDetails && importResult.errorDetails.length > 0 && (
+                    <div className="mt-2 text-xs space-y-1">
+                      {importResult.errorDetails.map((e, i) => <p key={i} className="opacity-70">• {e}</p>)}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center justify-between p-5 border-t">
+              <button onClick={() => importAgents(true)} disabled={importing || (importTab === "github" && !githubUrl) || (importTab === "upload" && uploadFiles.length === 0)}
+                className="px-4 py-2 text-sm border rounded-lg hover:bg-muted disabled:opacity-50">
+                {importing ? <Loader2 className="h-4 w-4 animate-spin inline mr-1" /> : null}
+                Dry Run
+              </button>
+              <div className="flex gap-2">
+                <button onClick={() => !importing && setShowImportModal(false)} className="px-4 py-2 text-sm border rounded-lg hover:bg-muted">Cancel</button>
+                <button onClick={() => importAgents(false)} disabled={importing || (importTab === "github" && !githubUrl) || (importTab === "upload" && uploadFiles.length === 0)}
+                  className="px-4 py-2 text-sm bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50">
+                  {importing ? <Loader2 className="h-4 w-4 animate-spin inline mr-1" /> : null}
+                  Import
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
