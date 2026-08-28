@@ -5,7 +5,7 @@ import connectToDatabase from "@/lib/mongodb";
 import fs from "fs";
 import path from "path";
 
-const AGENTS_DIR = "C:/xampp/htdocs/agency/agency-agents";
+const AGENTS_DIR = process.env.AGENCY_AGENTS_DIR || "C:/Users/Valeed Naeem/.agency-agents";
 
 const COLOR_MAP: Record<string, string> = {
   cyan: "#06B6D4", purple: "#A855F7", green: "#22C55E", red: "#EF4444",
