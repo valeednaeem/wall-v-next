@@ -5,6 +5,15 @@ import ProductCategory from "@/models/product-category";
 import { generateSlug } from "@/lib/generate-slug";
 import { getAuthUser } from "@/lib/auth";
 import { escapeRegex } from "@/lib/escape-regex";
+import { pickFields } from "@/lib/pick-fields";
+
+const PRODUCT_CREATE_FIELDS = [
+  "name", "type", "description", "shortDescription", "content",
+  "featuredImage", "gallery", "price", "salePrice", "currency",
+  "category", "subcategory", "badges", "features", "specifications",
+  "status", "isFeatured", "isPromotional", "stock", "sku",
+  "seo", "social", "variants",
+];
 
 export async function GET(request: Request) {
   try {
@@ -17,10 +26,18 @@ export async function GET(request: Request) {
     const type = searchParams.get("type");
     const search = searchParams.get("search");
     const featured = searchParams.get("featured");
+    const status = searchParams.get("status");
     const sort = searchParams.get("sort") || "createdAt";
     const order = searchParams.get("order") || "desc";
+    const allStatuses = searchParams.get("allStatuses") === "true";
 
-    const query: Record<string, unknown> = { status: "published" };
+    const query: Record<string, unknown> = {};
+
+    if (allStatuses) {
+      if (status) query.status = status;
+    } else {
+      query.status = "published";
+    }
 
     if (category) {
       const cat = await ProductCategory.findOne({ slug: category });
@@ -76,7 +93,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Product with this name already exists" }, { status: 409 });
     }
 
-    const product = await Product.create({ ...body, slug });
+    const productData = pickFields(body, PRODUCT_CREATE_FIELDS);
+    const product = await Product.create({ ...productData, slug, createdBy: user.userId });
     return NextResponse.json({ success: true, data: product }, { status: 201 });
   } catch (error) {
     console.error("Products POST error:", error);

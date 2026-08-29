@@ -2,6 +2,15 @@ import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import Product from "@/models/product";
 import { getAuthUser } from "@/lib/auth";
+import { pickFields } from "@/lib/pick-fields";
+
+const PRODUCT_UPDATE_FIELDS = [
+  "name", "type", "description", "shortDescription", "content",
+  "featuredImage", "gallery", "price", "salePrice", "currency",
+  "category", "subcategory", "badges", "features", "specifications",
+  "status", "isFeatured", "isPromotional", "stock", "sku",
+  "seo", "social", "variants",
+];
 
 export async function GET(
   request: Request,
@@ -10,8 +19,13 @@ export async function GET(
   try {
     await connectToDatabase();
     const { slug } = await params;
+    const { searchParams } = new URL(request.url);
+    const allStatuses = searchParams.get("allStatuses") === "true";
 
-    const product = await Product.findOne({ slug, status: "published" })
+    const query: Record<string, unknown> = { slug };
+    if (!allStatuses) query.status = "published";
+
+    const product = await Product.findOne(query)
       .populate("category", "name slug")
       .lean();
 
@@ -19,7 +33,9 @@ export async function GET(
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
     }
 
-    await Product.findByIdAndUpdate(product._id, { $inc: { viewCount: 1 } });
+    if (!allStatuses) {
+      await Product.findByIdAndUpdate(product._id, { $inc: { viewCount: 1 } });
+    }
 
     return NextResponse.json({ success: true, data: product });
   } catch (error) {
@@ -42,7 +58,8 @@ export async function PUT(
     const { slug } = await params;
     const body = await request.json();
 
-    const product = await Product.findOneAndUpdate({ slug }, body, { new: true });
+    const productData = pickFields(body, PRODUCT_UPDATE_FIELDS);
+    const product = await Product.findOneAndUpdate({ slug }, productData, { new: true });
     if (!product) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
     }

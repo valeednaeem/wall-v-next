@@ -21,6 +21,7 @@ export default function ProductForm({ product, onSave }: ProductFormProps) {
   const router = useRouter();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const [form, setForm] = useState({
     name: product?.name || "",
     slug: product?.slug || "",
@@ -56,6 +57,7 @@ export default function ProductForm({ product, onSave }: ProductFormProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setError("");
 
     const body = {
       ...form,
@@ -70,12 +72,16 @@ export default function ProductForm({ product, onSave }: ProductFormProps) {
       const url = product ? `/api/products/${product.slug}` : "/api/products";
       const method = product ? "PUT" : "POST";
       const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      const data = await res.json();
+
       if (res.ok) {
-        const data = await res.json();
         if (onSave) onSave(data.data);
         else router.push("/dashboard/ecommerce/products");
+      } else {
+        setError(data.error || "Failed to save product");
       }
     } catch (err) {
+      setError("Network error. Please try again.");
       console.error(err);
     } finally {
       setLoading(false);
@@ -84,6 +90,12 @@ export default function ProductForm({ product, onSave }: ProductFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6 max-w-3xl">
+      {error && (
+        <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+
       <div className="rounded-xl border p-6 space-y-4">
         <h3 className="font-semibold">General Information</h3>
         <div>
@@ -102,6 +114,7 @@ export default function ProductForm({ product, onSave }: ProductFormProps) {
               <option value="service">Service</option>
               <option value="digital">Digital Download</option>
               <option value="hosting">Hosting</option>
+              <option value="domain">Domain</option>
               <option value="saas">SaaS</option>
               <option value="ai-service">AI Service</option>
             </select>

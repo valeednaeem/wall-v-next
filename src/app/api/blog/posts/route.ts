@@ -2,12 +2,13 @@ import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import BlogPost from "@/models/blog-post";
 import BlogCategory from "@/models/blog-category";
+import BlogTag from "@/models/blog-tag";
 import { generateSlug } from "@/lib/generate-slug";
 import { getAuthUser } from "@/lib/auth";
 import { pickFields } from "@/lib/pick-fields";
 import { escapeRegex } from "@/lib/escape-regex";
 
-const BLOG_POST_FIELDS = ["title", "content", "excerpt", "featuredImage", "category", "tags", "status", "isFeatured", "seo"];
+const BLOG_POST_FIELDS = ["title", "content", "excerpt", "featuredImage", "category", "tags", "status", "isFeatured", "seo", "social"];
 
 export async function GET(request: Request) {
   try {
@@ -20,14 +21,25 @@ export async function GET(request: Request) {
     const tag = searchParams.get("tag");
     const search = searchParams.get("search");
     const featured = searchParams.get("featured");
+    const status = searchParams.get("status");
+    const allStatuses = searchParams.get("allStatuses") === "true";
 
-    const query: Record<string, unknown> = { status: "published" };
+    const query: Record<string, unknown> = {};
+
+    if (allStatuses) {
+      if (status) query.status = status;
+    } else {
+      query.status = "published";
+    }
 
     if (category) {
       const cat = await BlogCategory.findOne({ slug: category });
       if (cat) query.category = cat._id;
     }
-    if (tag) query.tags = tag;
+    if (tag) {
+      const tagDoc = await BlogTag.findOne({ slug: tag });
+      if (tagDoc) query.tags = { $in: [tagDoc._id] };
+    }
     if (featured === "true") query.isFeatured = true;
     if (search) {
       const safeSearch = escapeRegex(search);
@@ -42,7 +54,7 @@ export async function GET(request: Request) {
       .populate("author", "name avatar")
       .populate("category", "name slug")
       .populate("tags", "name slug")
-      .sort({ publishedAt: -1 })
+      .sort({ publishedAt: -1, createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(limit)
       .lean();
@@ -68,6 +80,10 @@ export async function POST(request: Request) {
     await connectToDatabase();
     const body = await request.json();
 
+    if (!body.title || !body.content) {
+      return NextResponse.json({ error: "Title and content are required" }, { status: 400 });
+    }
+
     const slug = generateSlug(body.title);
     const existing = await BlogPost.findOne({ slug });
     if (existing) {
@@ -75,8 +91,36 @@ export async function POST(request: Request) {
     }
 
     const postData = pickFields(body, BLOG_POST_FIELDS);
-    const readTime = Math.ceil((body.content || "").split(/\s+/).length / 200);
-    const post = await BlogPost.create({ ...postData, slug, readTime });
+    const readTime = Math.ceil((body.content || "").split(/\s+/).filter(Boolean).length / 200);
+
+    let categoryObjId = undefined;
+    if (body.category) {
+      categoryObjId = body.category;
+    }
+
+    let tagObjIds: string[] = [];
+    if (body.tags && Array.isArray(body.tags)) {
+      for (const tagName of body.tags) {
+        if (!tagName || typeof tagName !== "string") continue;
+        const tagSlug = tagName.toLowerCase().replace(/[^\w\s-]/g, "").replace(/\s+/g, "-").trim();
+        let tagDoc = await BlogTag.findOne({ slug: tagSlug });
+        if (!tagDoc) {
+          tagDoc = await BlogTag.create({ name: tagName.trim(), slug: tagSlug });
+        }
+        tagObjIds.push(tagDoc._id.toString());
+      }
+    }
+
+    const post = await BlogPost.create({
+      ...postData,
+      slug,
+      readTime,
+      author: user.userId,
+      createdBy: user.userId,
+      category: categoryObjId || undefined,
+      tags: tagObjIds,
+      publishedAt: body.status === "published" ? new Date() : undefined,
+    });
 
     return NextResponse.json({ success: true, data: post }, { status: 201 });
   } catch (error) {

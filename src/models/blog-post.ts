@@ -47,7 +47,7 @@ const BlogPostSchema = new Schema<IBlogPost>(
     featuredImage: String,
     gallery: [String],
     author: { type: Schema.Types.ObjectId, ref: "User", required: true },
-    category: { type: Schema.Types.ObjectId, ref: "BlogCategory", required: true },
+    category: { type: Schema.Types.ObjectId, ref: "BlogCategory" },
     tags: [{ type: Schema.Types.ObjectId, ref: "BlogTag" }],
     status: {
       type: String,

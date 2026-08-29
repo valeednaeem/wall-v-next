@@ -11,12 +11,13 @@ export default function EditProductPage() {
   const router = useRouter();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    fetch(`/api/products/${params.slug}`)
-      .then((r) => r.json())
-      .then((d) => { if (d.success) setProduct(d.data); })
-      .catch(console.error)
+    fetch(`/api/products/${params.slug}?allStatuses=true`)
+      .then((r) => { if (!r.ok) throw new Error("Not found"); return r.json(); })
+      .then((d) => { if (d.success) setProduct(d.data); else setError("Product not found"); })
+      .catch(() => setError("Product not found"))
       .finally(() => setLoading(false));
   }, [params.slug]);
 
@@ -31,10 +32,10 @@ export default function EditProductPage() {
     );
   }
 
-  if (!product) {
+  if (error || !product) {
     return (
       <div className="p-8 text-center">
-        <h2 className="text-xl font-bold mb-2">Product Not Found</h2>
+        <h2 className="text-xl font-bold mb-2">{error || "Product Not Found"}</h2>
         <Link href="/dashboard/ecommerce/products" className="text-primary hover:underline">Back to Products</Link>
       </div>
     );

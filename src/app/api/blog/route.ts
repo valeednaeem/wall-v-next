@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import BlogPost from "@/models/blog-post";
 import BlogCategory from "@/models/blog-category";
+import BlogTag from "@/models/blog-tag";
 import { escapeRegex } from "@/lib/escape-regex";
 
 export async function GET(request: Request) {
@@ -22,7 +23,10 @@ export async function GET(request: Request) {
       const cat = await BlogCategory.findOne({ slug: category });
       if (cat) query.category = cat._id;
     }
-    if (tag) query.tags = tag;
+    if (tag) {
+      const tagDoc = await BlogTag.findOne({ slug: tag });
+      if (tagDoc) query.tags = { $in: [tagDoc._id] };
+    }
     if (featured === "true") query.isFeatured = true;
     if (search) {
       const safeSearch = escapeRegex(search);

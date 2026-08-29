@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import HtmlEditor from "@/components/editor/html-editor";
+import ImageUpload from "@/components/media/image-upload";
 import AIAssist from "@/components/ai/ai-assist";
 
 interface Category {
@@ -15,14 +16,21 @@ export default function NewBlogPostPage() {
   const router = useRouter();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const [form, setForm] = useState({
     title: "",
     slug: "",
     excerpt: "",
     content: "",
+    featuredImage: "",
     category: "",
     tags: "",
     status: "draft",
+    isFeatured: false,
+    seo: {
+      metaTitle: "",
+      metaDescription: "",
+    },
   });
 
   useEffect(() => {
@@ -36,6 +44,7 @@ export default function NewBlogPostPage() {
 
   const handleSubmit = async (status: string) => {
     setLoading(true);
+    setError("");
     try {
       const body = {
         ...form,
@@ -43,8 +52,14 @@ export default function NewBlogPostPage() {
         tags: form.tags.split(",").map((t) => t.trim()).filter(Boolean),
       };
       const res = await fetch("/api/blog/posts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-      if (res.ok) router.push("/dashboard/blog");
+      const data = await res.json();
+      if (res.ok) {
+        router.push("/dashboard/blog");
+      } else {
+        setError(data.error || "Failed to create post");
+      }
     } catch (err) {
+      setError("Network error. Please try again.");
       console.error(err);
     } finally {
       setLoading(false);
@@ -58,6 +73,10 @@ export default function NewBlogPostPage() {
         <h2 className="text-2xl font-bold">New Blog Post</h2>
       </div>
 
+      {error && (
+        <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700">{error}</div>
+      )}
+
       <div className="space-y-4">
         <div>
           <label className="text-sm font-medium">Title *</label>
@@ -70,6 +89,12 @@ export default function NewBlogPostPage() {
         <div>
           <label className="text-sm font-medium">Excerpt</label>
           <textarea value={form.excerpt} onChange={(e) => setForm({ ...form, excerpt: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm min-h-[80px]" placeholder="Brief description" />
+        </div>
+        <div>
+          <label className="text-sm font-medium">Featured Image</label>
+          <div className="mt-1">
+            <ImageUpload value={form.featuredImage} onChange={(url) => setForm({ ...form, featuredImage: url })} />
+          </div>
         </div>
         <div>
           <label className="text-sm font-medium">Content *</label>
@@ -93,6 +118,30 @@ export default function NewBlogPostPage() {
           <div>
             <label className="text-sm font-medium">Tags (comma separated)</label>
             <input type="text" value={form.tags} onChange={(e) => setForm({ ...form, tags: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" placeholder="react, nextjs, ai" />
+          </div>
+        </div>
+      </div>
+
+      {/* SEO */}
+      <div className="rounded-xl border p-6 space-y-4">
+        <h3 className="font-semibold">SEO</h3>
+        <div>
+          <label className="text-sm font-medium">Meta Title</label>
+          <input type="text" value={form.seo.metaTitle} onChange={(e) => setForm({ ...form, seo: { ...form.seo, metaTitle: e.target.value } })} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" />
+        </div>
+        <div>
+          <label className="text-sm font-medium">Meta Description</label>
+          <textarea value={form.seo.metaDescription} onChange={(e) => setForm({ ...form, seo: { ...form.seo, metaDescription: e.target.value } })} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm min-h-[80px]" />
+        </div>
+      </div>
+
+      {/* Publishing */}
+      <div className="rounded-xl border p-6 space-y-4">
+        <h3 className="font-semibold">Publishing</h3>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <input type="checkbox" id="featured" checked={form.isFeatured} onChange={(e) => setForm({ ...form, isFeatured: e.target.checked })} className="rounded" />
+            <label htmlFor="featured" className="text-sm font-medium">Featured Post</label>
           </div>
         </div>
       </div>

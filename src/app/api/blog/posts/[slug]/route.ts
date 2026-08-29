@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import BlogPost from "@/models/blog-post";
+import BlogTag from "@/models/blog-tag";
 import { getAuthUser } from "@/lib/auth";
 import { pickFields } from "@/lib/pick-fields";
 
-const BLOG_POST_FIELDS = ["title", "content", "excerpt", "featuredImage", "category", "tags", "status", "isFeatured", "seo"];
+const BLOG_POST_FIELDS = ["title", "content", "excerpt", "featuredImage", "category", "tags", "status", "isFeatured", "seo", "social"];
 
 export async function GET(
   request: Request,
@@ -13,8 +14,13 @@ export async function GET(
   try {
     await connectToDatabase();
     const { slug } = await params;
+    const { searchParams } = new URL(request.url);
+    const allStatuses = searchParams.get("allStatuses") === "true";
 
-    const post = await BlogPost.findOne({ slug, status: "published" })
+    const query: Record<string, unknown> = { slug };
+    if (!allStatuses) query.status = "published";
+
+    const post = await BlogPost.findOne(query)
       .populate("author", "name avatar")
       .populate("category", "name slug")
       .populate("tags", "name slug")
@@ -25,7 +31,9 @@ export async function GET(
       return NextResponse.json({ error: "Post not found" }, { status: 404 });
     }
 
-    await BlogPost.findByIdAndUpdate(post._id, { $inc: { viewCount: 1 } });
+    if (!allStatuses) {
+      await BlogPost.findByIdAndUpdate(post._id, { $inc: { viewCount: 1 } });
+    }
 
     return NextResponse.json({ success: true, data: post });
   } catch (error) {
@@ -48,6 +56,31 @@ export async function PUT(
     const { slug } = await params;
     const body = await request.json();
     const postData = pickFields(body, BLOG_POST_FIELDS);
+
+    if (body.content) {
+      postData.readTime = Math.ceil(body.content.split(/\s+/).filter(Boolean).length / 200);
+    }
+
+    if (body.tags && Array.isArray(body.tags)) {
+      const tagObjIds: string[] = [];
+      for (const tagName of body.tags) {
+        if (!tagName || typeof tagName !== "string") continue;
+        const tagSlug = tagName.toLowerCase().replace(/[^\w\s-]/g, "").replace(/\s+/g, "-").trim();
+        let tagDoc = await BlogTag.findOne({ slug: tagSlug });
+        if (!tagDoc) {
+          tagDoc = await BlogTag.create({ name: tagName.trim(), slug: tagSlug });
+        }
+        tagObjIds.push(tagDoc._id.toString());
+      }
+      postData.tags = tagObjIds;
+    }
+
+    if (body.status === "published") {
+      const existing = await BlogPost.findOne({ slug }).lean();
+      if (existing && existing.status !== "published") {
+        postData.publishedAt = new Date();
+      }
+    }
 
     const post = await BlogPost.findOneAndUpdate({ slug }, postData, { new: true });
     if (!post) {

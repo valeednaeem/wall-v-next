@@ -12,7 +12,7 @@ interface PageParams {
 async function getProduct(slug: string) {
   try {
     await connectToDatabase();
-    const product = await Product.findOne({ slug, isActive: true })
+    const product = await Product.findOne({ slug, status: "published" })
       .populate("category", "name slug")
       .lean();
     return product;

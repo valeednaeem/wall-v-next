@@ -137,9 +137,9 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
               </span>
             )}
           </Link>
-          <a href="/" className="p-2 hover:bg-gray-100 rounded-lg text-sm text-gray-600">
+          <Link href="/" className="p-2 hover:bg-gray-100 rounded-lg text-sm text-gray-600">
             View Site
-          </a>
+          </Link>
         </header>
 
         {/* Page Content */}
