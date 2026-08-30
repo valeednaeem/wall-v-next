@@ -642,7 +642,35 @@ async function executeUpdateProject(args: Record<string, unknown>) {
 }
 
 async function executeCreateNotification(args: Record<string, unknown>) {
-  // Store notification in a simple format — actual notification delivery handled by caller
+  const Notification = (await import("@/models/notification")).default;
+  const connectToDatabase = (await import("@/lib/mongodb")).default;
+  await connectToDatabase();
+
+  // If no userId, find all admin users
+  let targetUserIds: string[] = [];
+  if (args.userId) {
+    targetUserIds = [args.userId as string];
+  } else {
+    const User = (await import("@/models/user")).default;
+    const admins = await User.find({ role: { $in: ["super-admin", "admin"] }, isActive: true }).select("_id").lean();
+    targetUserIds = admins.map((a: { _id: { toString(): string } }) => a._id.toString());
+  }
+
+  if (targetUserIds.length === 0) {
+    return { notification: null, message: "No target users found for notification" };
+  }
+
+  const notifications = await Notification.insertMany(
+    targetUserIds.map((userId) => ({
+      user: userId,
+      title: args.title,
+      message: args.message,
+      type: args.type || "info",
+      link: args.link || undefined,
+      read: false,
+    }))
+  );
+
   return {
     notification: {
       userId: args.userId || "admins",
@@ -650,9 +678,10 @@ async function executeCreateNotification(args: Record<string, unknown>) {
       message: args.message,
       type: args.type || "info",
       link: args.link || undefined,
+      count: notifications.length,
       createdAt: new Date().toISOString(),
     },
-    message: "Notification prepared",
+    message: `Notification created for ${notifications.length} user(s)`,
   };
 }
 
@@ -660,18 +689,93 @@ async function executeSkill(args: Record<string, unknown>) {
   const AgentSkill = (await import("@/models/agent-skill")).default as any;
   const skill = await AgentSkill.findOne({ slug: args.skillSlug, status: "active" }).lean();
   if (!skill) return { error: `Skill '${args.skillSlug}' not found or inactive` };
+
   // Track usage
   await AgentSkill.findByIdAndUpdate(skill._id, {
     $inc: { "usage.totalInvocations": 1 },
     $set: { "usage.lastUsed": new Date() },
   });
-  return {
-    skillId: skill._id,
-    name: skill.name,
-    instructions: skill.instructions,
-    capabilities: skill.capabilities,
-    message: "Skill located and ready for execution",
-  };
+
+  // Execute the skill by running its instructions as an LLM call
+  const skillInstructions = Array.isArray(skill.instructions) ? skill.instructions.join("\n") : (skill.instructions || "");
+  const input = args.input || {};
+  const context = args.context || {};
+
+  const systemPrompt = `You are executing the skill "${skill.name}" (${skill.category}).
+
+## Skill Instructions
+${skillInstructions}
+
+## Input
+${JSON.stringify(input, null, 2)}
+
+## Context
+${JSON.stringify(context, null, 2)}
+
+Execute this skill now. Provide a concrete, actionable output based on the instructions and input above.`;
+
+  try {
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      return {
+        skillId: skill._id.toString(),
+        name: skill.name,
+        result: skillInstructions,
+        message: "Skill instructions returned (LLM unavailable for execution)",
+      };
+    }
+
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: "gpt-4o",
+        messages: [{ role: "system", content: systemPrompt }],
+        temperature: 0.3,
+        max_tokens: 2048,
+      }),
+    });
+
+    if (!response.ok) {
+      return {
+        skillId: skill._id.toString(),
+        name: skill.name,
+        result: skillInstructions,
+        message: "Skill execution failed at LLM, returning instructions",
+      };
+    }
+
+    const data = await response.json();
+    const result = data.choices?.[0]?.message?.content || skillInstructions;
+
+    // Update success stats
+    const successRate = skill.usage?.successRate || 0;
+    const totalInvocations = (skill.usage?.totalInvocations || 1);
+    const newSuccessRate = ((successRate / 100) * (totalInvocations - 1) + 1) / totalInvocations * 100;
+    await AgentSkill.findByIdAndUpdate(skill._id, {
+      $set: { "usage.successRate": Math.round(newSuccessRate * 10) / 10 },
+    });
+
+    return {
+      skillId: skill._id.toString(),
+      name: skill.name,
+      category: skill.category,
+      result,
+      message: "Skill executed successfully",
+    };
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : "Skill execution failed";
+    return {
+      skillId: skill._id.toString(),
+      name: skill.name,
+      result: skillInstructions,
+      error: msg,
+      message: "Skill execution error, returning instructions",
+    };
+  }
 }
 
 async function executeDelegateToAgent(args: Record<string, unknown>) {

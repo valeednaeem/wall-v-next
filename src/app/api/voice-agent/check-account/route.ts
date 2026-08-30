@@ -164,6 +164,30 @@ export async function POST(request: Request) {
       userAccount = await User.findOne({ phone: normalizedPhone }).select("name email isActive lastLogin loginCount createdAt").lean();
     }
 
+    // Create User account if client was created but no user exists
+    if (created && !userAccount && (normalizedEmail || normalizedPhone)) {
+      const bcrypt = (await import("bcryptjs")).default;
+      const tempPassword = await bcrypt.hash("WallV@" + Date.now(), 12);
+      const baseSlug = (name || "voice-user").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+      userAccount = await User.create({
+        name: name || "Voice Caller",
+        email: normalizedEmail || undefined,
+        phone: normalizedPhone || undefined,
+        company: company || undefined,
+        password: tempPassword,
+        slug: `${baseSlug}-${Date.now()}`,
+        role: "customer",
+        isActive: true,
+        isEmailVerified: false,
+        provider: "voice-agent",
+      });
+      // Link client to user
+      if (client) {
+        client.user = userAccount._id;
+        await client.save();
+      }
+    }
+
     // Recent projects
     let projects: { name: string; status: string; createdAt: Date }[] = [];
     if (client) {
