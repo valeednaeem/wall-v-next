@@ -8,7 +8,7 @@ const PRODUCT_UPDATE_FIELDS = [
   "name", "type", "description", "shortDescription", "content",
   "featuredImage", "gallery", "price", "salePrice", "currency",
   "category", "subcategory", "badges", "features", "specifications",
-  "status", "isFeatured", "isPromotional", "stock", "sku",
+  "status", "isFeatured", "isPromotional", "sku",
   "seo", "social", "variants",
 ];
 

@@ -16,7 +16,6 @@ export const productSchema = z.object({
   status: z.enum(["draft", "published", "archived"]).default("draft"),
   isFeatured: z.boolean().default(false),
   isPromotional: z.boolean().default(false),
-  stock: z.number().min(0).optional(),
   sku: z.string().optional(),
   seo: z.object({
     metaTitle: z.string().optional(),

@@ -67,7 +67,7 @@ export async function PUT(
       id,
       { $set: update },
       { new: true }
-    ).select("slug name type status price featuredImage stock seo social");
+    ).select("slug name type status price featuredImage seo social");
 
     if (!product) {
       return NextResponse.json({ success: false, error: "Product not found" }, { status: 404 });

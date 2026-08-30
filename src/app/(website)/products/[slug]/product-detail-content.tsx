@@ -6,7 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { ShoppingCart, Check, Minus, Plus, Package, Star, ArrowLeft } from "lucide-react";
 import { useCart } from "@/lib/cart-context";
-import { isProductAvailable, isPhysicalProduct } from "@/lib/product-availability";
+import { isProductAvailable } from "@/lib/product-availability";
 import DOMPurify from "isomorphic-dompurify";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -35,7 +35,6 @@ interface Product {
   specifications?: Record<string, string>;
   rating?: number;
   reviewCount: number;
-  stock?: number;
   variants?: { name: string; price: number; description?: string }[];
 }
 
@@ -123,7 +122,7 @@ export function ProductDetailContent() {
   }
 
   const currentPrice = product.variants?.[selectedVariant]?.price ?? product.salePrice ?? product.price;
-  const isInStock = isProductAvailable(product.status, product.type, product.stock);
+  const isInStock = isProductAvailable(product.status);
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -267,7 +266,6 @@ export function ProductDetailContent() {
                         salePrice: product.salePrice,
                         image: product.featuredImage,
                         variant: product.variants?.[selectedVariant]?.name,
-                        stock: isPhysicalProduct(product.type) ? product.stock : undefined,
                       },
                       quantity
                     );
@@ -295,7 +293,6 @@ export function ProductDetailContent() {
                         salePrice: product.salePrice,
                         image: product.featuredImage,
                         variant: product.variants?.[selectedVariant]?.name,
-                        stock: isPhysicalProduct(product.type) ? product.stock : undefined,
                       },
                       quantity
                     );

@@ -13,7 +13,6 @@ interface ProductSEO {
   status: string;
   price: number;
   featuredImage?: string;
-  stock?: number;
   seo?: {
     metaTitle?: string;
     metaDescription?: string;

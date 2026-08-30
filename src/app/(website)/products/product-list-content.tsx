@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { useCart } from "@/lib/cart-context";
-import { isProductAvailable, isPhysicalProduct } from "@/lib/product-availability";
+import { isProductAvailable } from "@/lib/product-availability";
 import {
   Select,
   SelectContent,
@@ -35,7 +35,6 @@ interface Product {
   category: { name: string; slug: string };
   badges: string[];
   isFeatured: boolean;
-  stock?: number;
   rating?: number;
   reviewCount: number;
 }
@@ -250,7 +249,7 @@ export function ProductListContent() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {products.map((product) => {
-            const available = isProductAvailable(product.status, product.type, product.stock);
+            const available = isProductAvailable(product.status);
             const justAdded = addedIds.has(product._id);
 
             return (
@@ -340,7 +339,6 @@ export function ProductListContent() {
                           price: product.price,
                           salePrice: product.salePrice,
                           image: product.featuredImage,
-                          stock: isPhysicalProduct(product.type) ? product.stock : undefined,
                         });
                         setAddedIds((prev) => new Set(prev).add(product._id));
                         setTimeout(() => setAddedIds((prev) => { const n = new Set(prev); n.delete(product._id); return n; }), 2000);
@@ -366,7 +364,6 @@ export function ProductListContent() {
                           price: product.price,
                           salePrice: product.salePrice,
                           image: product.featuredImage,
-                          stock: isPhysicalProduct(product.type) ? product.stock : undefined,
                         });
                         router.push("/checkout");
                       }}

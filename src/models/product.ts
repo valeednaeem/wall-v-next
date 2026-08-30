@@ -20,7 +20,6 @@ export interface IProduct extends Document {
   status: "draft" | "published" | "archived";
   isFeatured: boolean;
   isPromotional: boolean;
-  stock?: number;
   sku?: string;
   rating?: number;
   reviewCount: number;
@@ -71,7 +70,6 @@ const ProductSchema = new Schema<IProduct>(
     status: { type: String, enum: ["draft", "published", "archived"], default: "draft" },
     isFeatured: { type: Boolean, default: false },
     isPromotional: { type: Boolean, default: false },
-    stock: { type: Number, default: 0 },
     sku: String,
     rating: { type: Number, min: 0, max: 5 },
     reviewCount: { type: Number, default: 0 },

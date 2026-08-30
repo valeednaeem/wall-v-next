@@ -31,7 +31,7 @@ export async function GET(request: Request) {
     if (type) query.type = type;
 
     const products = await Product.find(query)
-      .select("slug name type status price featuredImage stock seo social")
+      .select("slug name type status price featuredImage seo social")
       .sort({ name: 1 })
       .lean();
 

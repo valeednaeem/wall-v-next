@@ -80,7 +80,7 @@ export async function POST() {
       description: product.description,
       link: `${process.env.NEXT_PUBLIC_APP_URL}/products/${product.slug}`,
       imageLink: product.featuredImage,
-      availability: isProductAvailable(product.status, product.type, product.stock) ? "in_stock" : "out_of_stock",
+      availability: isProductAvailable(product.status) ? "in_stock" : "out_of_stock",
       price: { value: product.price.toFixed(2), currency: product.currency || "USD" },
       googleProductCategory: (product.category as any)?.googleCategory || "Software > Business & Productivity Software",
       brand: "Wall-V",

@@ -11,7 +11,6 @@ export interface CartItem {
   image?: string;
   variant?: string;
   quantity: number;
-  stock?: number;
 }
 
 interface CartContextType {
@@ -61,7 +60,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       if (existing) {
         return prev.map((i) =>
           `${i.productId}-${i.variant || ""}` === key
-            ? { ...i, quantity: Math.min(i.quantity + quantity, i.stock || 999) }
+            ? { ...i, quantity: i.quantity + quantity }
             : i
         );
       }
@@ -81,7 +80,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setItems((prev) =>
       prev.map((i) =>
         i.productId === productId && (i.variant || "") === (variant || "")
-          ? { ...i, quantity: Math.min(quantity, i.stock || 999) }
+          ? { ...i, quantity }
           : i
       )
     );

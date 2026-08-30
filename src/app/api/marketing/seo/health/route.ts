@@ -8,7 +8,6 @@ import RobotsSettings from "@/models/robots-settings";
 import SitemapSettings from "@/models/sitemap-settings";
 import SiteSettings from "@/models/site-settings";
 import { requirePermission } from "@/lib/api-middleware";
-import { isPhysicalProduct } from "@/lib/product-availability";
 
 interface SEOIssue {
   type: "critical" | "warning" | "passed";
@@ -44,7 +43,7 @@ export async function GET() {
 
     // ── Products ──────────────────────────────────────────────
     const products = await Product.find({ status: "published" })
-      .select("slug name seo featuredImage price stock type category description shortDescription")
+      .select("slug name seo featuredImage price type category description shortDescription")
       .populate("category")
       .lean();
 
@@ -88,11 +87,6 @@ export async function GET() {
         issues.push({ type: "critical", page: url, pageType: "product", field: "price", message: "Invalid price for Product schema" });
       } else {
         issues.push({ type: "passed", page: url, pageType: "product", field: "price", message: "Product price valid" });
-      }
-      if (isPhysicalProduct(product.type) && (product.stock === undefined || product.stock === null)) {
-        issues.push({ type: "warning", page: url, pageType: "product", field: "availability", message: "Stock not set (affects schema availability)" });
-      } else {
-        issues.push({ type: "passed", page: url, pageType: "product", field: "availability", message: "Stock status set" });
       }
 
       // Robots / noindex
