@@ -9,6 +9,23 @@ interface ChatMessage {
   timestamp: Date;
 }
 
+interface VisitorState {
+  name: string | null;
+  email: string | null;
+  phone: string | null;
+  company: string | null;
+  intent: string | null;
+  projectType: string | null;
+  objective: string | null;
+  features: string[];
+  budget: string | null;
+  timeline: string | null;
+  userId: string | null;
+  clientId: string | null;
+  projectRequestId: string | null;
+  [key: string]: unknown;
+}
+
 interface AgentChatWidgetProps {
   agentName?: string;
   primaryColor?: string;
@@ -26,6 +43,8 @@ export default function AgentChatWidget({
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [visitorState, setVisitorState] = useState<VisitorState | null>(null);
+  const [conversationId, setConversationId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -59,16 +78,21 @@ export default function AgentChatWidget({
         body: JSON.stringify({
           message: userMsg.content,
           channel: "website",
+          conversationId: conversationId,
+          visitorState: visitorState,
           page: typeof window !== "undefined" ? window.location.href : "",
         }),
       });
 
       const data = await res.json();
-      if (res.ok) {
+      if (res.ok && data.response) {
         setMessages((prev) => [
           ...prev,
           { role: "assistant", content: data.response, timestamp: new Date() },
         ]);
+        // Update state for next turn
+        if (data.visitorState) setVisitorState(data.visitorState);
+        if (data.conversationId) setConversationId(data.conversationId);
       } else {
         setMessages((prev) => [
           ...prev,

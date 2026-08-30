@@ -82,6 +82,8 @@ export function SalesChatbot() {
   const [toolLoading, setToolLoading] = useState<string | null>(null);
   const [lastProjectUrl, setLastProjectUrl] = useState<string | null>(null);
   const [agentName, setAgentName] = useState("Wall-V AI");
+  const [visitorState, setVisitorState] = useState<Record<string, unknown> | null>(null);
+  const [convId, setConvId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const langMenuRef = useRef<HTMLDivElement>(null);
@@ -153,6 +155,8 @@ export function SalesChatbot() {
         body: JSON.stringify({
           message: textToUse.trim(),
           channel: "website",
+          conversationId: convId,
+          visitorState: visitorState,
           page: window.location.href,
         }),
       });
@@ -181,6 +185,9 @@ export function SalesChatbot() {
         setMessages([...updatedMessages, aiMessage]);
 
         // Update conversation state from backend
+        if (data.visitorState) setVisitorState(data.visitorState);
+        if (data.conversationId) setConvId(data.conversationId);
+
         setConversationState((prev) => ({
           ...prev,
           stage: state,
@@ -201,7 +208,7 @@ export function SalesChatbot() {
     } finally {
       setIsLoading(false);
     }
-  }, [input, isLoading, messages, language]);
+  }, [input, isLoading, messages, language, visitorState, convId]);
 
   // Tool handlers
   const handleBilling = useCallback(async () => {
