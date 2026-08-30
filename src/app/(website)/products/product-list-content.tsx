@@ -1,13 +1,16 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { Search, SlidersHorizontal, ChevronLeft, ChevronRight, Package, X } from "lucide-react";
+import { Search, SlidersHorizontal, ChevronLeft, ChevronRight, Package, X, ShoppingCart, Zap, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { useCart } from "@/lib/cart-context";
+import { isProductAvailable, isPhysicalProduct } from "@/lib/product-availability";
 import {
   Select,
   SelectContent,
@@ -22,6 +25,7 @@ interface Product {
   name: string;
   slug: string;
   type: string;
+  status: string;
   description: string;
   shortDescription?: string;
   featuredImage?: string;
@@ -68,6 +72,9 @@ export function ProductListContent() {
   const [sortBy, setSortBy] = useState("newest");
   const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 12, total: 0, pages: 0 });
   const [showFilters, setShowFilters] = useState(false);
+  const [addedIds, setAddedIds] = useState<Set<string>>(new Set());
+  const { addItem } = useCart();
+  const router = useRouter();
 
   const fetchProducts = useCallback(async (page = 1) => {
     setLoading(true);
@@ -242,35 +249,40 @@ export function ProductListContent() {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {products.map((product) => (
-            <Link key={product._id} href={`/products/${product.slug}`} className="group">
-              <Card className="overflow-hidden h-full transition-shadow hover:shadow-lg">
-                <div className="relative aspect-[4/3] overflow-hidden bg-muted">
-                  {product.featuredImage ? (
-                    <Image
-                      src={product.featuredImage}
-                      alt={product.name}
-                      fill
-                      className="object-cover group-hover:scale-105 transition-transform duration-300"
-                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                    />
-                  ) : (
-                    <div className="flex h-full items-center justify-center text-muted-foreground">
-                      <Package className="h-12 w-12" />
-                    </div>
-                  )}
-                  {product.salePrice && (
-                    <Badge className="absolute top-3 left-3 bg-red-500 hover:bg-red-600">
-                      Sale
-                    </Badge>
-                  )}
-                  {product.isFeatured && (
-                    <Badge className="absolute top-3 right-3 bg-amber-500 hover:bg-amber-600">
-                      Featured
-                    </Badge>
-                  )}
-                </div>
-                <CardContent className="p-5">
+          {products.map((product) => {
+            const available = isProductAvailable(product.status, product.type, product.stock);
+            const justAdded = addedIds.has(product._id);
+
+            return (
+              <Card key={product._id} className="overflow-hidden h-full flex flex-col transition-shadow hover:shadow-lg">
+                <Link href={`/products/${product.slug}`} className="block">
+                  <div className="relative aspect-[4/3] overflow-hidden bg-muted">
+                    {product.featuredImage ? (
+                      <Image
+                        src={product.featuredImage}
+                        alt={product.name}
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-300"
+                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                      />
+                    ) : (
+                      <div className="flex h-full items-center justify-center text-muted-foreground">
+                        <Package className="h-12 w-12" />
+                      </div>
+                    )}
+                    {product.salePrice && (
+                      <Badge className="absolute top-3 left-3 bg-red-500 hover:bg-red-600">
+                        Sale
+                      </Badge>
+                    )}
+                    {product.isFeatured && (
+                      <Badge className="absolute top-3 right-3 bg-amber-500 hover:bg-amber-600">
+                        Featured
+                      </Badge>
+                    )}
+                  </div>
+                </Link>
+                <CardContent className="p-5 flex flex-col flex-1">
                   <div className="flex items-center gap-2 mb-2">
                     {product.category && (
                       <Badge variant="secondary" className="text-xs">
@@ -278,41 +290,95 @@ export function ProductListContent() {
                       </Badge>
                     )}
                     <span className="text-xs text-muted-foreground capitalize">{product.type}</span>
+                    {!available && (
+                      <Badge variant="destructive" className="text-xs">Out of Stock</Badge>
+                    )}
                   </div>
-                  <h3 className="font-semibold text-lg mb-1 group-hover:text-primary transition-colors line-clamp-1">
-                    {product.name}
-                  </h3>
+                  <Link href={`/products/${product.slug}`} className="block group">
+                    <h3 className="font-semibold text-lg mb-1 group-hover:text-primary transition-colors line-clamp-1">
+                      {product.name}
+                    </h3>
+                  </Link>
                   <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
                     {product.shortDescription || product.description}
                   </p>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-baseline gap-2">
-                      {product.salePrice ? (
-                        <>
-                          <span className="text-lg font-bold text-primary">
-                            ${product.salePrice.toLocaleString()}
-                          </span>
-                          <span className="text-sm text-muted-foreground line-through">
-                            ${product.price.toLocaleString()}
-                          </span>
-                        </>
-                      ) : (
-                        <span className="text-lg font-bold">
+                  <div className="flex items-baseline gap-2 mb-4">
+                    {product.salePrice ? (
+                      <>
+                        <span className="text-lg font-bold text-primary">
+                          ${product.salePrice.toLocaleString()}
+                        </span>
+                        <span className="text-sm text-muted-foreground line-through">
                           ${product.price.toLocaleString()}
                         </span>
-                      )}
-                    </div>
+                      </>
+                    ) : (
+                      <span className="text-lg font-bold">
+                        ${product.price.toLocaleString()}
+                      </span>
+                    )}
                     {product.rating && (
-                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                      <span className="text-sm text-muted-foreground ml-auto flex items-center gap-1">
                         <span className="text-yellow-500">★</span>
                         {product.rating.toFixed(1)}
-                      </div>
+                      </span>
                     )}
+                  </div>
+                  <div className="mt-auto flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="flex-1"
+                      disabled={!available}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        addItem({
+                          productId: product._id,
+                          name: product.name,
+                          slug: product.slug,
+                          price: product.price,
+                          salePrice: product.salePrice,
+                          image: product.featuredImage,
+                          stock: isPhysicalProduct(product.type) ? product.stock : undefined,
+                        });
+                        setAddedIds((prev) => new Set(prev).add(product._id));
+                        setTimeout(() => setAddedIds((prev) => { const n = new Set(prev); n.delete(product._id); return n; }), 2000);
+                      }}
+                    >
+                      {justAdded ? (
+                        <><Check className="h-4 w-4 mr-1" /> Added</>
+                      ) : (
+                        <><ShoppingCart className="h-4 w-4 mr-1" /> Cart</>
+                      )}
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="flex-1"
+                      disabled={!available}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        addItem({
+                          productId: product._id,
+                          name: product.name,
+                          slug: product.slug,
+                          price: product.price,
+                          salePrice: product.salePrice,
+                          image: product.featuredImage,
+                          stock: isPhysicalProduct(product.type) ? product.stock : undefined,
+                        });
+                        router.push("/checkout");
+                      }}
+                    >
+                      <Zap className="h-4 w-4 mr-1" />
+                      Buy Now
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
-            </Link>
-          ))}
+            );
+          })}
         </div>
       )}
 

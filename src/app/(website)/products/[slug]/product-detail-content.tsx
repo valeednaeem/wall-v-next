@@ -338,14 +338,21 @@ export function ProductDetailContent() {
         </div>
       </div>
 
-      {/* Rich Content Description */}
-      {product.content && (
-        <div className="max-w-4xl mx-auto mt-16">
-          <Separator className="mb-8" />
-          <h2 className="text-2xl font-bold mb-6">Description</h2>
-          <div className="prose prose-lg max-w-none" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(product.content) }} />
-        </div>
-      )}
+      {/* Full Description */}
+      <div className="max-w-4xl mx-auto mt-16">
+        <Separator className="mb-8" />
+        <h2 className="text-2xl font-bold mb-6">Description</h2>
+        {product.content ? (
+          <div
+            className="prose prose-lg max-w-none"
+            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(product.content) }}
+          />
+        ) : (
+          <div className="prose prose-lg max-w-none whitespace-pre-wrap text-muted-foreground">
+            {product.description}
+          </div>
+        )}
+      </div>
 
       {/* Related Products */}
       {relatedProducts.length > 0 && (
