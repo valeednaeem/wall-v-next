@@ -81,7 +81,6 @@ export function SalesChatbot() {
   const [generatedAssets, setGeneratedAssets] = useState<GeneratedAsset[]>([]);
   const [toolLoading, setToolLoading] = useState<string | null>(null);
   const [lastProjectUrl, setLastProjectUrl] = useState<string | null>(null);
-  const [agentId, setAgentId] = useState<string | null>(null);
   const [agentName, setAgentName] = useState("Wall-V AI");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -93,24 +92,6 @@ export function SalesChatbot() {
   // Generate session ID on mount
   useEffect(() => {
     setSessionId(`chat_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`);
-  }, []);
-
-  // Auto-discover master agent on mount
-  useEffect(() => {
-    async function discoverAgent() {
-      try {
-        const res = await fetch("/api/agents/public");
-        const data = await res.json();
-        const agent = data.agent;
-        if (agent) {
-          setAgentId(agent._id);
-          setAgentName(agent.name || "Wall-V AI");
-        }
-      } catch {
-        // Use default agent name
-      }
-    }
-    discoverAgent();
   }, []);
 
   useEffect(() => {
@@ -166,29 +147,29 @@ export function SalesChatbot() {
     setIsLoading(true);
 
     try {
-      const res = await fetch("/api/agents/master-chat", {
+      const res = await fetch("/api/ai/execute", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message: textToUse.trim(),
-          agentId: agentId,
-          sessionId,
-          visitor: { language },
-          context: { page: window.location.href, language },
+          channel: "website",
+          page: window.location.href,
         }),
       });
 
       const data = await res.json();
 
       if (data.response) {
-        // Parse state from response to detect conversation stage
-        const state = data.state || "greeting";
+        // Derive conversation stage from classified request type
+        const state = data.classified?.requestType === "project_creation" ? "generate-brief"
+          : data.classified?.requestType === "pricing_inquiry" ? "generate-brief"
+          : "greeting";
         let suggestions: string[] = [];
 
         // Show suggestions based on conversation state
-        if (state === "generate-brief" || state === "completed") {
+        if (state === "generate-brief") {
           suggestions = ["Generate project", "Get a quote", "I need changes"];
-        } else if (state === "greeting" || state === "identify-project") {
+        } else {
           suggestions = ["I need a website", "I need a mobile app", "I need AI/automation", "I need hosting"];
         }
 
@@ -200,19 +181,12 @@ export function SalesChatbot() {
         setMessages([...updatedMessages, aiMessage]);
 
         // Update conversation state from backend
-        if (data.state) {
-          setConversationState((prev) => ({
-            ...prev,
-            stage: data.state,
-            language,
-            turnCount: (prev?.turnCount || 0) + 1,
-          } as DiscoveryState));
-        }
-
-        // Update session ID if new
-        if (data.sessionId) {
-          setSessionId(data.sessionId);
-        }
+        setConversationState((prev) => ({
+          ...prev,
+          stage: state,
+          language,
+          turnCount: (prev?.turnCount || 0) + 1,
+        } as DiscoveryState));
       } else {
         setMessages([...updatedMessages, {
           role: "assistant",
@@ -227,7 +201,7 @@ export function SalesChatbot() {
     } finally {
       setIsLoading(false);
     }
-  }, [input, isLoading, messages, language, sessionId, agentId]);
+  }, [input, isLoading, messages, language]);
 
   // Tool handlers
   const handleBilling = useCallback(async () => {
