@@ -123,7 +123,7 @@ export function ProductDetailContent() {
   }
 
   const currentPrice = product.variants?.[selectedVariant]?.price ?? product.salePrice ?? product.price;
-  const isInStock = isProductAvailable(product.status, product.type as Parameters<typeof isProductAvailable>[1], product.stock);
+  const isInStock = isProductAvailable(product.status, product.type, product.stock);
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -267,7 +267,7 @@ export function ProductDetailContent() {
                         salePrice: product.salePrice,
                         image: product.featuredImage,
                         variant: product.variants?.[selectedVariant]?.name,
-                        stock: isPhysicalProduct(product.type as Parameters<typeof isPhysicalProduct>[0]) ? product.stock : undefined,
+                        stock: isPhysicalProduct(product.type) ? product.stock : undefined,
                       },
                       quantity
                     );
@@ -295,7 +295,7 @@ export function ProductDetailContent() {
                         salePrice: product.salePrice,
                         image: product.featuredImage,
                         variant: product.variants?.[selectedVariant]?.name,
-                        stock: isPhysicalProduct(product.type as Parameters<typeof isPhysicalProduct>[0]) ? product.stock : undefined,
+                        stock: isPhysicalProduct(product.type) ? product.stock : undefined,
                       },
                       quantity
                     );
