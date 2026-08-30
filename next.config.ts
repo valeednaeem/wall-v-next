@@ -46,6 +46,8 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: true,
   },
   redirects: async () => [
+    { source: "/shop", destination: "/products", permanent: true },
+    { source: "/shop/:path*", destination: "/products/:path*", permanent: true },
     { source: "/dashboard/voice-agent-conversations", destination: "/dashboard/ai-conversations", permanent: true },
     { source: "/dashboard/invoices", destination: "/dashboard/projects", permanent: true },
     { source: "/dashboard/sales", destination: "/dashboard/projects", permanent: true },

@@ -3,7 +3,12 @@
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Package, Clock, CheckCircle, XCircle } from "lucide-react";
+import { ArrowLeft, Package, Clock, CheckCircle, XCircle, CreditCard, MapPin } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface OrderItem {
   name: string;
@@ -19,25 +24,45 @@ interface Order {
   items: OrderItem[];
   subtotal: number;
   tax: number;
+  discount: number;
   total: number;
   currency: string;
   status: string;
   paymentStatus: string;
   paymentMethod: string;
-  billingAddress: { name?: string; email?: string; street?: string; city?: string; state?: string; country?: string; zip?: string };
+  billingAddress: {
+    name?: string;
+    email?: string;
+    phone?: string;
+    street?: string;
+    city?: string;
+    state?: string;
+    country?: string;
+    zip?: string;
+  };
+  shippingAddress?: {
+    name?: string;
+    street?: string;
+    city?: string;
+    state?: string;
+    country?: string;
+    zip?: string;
+  };
+  notes?: string;
   createdAt: string;
+  updatedAt: string;
 }
 
-const statusColors: Record<string, string> = {
-  pending: "bg-yellow-100 text-yellow-800",
-  confirmed: "bg-blue-100 text-blue-800",
-  processing: "bg-indigo-100 text-indigo-800",
-  completed: "bg-green-100 text-green-800",
-  cancelled: "bg-red-100 text-red-800",
-  refunded: "bg-gray-100 text-gray-800",
+const statusVariant: Record<string, "default" | "secondary" | "destructive" | "outline" | "success" | "warning"> = {
+  pending: "warning",
+  confirmed: "default",
+  processing: "default",
+  completed: "success",
+  cancelled: "destructive",
+  refunded: "secondary",
 };
 
-const statusIcons: Record<string, typeof Package> = {
+const statusIcon: Record<string, typeof Package> = {
   pending: Clock,
   confirmed: CheckCircle,
   processing: Package,
@@ -61,70 +86,175 @@ export default function OrderDetailPage() {
   }, [params.id]);
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" /></div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-full max-w-3xl space-y-6 px-4">
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-64 rounded-xl" />
+          <Skeleton className="h-40 rounded-xl" />
+        </div>
+      </div>
+    );
   }
 
   if (error || !order) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <p className="text-muted-foreground mb-4">{error || "Order not found"}</p>
-          <Link href="/products" className="text-primary hover:underline">Back to Products</Link>
+          <Package className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+          <p className="text-lg font-semibold mb-2">{error || "Order not found"}</p>
+          <Button asChild variant="outline">
+            <Link href="/products">Back to Products</Link>
+          </Button>
         </div>
       </div>
     );
   }
 
-  const StatusIcon = statusIcons[order.status] || Package;
+  const StatusIcon = statusIcon[order.status] || Package;
 
   return (
     <div className="min-h-screen bg-background">
       <div className="mx-auto max-w-3xl px-4 py-8">
-        <Link href="/products" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-primary mb-6">
-          <ArrowLeft className="h-4 w-4" /> Back to Products
-        </Link>
+        <Button variant="ghost" asChild className="mb-6">
+          <Link href="/products">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Products
+          </Link>
+        </Button>
 
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-2xl font-bold">Order #{order.orderNumber}</h1>
-            <p className="text-sm text-muted-foreground">{new Date(order.createdAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}</p>
+            <h1 className="text-2xl font-bold tracking-tight">Order #{order.orderNumber}</h1>
+            <p className="text-sm text-muted-foreground">
+              {new Date(order.createdAt).toLocaleDateString("en-US", {
+                year: "numeric", month: "long", day: "numeric",
+              })}
+            </p>
           </div>
-          <div className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${statusColors[order.status] || ""}`}>
+          <Badge variant={statusVariant[order.status] || "default"} className="gap-1.5">
             <StatusIcon className="h-3 w-3" />
             {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-          </div>
+          </Badge>
         </div>
 
         <div className="space-y-6">
-          <section className="rounded-lg border bg-card p-6">
-            <h2 className="font-semibold mb-4">Items</h2>
-            <div className="divide-y">
-              {order.items.map((item, i) => (
-                <div key={i} className="flex justify-between py-3 first:pt-0 last:pb-0">
-                  <div>
-                    <p className="font-medium text-sm">{item.name}</p>
-                    {item.variant && <p className="text-xs text-muted-foreground">{item.variant}</p>}
-                    <p className="text-xs text-muted-foreground">Qty: {item.quantity}</p>
+          {/* Items */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Items</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="divide-y">
+                {order.items.map((item, i) => (
+                  <div key={i} className="flex justify-between py-3 first:pt-0 last:pb-0">
+                    <div>
+                      <p className="font-medium text-sm">{item.name}</p>
+                      {item.variant && <p className="text-xs text-muted-foreground">{item.variant}</p>}
+                      <p className="text-xs text-muted-foreground">Qty: {item.quantity}</p>
+                    </div>
+                    <span className="text-sm font-medium">${(item.price * item.quantity).toFixed(2)}</span>
                   </div>
-                  <span className="text-sm font-medium">${(item.price * item.quantity).toFixed(2)}</span>
+                ))}
+              </div>
+              <Separator className="my-4" />
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Subtotal</span>
+                  <span>${order.subtotal.toFixed(2)}</span>
                 </div>
-              ))}
-            </div>
-            <div className="border-t mt-4 pt-4 space-y-2">
-              <div className="flex justify-between text-sm"><span className="text-muted-foreground">Subtotal</span><span>${order.subtotal.toFixed(2)}</span></div>
-              <div className="flex justify-between text-sm"><span className="text-muted-foreground">Tax</span><span>${order.tax.toFixed(2)}</span></div>
-              <div className="flex justify-between font-bold"><span>Total</span><span>${order.total.toFixed(2)}</span></div>
-            </div>
-          </section>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Tax</span>
+                  <span>${order.tax.toFixed(2)}</span>
+                </div>
+                {order.discount > 0 && (
+                  <div className="flex justify-between text-sm text-green-600">
+                    <span>Discount</span>
+                    <span>-${order.discount.toFixed(2)}</span>
+                  </div>
+                )}
+                <Separator />
+                <div className="flex justify-between font-bold text-lg">
+                  <span>Total</span>
+                  <span>${order.total.toFixed(2)}</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
+          {/* Payment & Status */}
+          <div className="grid sm:grid-cols-2 gap-6">
+            <Card>
+              <CardContent className="p-6">
+                <h3 className="font-semibold mb-3 flex items-center gap-2">
+                  <CreditCard className="h-4 w-4" />
+                  Payment
+                </h3>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Method</span>
+                    <span className="capitalize">{order.paymentMethod}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Status</span>
+                    <Badge variant={order.paymentStatus === "paid" ? "success" : order.paymentStatus === "failed" ? "destructive" : "warning"}>
+                      {order.paymentStatus}
+                    </Badge>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-6">
+                <h3 className="font-semibold mb-3 flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  Status
+                </h3>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Order</span>
+                    <Badge variant={statusVariant[order.status] || "default"}>
+                      {order.status}
+                    </Badge>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Last updated</span>
+                    <span>{new Date(order.updatedAt).toLocaleDateString()}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Billing Address */}
           {order.billingAddress?.name && (
-            <section className="rounded-lg border bg-card p-6">
-              <h2 className="font-semibold mb-2">Billing Address</h2>
-              <p className="text-sm">{order.billingAddress.name}</p>
-              <p className="text-sm text-muted-foreground">{order.billingAddress.street}</p>
-              <p className="text-sm text-muted-foreground">{order.billingAddress.city}, {order.billingAddress.state} {order.billingAddress.zip}</p>
-              <p className="text-sm text-muted-foreground">{order.billingAddress.country}</p>
-            </section>
+            <Card>
+              <CardContent className="p-6">
+                <h3 className="font-semibold mb-3 flex items-center gap-2">
+                  <MapPin className="h-4 w-4" />
+                  Billing Address
+                </h3>
+                <div className="text-sm text-muted-foreground space-y-1">
+                  <p className="font-medium text-foreground">{order.billingAddress.name}</p>
+                  <p>{order.billingAddress.street}</p>
+                  <p>{order.billingAddress.city}, {order.billingAddress.state} {order.billingAddress.zip}</p>
+                  <p>{order.billingAddress.country}</p>
+                  {order.billingAddress.email && <p>{order.billingAddress.email}</p>}
+                  {order.billingAddress.phone && <p>{order.billingAddress.phone}</p>}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Notes */}
+          {order.notes && (
+            <Card>
+              <CardContent className="p-6">
+                <h3 className="font-semibold mb-2">Notes</h3>
+                <p className="text-sm text-muted-foreground">{order.notes}</p>
+              </CardContent>
+            </Card>
           )}
         </div>
       </div>

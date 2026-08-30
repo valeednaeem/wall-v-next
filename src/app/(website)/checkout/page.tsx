@@ -3,7 +3,12 @@
 import { useState } from "react";
 import { useCart } from "@/lib/cart-context";
 import Link from "next/link";
-import { Lock, CreditCard, ExternalLink } from "lucide-react";
+import { Lock, ExternalLink, Package, ArrowLeft, Shield } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 
 interface BillingInfo {
   name: string;
@@ -29,8 +34,11 @@ export default function CheckoutPage() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
+          <Package className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
           <p className="text-muted-foreground mb-4">Your cart is empty.</p>
-          <Link href="/products" className="text-primary hover:underline">Browse Products</Link>
+          <Button asChild>
+            <Link href="/products">Browse Products</Link>
+          </Button>
         </div>
       </div>
     );
@@ -60,8 +68,6 @@ export default function CheckoutPage() {
       }
 
       clearCart();
-
-      // Redirect to 2Checkout hosted checkout
       window.location.href = data.data.checkoutUrl;
     } catch {
       setError("Something went wrong. Please try again.");
@@ -70,101 +76,176 @@ export default function CheckoutPage() {
     }
   };
 
+  const updateBilling = (field: keyof BillingInfo, value: string) => {
+    setBilling((prev) => ({ ...prev, [field]: value }));
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <div className="mx-auto max-w-5xl px-4 py-8">
-        <h1 className="text-3xl font-bold mb-8">Checkout</h1>
+        <Button variant="ghost" asChild className="mb-6">
+          <Link href="/cart">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Cart
+          </Link>
+        </Button>
+
+        <h1 className="text-3xl font-bold tracking-tight mb-8">Checkout</h1>
 
         {error && (
-          <div className="mb-6 rounded-lg bg-destructive/10 border border-destructive/20 p-4 text-sm text-destructive">{error}</div>
+          <div className="mb-6 rounded-lg bg-destructive/10 border border-destructive/20 p-4 text-sm text-destructive">
+            {error}
+          </div>
         )}
 
         <form onSubmit={handleSubmit}>
           <div className="grid gap-8 lg:grid-cols-3">
             <div className="lg:col-span-2 space-y-6">
-              <section className="rounded-lg border bg-card p-6">
-                <h2 className="text-lg font-semibold mb-4">Billing Information</h2>
-                <p className="text-sm text-muted-foreground mb-4">
-                  You&apos;ll complete payment on 2Checkout&apos;s secure checkout page.
-                </p>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <label className="text-sm font-medium">Full Name *</label>
-                    <input required type="text" value={billing.name} onChange={(e) => setBilling({ ...billing, name: e.target.value })}
-                      className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" placeholder="John Doe" />
+              {/* Billing Information */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Billing Information</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    You&apos;ll complete payment on 2Checkout&apos;s secure checkout page.
+                  </p>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="name">Full Name *</Label>
+                      <Input
+                        id="name"
+                        required
+                        value={billing.name}
+                        onChange={(e) => updateBilling("name", e.target.value)}
+                        placeholder="John Doe"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Email *</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        required
+                        value={billing.email}
+                        onChange={(e) => updateBilling("email", e.target.value)}
+                        placeholder="john@example.com"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="phone">Phone</Label>
+                      <Input
+                        id="phone"
+                        type="tel"
+                        value={billing.phone}
+                        onChange={(e) => updateBilling("phone", e.target.value)}
+                        placeholder="+1 (555) 000-0000"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="country">Country *</Label>
+                      <Input
+                        id="country"
+                        required
+                        value={billing.country}
+                        onChange={(e) => updateBilling("country", e.target.value)}
+                        placeholder="United States"
+                      />
+                    </div>
+                    <div className="sm:col-span-2 space-y-2">
+                      <Label htmlFor="street">Street Address *</Label>
+                      <Input
+                        id="street"
+                        required
+                        value={billing.street}
+                        onChange={(e) => updateBilling("street", e.target.value)}
+                        placeholder="123 Main St"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="city">City *</Label>
+                      <Input
+                        id="city"
+                        required
+                        value={billing.city}
+                        onChange={(e) => updateBilling("city", e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="state">State *</Label>
+                      <Input
+                        id="state"
+                        required
+                        value={billing.state}
+                        onChange={(e) => updateBilling("state", e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="zip">ZIP Code *</Label>
+                      <Input
+                        id="zip"
+                        required
+                        value={billing.zip}
+                        onChange={(e) => updateBilling("zip", e.target.value)}
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <label className="text-sm font-medium">Email *</label>
-                    <input required type="email" value={billing.email} onChange={(e) => setBilling({ ...billing, email: e.target.value })}
-                      className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" placeholder="john@example.com" />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium">Phone</label>
-                    <input type="tel" value={billing.phone} onChange={(e) => setBilling({ ...billing, phone: e.target.value })}
-                      className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" placeholder="+1 (555) 000-0000" />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium">Country *</label>
-                    <input required type="text" value={billing.country} onChange={(e) => setBilling({ ...billing, country: e.target.value })}
-                      className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" placeholder="United States" />
-                  </div>
-                  <div className="sm:col-span-2">
-                    <label className="text-sm font-medium">Street Address *</label>
-                    <input required type="text" value={billing.street} onChange={(e) => setBilling({ ...billing, street: e.target.value })}
-                      className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" placeholder="123 Main St" />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium">City *</label>
-                    <input required type="text" value={billing.city} onChange={(e) => setBilling({ ...billing, city: e.target.value })}
-                      className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium">State *</label>
-                    <input required type="text" value={billing.state} onChange={(e) => setBilling({ ...billing, state: e.target.value })}
-                      className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium">ZIP Code *</label>
-                    <input required type="text" value={billing.zip} onChange={(e) => setBilling({ ...billing, zip: e.target.value })}
-                      className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" />
-                  </div>
-                </div>
-              </section>
+                </CardContent>
+              </Card>
             </div>
 
             {/* Order Summary */}
-            <div>
-              <div className="sticky top-24 rounded-lg border bg-card p-6">
-                <h2 className="text-lg font-semibold mb-4">Order Summary</h2>
-                <div className="space-y-3 mb-4">
-                  {items.map((item) => (
-                    <div key={`${item.productId}-${item.variant || ""}`} className="flex justify-between text-sm">
-                      <span className="text-muted-foreground truncate max-w-[180px]">{item.name} x{item.quantity}</span>
-                      <span>${((item.salePrice || item.price) * item.quantity).toFixed(2)}</span>
+            <div className="lg:col-span-1">
+              <Card className="sticky top-24">
+                <CardHeader>
+                  <CardTitle>Order Summary</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-3 max-h-48 overflow-auto">
+                    {items.map((item) => (
+                      <div key={`${item.productId}-${item.variant || ""}`} className="flex justify-between text-sm">
+                        <span className="text-muted-foreground truncate max-w-[180px]">
+                          {item.name} x{item.quantity}
+                        </span>
+                        <span className="font-medium shrink-0">
+                          ${((item.salePrice || item.price) * item.quantity).toFixed(2)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <Separator />
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span>Subtotal ({itemCount} items)</span>
+                      <span>${subtotal.toFixed(2)}</span>
                     </div>
-                  ))}
-                </div>
-                <div className="border-t pt-3 space-y-2">
-                  <div className="flex justify-between text-sm"><span>Subtotal ({itemCount} items)</span><span>${subtotal.toFixed(2)}</span></div>
-                  <div className="flex justify-between text-sm"><span>Tax (8%)</span><span>${tax.toFixed(2)}</span></div>
-                  <div className="border-t pt-2 flex justify-between font-bold"><span>Total</span><span>${total.toFixed(2)}</span></div>
-                </div>
+                    <div className="flex justify-between text-sm">
+                      <span>Tax (8%)</span>
+                      <span>${tax.toFixed(2)}</span>
+                    </div>
+                    <Separator />
+                    <div className="flex justify-between font-bold text-lg">
+                      <span>Total</span>
+                      <span>${total.toFixed(2)}</span>
+                    </div>
+                  </div>
 
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="mt-6 w-full rounded-lg bg-primary py-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 flex items-center justify-center gap-2"
-                >
-                  <Lock className="h-4 w-4" />
-                  {loading ? "Redirecting to 2Checkout..." : `Pay $${total.toFixed(2)}`}
-                </button>
+                  <Button type="submit" className="w-full" size="lg" disabled={loading}>
+                    {loading ? (
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent mr-2" />
+                    ) : (
+                      <Lock className="h-4 w-4 mr-2" />
+                    )}
+                    {loading ? "Redirecting to 2Checkout..." : `Pay $${total.toFixed(2)}`}
+                  </Button>
 
-                <div className="mt-4 flex items-center justify-center gap-2 text-xs text-muted-foreground">
-                  <CreditCard className="h-3 w-3" />
-                  Secured by 2Checkout
-                  <ExternalLink className="h-3 w-3" />
-                </div>
-              </div>
+                  <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                    <Shield className="h-3 w-3" />
+                    Secured by 2Checkout
+                    <ExternalLink className="h-3 w-3" />
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           </div>
         </form>

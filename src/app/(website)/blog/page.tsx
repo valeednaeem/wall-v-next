@@ -11,10 +11,10 @@ export const metadata: Metadata = generateSEO({
 
 export default function BlogPage() {
   return (
-    <div className="container mx-auto px-4 py-16">
-      <div className="text-center mb-12">
-        <h1 className="text-4xl font-bold">Blog</h1>
-        <p className="mt-4 text-muted-foreground max-w-2xl mx-auto">
+    <div className="container mx-auto px-4 py-12">
+      <div className="text-center mb-10">
+        <h1 className="text-4xl font-bold tracking-tight">Blog</h1>
+        <p className="mt-3 text-muted-foreground max-w-2xl mx-auto">
           Stay updated with the latest insights, tutorials, and news from our team.
         </p>
       </div>
