@@ -25,6 +25,7 @@ export default function CheckoutPage() {
   const { items, subtotal, tax, total, clearCart, itemCount } = useCart();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [billing, setBilling] = useState<BillingInfo>({
     name: "", email: "", phone: "",
     street: "", city: "", state: "", country: "", zip: "",
@@ -230,7 +231,27 @@ export default function CheckoutPage() {
                     </div>
                   </div>
 
-                  <Button type="submit" className="w-full" size="lg" disabled={loading}>
+                  <div className="flex items-start gap-3">
+                    <input
+                      type="checkbox"
+                      id="agree-terms"
+                      checked={agreedToTerms}
+                      onChange={(e) => setAgreedToTerms(e.target.checked)}
+                      className="mt-1 h-4 w-4 rounded border-gray-300 accent-primary cursor-pointer"
+                    />
+                    <Label htmlFor="agree-terms" className="text-sm text-muted-foreground cursor-pointer leading-snug">
+                      I agree to the{" "}
+                      <Link href="/terms" target="_blank" className="underline hover:text-primary">
+                        Terms &amp; Conditions
+                      </Link>{" "}
+                      and{" "}
+                      <Link href="/privacy" target="_blank" className="underline hover:text-primary">
+                        Privacy Policy
+                      </Link>
+                    </Label>
+                  </div>
+
+                  <Button type="submit" className="w-full" size="lg" disabled={loading || !agreedToTerms}>
                     {loading ? (
                       <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent mr-2" />
                     ) : (
