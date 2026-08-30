@@ -4,6 +4,7 @@ import Order from "@/models/order";
 import Product from "@/models/product";
 import { getAuthUser } from "@/lib/auth";
 import { escapeRegex } from "@/lib/escape-regex";
+import { shouldValidateStock, shouldDecrementStock } from "@/lib/product-availability";
 
 function generateOrderNumber(): string {
   const date = new Date();
@@ -88,7 +89,7 @@ export async function POST(request: Request) {
       if (!product) {
         return NextResponse.json({ error: `Product not found: ${item.slug}` }, { status: 400 });
       }
-      if (product.stock !== undefined && product.stock < item.quantity) {
+      if (shouldValidateStock(product.type) && product.stock !== undefined && product.stock < item.quantity) {
         return NextResponse.json({ error: `Insufficient stock for ${product.name}` }, { status: 400 });
       }
 
@@ -105,8 +106,8 @@ export async function POST(request: Request) {
         variant: item.variant,
       });
 
-      // Decrement stock
-      if (product.stock !== undefined) {
+      // Decrement stock only for physical products
+      if (shouldDecrementStock(product.type) && product.stock !== undefined) {
         await Product.updateOne({ _id: product._id }, { $inc: { stock: -item.quantity } });
       }
     }

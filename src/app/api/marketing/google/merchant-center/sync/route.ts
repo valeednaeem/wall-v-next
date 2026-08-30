@@ -5,6 +5,7 @@ import Product from "@/models/product";
 import GoogleServiceConfig from "@/models/google-services";
 import { getValidGoogleToken, GOOGLE_SCOPES } from "@/lib/google-auth";
 import { requirePermission } from "@/lib/api-middleware";
+import { isProductAvailable } from "@/lib/product-availability";
 
 interface SyncResult {
   message: string;
@@ -79,7 +80,7 @@ export async function POST() {
       description: product.description,
       link: `${process.env.NEXT_PUBLIC_APP_URL}/products/${product.slug}`,
       imageLink: product.featuredImage,
-      availability: product.stock && product.stock > 0 ? "in_stock" : "out_of_stock",
+      availability: isProductAvailable(product.status, product.type, product.stock) ? "in_stock" : "out_of_stock",
       price: { value: product.price.toFixed(2), currency: product.currency || "USD" },
       googleProductCategory: (product.category as any)?.googleCategory || "Software > Business & Productivity Software",
       brand: "Wall-V",

@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ShareButtons } from "@/components/share-buttons";
 
 interface BlogPost {
   _id: string;
@@ -211,8 +212,15 @@ export function BlogPostContent() {
         </div>
       )}
 
+      {/* Share */}
+      <ShareButtons
+        url={`${typeof window !== "undefined" ? window.location.origin : ""}/blog/${post.slug}`}
+        title={post.title}
+        text={post.excerpt || post.title}
+      />
+
       {/* Navigation */}
-      <div className="mt-12 pt-8 border-t flex justify-between">
+      <div className="mt-8 pt-8 border-t flex justify-between">
         <Button variant="ghost" asChild>
           <Link href="/blog">
             <ArrowLeft className="h-4 w-4 mr-2" />

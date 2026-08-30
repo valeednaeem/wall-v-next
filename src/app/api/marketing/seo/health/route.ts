@@ -8,6 +8,7 @@ import RobotsSettings from "@/models/robots-settings";
 import SitemapSettings from "@/models/sitemap-settings";
 import SiteSettings from "@/models/site-settings";
 import { requirePermission } from "@/lib/api-middleware";
+import { isPhysicalProduct } from "@/lib/product-availability";
 
 interface SEOIssue {
   type: "critical" | "warning" | "passed";
@@ -88,7 +89,7 @@ export async function GET() {
       } else {
         issues.push({ type: "passed", page: url, pageType: "product", field: "price", message: "Product price valid" });
       }
-      if (product.stock === undefined || product.stock === null) {
+      if (isPhysicalProduct(product.type) && (product.stock === undefined || product.stock === null)) {
         issues.push({ type: "warning", page: url, pageType: "product", field: "availability", message: "Stock not set (affects schema availability)" });
       } else {
         issues.push({ type: "passed", page: url, pageType: "product", field: "availability", message: "Stock status set" });

@@ -6,18 +6,21 @@ import Link from "next/link";
 import Image from "next/image";
 import { ShoppingCart, Check, Minus, Plus, Package, Star, ArrowLeft } from "lucide-react";
 import { useCart } from "@/lib/cart-context";
+import { isProductAvailable, isPhysicalProduct } from "@/lib/product-availability";
 import DOMPurify from "isomorphic-dompurify";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ShareButtons } from "@/components/share-buttons";
 
 interface Product {
   _id: string;
   name: string;
   slug: string;
   type: string;
+  status: string;
   description: string;
   shortDescription?: string;
   content?: string;
@@ -120,7 +123,7 @@ export function ProductDetailContent() {
   }
 
   const currentPrice = product.variants?.[selectedVariant]?.price ?? product.salePrice ?? product.price;
-  const isInStock = product.stock === undefined || product.stock > 0;
+  const isInStock = isProductAvailable(product.status, product.type as Parameters<typeof isProductAvailable>[1], product.stock);
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -264,7 +267,7 @@ export function ProductDetailContent() {
                         salePrice: product.salePrice,
                         image: product.featuredImage,
                         variant: product.variants?.[selectedVariant]?.name,
-                        stock: product.stock,
+                        stock: isPhysicalProduct(product.type as Parameters<typeof isPhysicalProduct>[0]) ? product.stock : undefined,
                       },
                       quantity
                     );
@@ -292,7 +295,7 @@ export function ProductDetailContent() {
                         salePrice: product.salePrice,
                         image: product.featuredImage,
                         variant: product.variants?.[selectedVariant]?.name,
-                        stock: product.stock,
+                        stock: isPhysicalProduct(product.type as Parameters<typeof isPhysicalProduct>[0]) ? product.stock : undefined,
                       },
                       quantity
                     );
@@ -385,8 +388,17 @@ export function ProductDetailContent() {
         </div>
       )}
 
-      {/* Back to Products */}
+      {/* Share */}
       <div className="max-w-6xl mx-auto mt-12">
+        <ShareButtons
+          url={`${typeof window !== "undefined" ? window.location.origin : ""}/products/${product.slug}`}
+          title={product.name}
+          text={product.shortDescription || product.description}
+        />
+      </div>
+
+      {/* Back to Products */}
+      <div className="max-w-6xl mx-auto mt-8">
         <Button variant="ghost" asChild>
           <Link href="/products">
             <ArrowLeft className="h-4 w-4 mr-2" />
