@@ -102,6 +102,7 @@ export default function DashboardPage() {
             { label: "My Projects", value: data?.totalProjects || 0, icon: "📁", color: "text-blue-500" },
             { label: "Active Projects", value: data?.activeProjects || 0, icon: "🔄", color: "text-green-500" },
             { label: "Completed", value: data?.completedProjects || 0, icon: "✅", color: "text-emerald-500" },
+            { label: "My Inquiries", value: data?.totalInquiries || 0, icon: "📋", color: "text-amber-500" },
           ].map((stat) => (
             <div key={stat.label} className="rounded-lg border p-6">
               <div className="flex items-center justify-between">
@@ -152,6 +153,33 @@ export default function DashboardPage() {
             </Link>
           </div>
         </div>
+
+        {data?.recentInquiries && data.recentInquiries.length > 0 && (
+          <div className="rounded-lg border p-6">
+            <h3 className="text-lg font-semibold mb-4">Recent Inquiries</h3>
+            <div className="space-y-3">
+              {data.recentInquiries.map((inquiry: any) => (
+                <div key={inquiry._id} className="flex items-center justify-between border-b pb-3 last:border-0 -mx-2 px-2 py-1">
+                  <div>
+                    <p className="font-medium text-sm">{inquiry.subject || inquiry.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {inquiry.source === "chat" ? "Via Chat" : inquiry.source === "voice" ? "Via Voice" : "Via Contact Form"}
+                      {" · "}
+                      {new Date(inquiry.createdAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <span className={`text-xs px-2 py-1 rounded-full capitalize ${
+                    inquiry.status === "new" ? "bg-blue-100 text-blue-700" :
+                    inquiry.status === "contacted" ? "bg-green-100 text-green-700" :
+                    "bg-gray-100 text-gray-700"
+                  }`}>
+                    {inquiry.status}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     );
   }

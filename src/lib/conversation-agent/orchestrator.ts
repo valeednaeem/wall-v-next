@@ -56,17 +56,43 @@ function buildSystemPrompt(
     parts.push("");
   }
 
-  // Structured state (what we know so far)
-  parts.push("## What You Know About This Visitor");
+  // ── Conversation mode (the most important section) ──────────────
+  parts.push("## How to Talk");
+  parts.push("");
+  parts.push("You are having a natural conversation, NOT running a menu system.");
+  parts.push("");
+  parts.push("NEVER do these things:");
+  parts.push("- NEVER present numbered lists of services or options for the user to pick from.");
+  parts.push("- NEVER say \"Choose one of these options\" or \"Select from the following\".");
+  parts.push("- NEVER repeat the same options or service list in consecutive messages.");
+  parts.push("- NEVER ask for information you already know (check the Known fields below).");
+  parts.push("- NEVER ask for more than one piece of information at a time.");
+  parts.push("");
+  parts.push("ALWAYS do these things:");
+  parts.push("- Respond to what the user actually said. Address their specific message.");
+  parts.push("- Ask at most ONE question per message — weave it naturally into your reply.");
+  parts.push("- If the user provided their name, email, or phone, acknowledge it briefly and move on.");
+  parts.push("- Use the visitor's name occasionally (not every sentence).");
+  parts.push("- Keep responses short (2-4 sentences max unless explaining something).");
+  parts.push("- Sound like a helpful human, not a form. No bullet-point lists of options.");
+  parts.push("");
+
+  // ── Known state ─────────────────────────────────────────────────
+  parts.push("## What You Know");
   parts.push(formatStateForPrompt(state));
   parts.push("");
 
-  // Tool results (what actions were taken)
+  // ── Next action (exactly what to do now) ────────────────────────
+  parts.push("## What To Do Now");
+  parts.push(getNextActionGuidance(state, capability));
+  parts.push("");
+
+  // ── Tool results (what actions were taken) ──────────────────────
   if (toolResults.length > 0) {
     parts.push("## Actions Taken");
     for (const result of toolResults) {
       if (result.success) {
-        parts.push(`- ${result.toolName}: Success — ${JSON.stringify(result.data).slice(0, 200)}`);
+        parts.push(`- ${result.toolName}: Success`);
       } else {
         parts.push(`- ${result.toolName}: Failed — ${result.error}`);
       }
@@ -74,60 +100,108 @@ function buildSystemPrompt(
     parts.push("");
   }
 
-  // Capability context
+  // ── Capability context ──────────────────────────────────────────
   if (capability) {
-    parts.push("## Service Context");
-    parts.push(`The visitor appears to need: ${capability.name}`);
-    parts.push(`${capability.description}`);
+    parts.push("## Detected Service Need");
+    parts.push(`${capability.name}: ${capability.description}`);
     parts.push("");
   }
 
-  // Instructions
+  // ── Agent instructions ──────────────────────────────────────────
   if (agent.instructions && agent.instructions.length > 0) {
     parts.push("## Rules");
     agent.instructions.forEach((inst) => parts.push(`- ${inst}`));
     parts.push("");
   }
 
-  parts.push("## Critical Rules");
+  // ── Hard rules ──────────────────────────────────────────────────
+  parts.push("## Hard Rules");
   parts.push("- NEVER claim an action succeeded unless the tool result above confirms it.");
   parts.push("- NEVER fabricate IDs, confirmation numbers, or account details.");
-  parts.push("- If a tool failed, explain what went wrong and ask for clarification.");
-  parts.push("- If you need information that hasn't been collected yet, ask for it.");
-  parts.push("- Keep responses concise and professional.");
-  parts.push("- Use the visitor's name if you know it.");
+  parts.push("- NEVER present a menu, numbered list, or \"option 1 / option 2\" choices.");
+  parts.push("- If a tool failed, say what went wrong and ask how to proceed.");
+  parts.push("- After tools create or update a record, tell the user they can see it in their dashboard.");
   parts.push("");
-
-  // Missing fields guidance
-  if (state.missingRequiredFields.length > 0) {
-    parts.push("## Missing Information");
-    parts.push(`You still need: ${state.missingRequiredFields.join(", ")}`);
-    parts.push("Ask the visitor for this information naturally — don't list fields.");
-    parts.push("");
-  }
 
   return parts.join("\n");
 }
 
 function formatStateForPrompt(state: VisitorState): string {
   const lines: string[] = [];
-  if (state.name) lines.push(`- Name: ${state.name}`);
-  if (state.email) lines.push(`- Email: ${state.email}`);
-  if (state.phone) lines.push(`- Phone: ${state.phone}`);
-  if (state.company) lines.push(`- Company: ${state.company}`);
-  if (state.intent) lines.push(`- Intent: ${state.intent}`);
-  if (state.projectType) lines.push(`- Project type: ${state.projectType}`);
-  if (state.objective) lines.push(`- Objective: ${state.objective}`);
-  if (state.features.length > 0) lines.push(`- Features: ${state.features.join(", ")}`);
-  if (state.budget) lines.push(`- Budget: ${state.budget}`);
-  if (state.timeline) lines.push(`- Timeline: ${state.timeline}`);
-  if (state.industry) lines.push(`- Industry: ${state.industry}`);
-  if (state.targetAudience) lines.push(`- Target audience: ${state.targetAudience}`);
-  if (state.userId) lines.push(`- User ID: ${state.userId}`);
-  if (state.clientId) lines.push(`- Client ID: ${state.clientId}`);
-  if (state.projectRequestId) lines.push(`- Project Request ID: ${state.projectRequestId}`);
-  if (lines.length === 0) lines.push("- No information collected yet");
+
+  const known: string[] = [];
+  if (state.name) known.push(`Name: ${state.name}`);
+  if (state.email) known.push(`Email: ${state.email}`);
+  if (state.phone) known.push(`Phone: ${state.phone}`);
+  if (state.company) known.push(`Company: ${state.company}`);
+
+  if (known.length > 0) {
+    lines.push(`Identity: ${known.join(" | ")}`);
+  } else {
+    lines.push("Identity: Not yet collected");
+  }
+
+  if (state.intent) lines.push(`Intent: ${state.intent}`);
+  if (state.projectType) lines.push(`Service: ${state.projectType}`);
+  if (state.objective) lines.push(`Goal: ${state.objective}`);
+  if (state.features.length > 0) lines.push(`Requirements: ${state.features.join(", ")}`);
+  if (state.budget) lines.push(`Budget: ${state.budget}`);
+  if (state.timeline) lines.push(`Timeline: ${state.timeline}`);
+  if (state.industry) lines.push(`Industry: ${state.industry}`);
+  if (state.targetAudience) lines.push(`Audience: ${state.targetAudience}`);
+
+  if (state.userId) lines.push(`(User ID: ${state.userId})`);
+  if (state.clientId) lines.push(`(Client ID: ${state.clientId})`);
+  if (state.projectRequestId) lines.push(`(Project Request: ${state.projectRequestId})`);
+  if (state.inquiryId) lines.push(`(Inquiry: ${state.inquiryId})`);
+
+  if (lines.length === 0) lines.push("No information collected yet — start by greeting the visitor.");
+
   return lines.join("\n");
+}
+
+/**
+ * Returns guidance about exactly what the agent should do on this turn.
+ * This is the key mechanism that prevents repeated questions and menus.
+ */
+function getNextActionGuidance(
+  state: VisitorState,
+  capability: { name: string; description: string } | null
+): string {
+  const missing = state.missingRequiredFields;
+  const hasIdentity = !!(state.name || state.email || state.phone);
+  const hasService = !!(state.intent || state.projectType);
+
+  // First turn — greet
+  if (state.turnCount <= 1 && !hasIdentity) {
+    return "This is the start of the conversation. Greet the visitor briefly, ask how you can help. Do NOT present options or a menu.";
+  }
+
+  // User just provided info — acknowledge and continue
+  if (hasIdentity && hasService && missing.length > 0) {
+    return `The visitor has shared what they need. You still need their ${missing[0]} — ask for it naturally in context, not as an isolated question.`;
+  }
+
+  // We have service but missing identity
+  if (hasService && !hasIdentity && missing.length > 0) {
+    return `The visitor wants: ${state.intent || state.projectType}. You need their ${missing[0]} — ask for it naturally while acknowledging their request.`;
+  }
+
+  // Missing requirements details — ask about their project
+  if (hasService && hasIdentity && missing.length > 0) {
+    return `You have their identity and service need. Ask about ${missing[0]} to fill in project details. Ask open-ended questions about their needs, not yes/no.`;
+  }
+
+  // Everything collected — continue natural conversation
+  if (missing.length === 0) {
+    if (state.features.length > 0) {
+      return "All key information collected. Ask follow-up questions about their requirements if needed, or confirm what you have captured. Mention they can see details in their dashboard.";
+    }
+    return "All key information collected. Ask open-ended questions about their project needs, goals, or timeline. Continue the conversation naturally.";
+  }
+
+  // Default — ask for the first missing field
+  return `Ask for the visitor's ${missing[0]} naturally, woven into your response to what they just said.`;
 }
 
 // ─── Main Orchestration ─────────────────────────────────────────────────────
@@ -514,6 +588,27 @@ async function executeAction(
         integrations: state.integrations.join(", "),
       });
     }
+    case "create_inquiry": {
+      // Don't create duplicate inquiries if we already have one
+      if (state.inquiryId) {
+        return { success: true, toolName: "create_inquiry", data: { alreadyExists: true, inquiryId: state.inquiryId }, error: null, errorCode: null };
+      }
+      const requirements = state.features.length > 0
+        ? state.features.join(", ")
+        : state.objective || "General inquiry";
+      return executeConversationTool("create_inquiry", {
+        name: state.name || "",
+        email: state.email || "",
+        phone: state.phone || "",
+        company: state.company || "",
+        subject: `${state.projectType || state.intent || "Project"} Inquiry`,
+        message: `Service: ${state.projectType || state.intent || "Unknown"}\n\nGoal: ${state.objective || "Not specified"}\n\nRequirements: ${requirements}${state.budget ? `\n\nBudget: ${state.budget}` : ""}${state.timeline ? `\n\nTimeline: ${state.timeline}` : ""}${state.industry ? `\n\nIndustry: ${state.industry}` : ""}${state.targetAudience ? `\n\nTarget Audience: ${state.targetAudience}` : ""}`,
+        type: "sales",
+        source: params.channel === "voice" ? "voice" : "chat",
+        estimatedBudget: state.budget || undefined,
+        estimatedTimeline: state.timeline || undefined,
+      });
+    }
     default:
       return { success: false, toolName: action, data: null, error: `Unknown action: ${action}`, errorCode: "UNKNOWN_ACTION" };
   }
@@ -554,6 +649,11 @@ function applyToolResult(state: VisitorState, action: string, result: ToolResult
     case "create_project_request":
       if (result.data.created && result.data.projectRequestId) {
         updated.projectRequestId = result.data.projectRequestId as string;
+      }
+      break;
+    case "create_inquiry":
+      if (result.data.inquiryId) {
+        updated.inquiryId = result.data.inquiryId as string;
       }
       break;
   }

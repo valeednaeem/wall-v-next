@@ -57,6 +57,21 @@ export async function GET() {
         .select("name status projectType progress budget currency createdAt description")
         .lean();
 
+      // Customer inquiries (from chat or contact form)
+      const inquiryFilter = {
+        $or: [
+          { email: user.email?.toLowerCase() || "" },
+        ],
+      };
+      const [myInquiries, recentInquiries] = await Promise.all([
+        Inquiry.countDocuments(inquiryFilter),
+        Inquiry.find(inquiryFilter)
+          .sort({ createdAt: -1 })
+          .limit(5)
+          .select("subject name status priority source createdAt type tags")
+          .lean(),
+      ]);
+
       return NextResponse.json({
         success: true,
         data: {
@@ -64,6 +79,8 @@ export async function GET() {
           activeProjects: myActiveProjects,
           completedProjects: myCompletedProjects,
           recentProjects,
+          totalInquiries: myInquiries,
+          recentInquiries,
           role: "customer",
         },
       });

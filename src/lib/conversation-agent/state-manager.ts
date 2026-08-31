@@ -307,5 +307,10 @@ export function determineRequiredActions(state: VisitorState): string[] {
     }
   }
 
+  // Need inquiry if we have name + email + some project info
+  if (state.name && state.email && (state.projectType || state.objective || state.features.length > 0)) {
+    actions.push("create_inquiry");
+  }
+
   return actions;
 }
