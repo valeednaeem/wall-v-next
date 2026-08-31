@@ -280,7 +280,137 @@ export function generateChangeRequestEmail(opts: {
             <p style="margin: 4px 0 0; color: #6b7280; font-size: 13px;">Type: ${opts.changeType}</p>
           </div>
           <p style="color: #6b7280; font-size: 14px;">
-            View details in your <a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard/projects" style="color: #7c3aed;">Client Portal</a>.
+            View details in your <a href="${process.env.NEXT_PUBLIC_APP_URL}/client/projects" style="color: #7c3aed;">Client Portal</a>.
+          </p>
+        </div>
+        <div style="text-align: center; padding: 16px; color: #9ca3af; font-size: 12px;">
+          Wall-V Digital Agency
+        </div>
+      </div>
+    `,
+  };
+}
+
+export function generateAccountCreatedEmail(opts: {
+  name: string;
+  email: string;
+}): { subject: string; html: string } {
+  return {
+    subject: "Welcome to Wall-V — Account Created",
+    html: `
+      <div style="max-width: 600px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif;">
+        <div style="background: linear-gradient(135deg, #7c3aed, #6366f1); padding: 24px; border-radius: 12px 12px 0 0;">
+          <h1 style="color: white; margin: 0; font-size: 20px;">Welcome to Wall-V</h1>
+        </div>
+        <div style="background: #f9fafb; padding: 24px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px;">
+          <p style="color: #374151; font-size: 16px;">Hi ${opts.name},</p>
+          <p style="color: #374151;">Your Wall-V account has been created successfully.</p>
+          <div style="background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin: 16px 0;">
+            <p style="margin: 0; color: #6b7280;">Email: <strong>${opts.email}</strong></p>
+          </div>
+          <p style="color: #374151;">You can now log in, explore our services, and start projects.</p>
+          <a href="${process.env.NEXT_PUBLIC_APP_URL || "https://www.wall-v.com"}/login" style="display: inline-block; background: #7c3aed; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; margin: 16px 0;">Log In to Your Account</a>
+        </div>
+        <div style="text-align: center; padding: 16px; color: #9ca3af; font-size: 12px;">
+          Wall-V Digital Agency
+        </div>
+      </div>
+    `,
+  };
+}
+
+export function generateProjectCreatedEmail(opts: {
+  clientName: string;
+  projectName: string;
+  projectType?: string;
+  budget?: string;
+}): { subject: string; html: string } {
+  return {
+    subject: `Your Project "${opts.projectName}" Has Been Created`,
+    html: `
+      <div style="max-width: 600px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif;">
+        <div style="background: linear-gradient(135deg, #059669, #10b981); padding: 24px; border-radius: 12px 12px 0 0;">
+          <h1 style="color: white; margin: 0; font-size: 20px;">Project Created</h1>
+        </div>
+        <div style="background: #f9fafb; padding: 24px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px;">
+          <p style="color: #374151; font-size: 16px;">Hi ${opts.clientName},</p>
+          <p style="color: #374151;">Your project has been created and our team will review it shortly.</p>
+          <div style="background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin: 16px 0;">
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="padding: 8px 0; color: #6b7280;">Project:</td>
+                <td style="padding: 8px 0; text-align: right; font-weight: bold;">${opts.projectName}</td>
+              </tr>
+              ${opts.projectType ? `<tr><td style="padding: 8px 0; color: #6b7280;">Type:</td><td style="padding: 8px 0; text-align: right;">${opts.projectType}</td></tr>` : ""}
+              ${opts.budget ? `<tr><td style="padding: 8px 0; color: #6b7280;">Budget:</td><td style="padding: 8px 0; text-align: right;">${opts.budget}</td></tr>` : ""}
+            </table>
+          </div>
+          <p style="color: #6b7280; font-size: 14px;">
+            Track progress in your <a href="${process.env.NEXT_PUBLIC_APP_URL || "https://www.wall-v.com"}/client/projects" style="color: #7c3aed;">Client Portal</a>.
+          </p>
+        </div>
+        <div style="text-align: center; padding: 16px; color: #9ca3af; font-size: 12px;">
+          Wall-V Digital Agency
+        </div>
+      </div>
+    `,
+  };
+}
+
+export function generateInquiryReceivedEmail(opts: {
+  clientName: string;
+  subject: string;
+  service?: string;
+}): { subject: string; html: string } {
+  return {
+    subject: `We Received Your Inquiry — ${opts.subject}`,
+    html: `
+      <div style="max-width: 600px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif;">
+        <div style="background: linear-gradient(135deg, #2563eb, #6366f1); padding: 24px; border-radius: 12px 12px 0 0;">
+          <h1 style="color: white; margin: 0; font-size: 20px;">Inquiry Received</h1>
+        </div>
+        <div style="background: #f9fafb; padding: 24px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px;">
+          <p style="color: #374151; font-size: 16px;">Hi ${opts.clientName},</p>
+          <p style="color: #374151;">Thank you for reaching out. We've received your inquiry and our team will get back to you within 24 hours.</p>
+          <div style="background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin: 16px 0;">
+            <p style="margin: 0; color: #6b7280;">Subject: <strong>${opts.subject}</strong></p>
+            ${opts.service ? `<p style="margin: 4px 0 0; color: #6b7280;">Service: <strong>${opts.service}</strong></p>` : ""}
+          </div>
+          <p style="color: #6b7280; font-size: 14px;">
+            You can also view your inquiries in the <a href="${process.env.NEXT_PUBLIC_APP_URL || "https://www.wall-v.com"}/client" style="color: #7c3aed;">Client Portal</a>.
+          </p>
+        </div>
+        <div style="text-align: center; padding: 16px; color: #9ca3af; font-size: 12px;">
+          Wall-V Digital Agency
+        </div>
+      </div>
+    `,
+  };
+}
+
+export function generateProjectStatusEmail(opts: {
+  clientName: string;
+  projectName: string;
+  oldStatus: string;
+  newStatus: string;
+}): { subject: string; html: string } {
+  return {
+    subject: `Project Status Updated: ${opts.projectName} → ${opts.newStatus}`,
+    html: `
+      <div style="max-width: 600px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif;">
+        <div style="background: linear-gradient(135deg, #7c3aed, #6366f1); padding: 24px; border-radius: 12px 12px 0 0;">
+          <h1 style="color: white; margin: 0; font-size: 20px;">Project Status Update</h1>
+        </div>
+        <div style="background: #f9fafb; padding: 24px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px;">
+          <p style="color: #374151; font-size: 16px;">Hi ${opts.clientName},</p>
+          <p style="color: #374151;">The status of your project <strong>${opts.projectName}</strong> has been updated.</p>
+          <div style="background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin: 16px 0; text-align: center;">
+            <span style="color: #6b7280; text-decoration: line-through;">${opts.oldStatus}</span>
+            <span style="margin: 0 12px; color: #6b7280;">→</span>
+            <span style="font-weight: bold; color: #7c3aed; text-transform: capitalize;">${opts.newStatus}</span>
+          </div>
+          <p style="color: #6b7280; font-size: 14px;">
+            View details in your <a href="${process.env.NEXT_PUBLIC_APP_URL || "https://www.wall-v.com"}/client/projects" style="color: #7c3aed;">Client Portal</a>.
           </p>
         </div>
         <div style="text-align: center; padding: 16px; color: #9ca3af; font-size: 12px;">

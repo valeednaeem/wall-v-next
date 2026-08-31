@@ -1,48 +1,17 @@
-import nodemailer from "nodemailer";
+/**
+ * Re-exports from the canonical email utility at @/lib/mail.ts.
+ * This file exists for backward compatibility with routes that import from @/services/email.
+ */
+export { sendEmail } from "@/lib/mail";
 
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || "smtp.gmail.com",
-  port: parseInt(process.env.SMTP_PORT || "587"),
-  secure: process.env.SMTP_SECURE === "true",
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
-
-interface EmailOptions {
+interface LegacyEmailOptions {
   to: string;
   subject: string;
   html: string;
   text?: string;
 }
 
-export async function sendEmail(options: EmailOptions): Promise<boolean> {
-  try {
-    if (!process.env.SMTP_USER) {
-      console.log("[Email] SMTP not configured, skipping email:", options.subject);
-      return false;
-    }
-
-    await transporter.sendMail({
-      from: process.env.SMTP_FROM || process.env.SMTP_USER,
-      to: options.to,
-      subject: options.subject,
-      html: options.html,
-      text: options.text,
-    });
-
-    console.log("[Email] Sent:", options.subject, "to", options.to);
-    return true;
-  } catch (error) {
-    console.error("[Email] Failed to send:", error);
-    return false;
-  }
-}
-
-// ─── Email Templates ────────────────────────────────────────────────────────
-
-export function projectCreatedEmail(projectName: string, clientName: string, previewUrl: string): EmailOptions & { subject: string } {
+export function projectCreatedEmail(projectName: string, clientName: string, previewUrl: string): LegacyEmailOptions & { subject: string } {
   return {
     to: "",
     subject: `Your project "${projectName}" has been created`,
@@ -61,7 +30,7 @@ export function projectCreatedEmail(projectName: string, clientName: string, pre
   };
 }
 
-export function milestonePaidEmail(projectName: string, milestoneName: string, amount: number, invoiceNumber: string): EmailOptions & { subject: string } {
+export function milestonePaidEmail(projectName: string, milestoneName: string, amount: number, invoiceNumber: string): LegacyEmailOptions & { subject: string } {
   return {
     to: "",
     subject: `Payment received for "${projectName}" — ${milestoneName}`,
@@ -83,7 +52,7 @@ export function milestonePaidEmail(projectName: string, milestoneName: string, a
   };
 }
 
-export function adminNewProjectEmail(projectName: string, clientName: string, projectType: string, budget: string): EmailOptions & { subject: string } {
+export function adminNewProjectEmail(projectName: string, clientName: string, projectType: string, budget: string): LegacyEmailOptions & { subject: string } {
   return {
     to: "",
     subject: `New project created: "${projectName}"`,
@@ -97,13 +66,13 @@ export function adminNewProjectEmail(projectName: string, clientName: string, pr
           <p><strong>Type:</strong> ${projectType}</p>
           <p><strong>Budget:</strong> ${budget}</p>
         </div>
-        <a href="/dashboard/projects" style="display: inline-block; background: #000; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 8px; margin: 16px 0;">View in Dashboard</a>
+        <a href="${process.env.NEXT_PUBLIC_APP_URL || "https://www.wall-v.com"}/dashboard/projects" style="display: inline-block; background: #000; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 8px; margin: 16px 0;">View in Dashboard</a>
       </div>
     `,
   };
 }
 
-export function milestoneCompletedEmail(projectName: string, milestoneName: string): EmailOptions & { subject: string } {
+export function milestoneCompletedEmail(projectName: string, milestoneName: string): LegacyEmailOptions & { subject: string } {
   return {
     to: "",
     subject: `Milestone completed: "${milestoneName}" in ${projectName}`,

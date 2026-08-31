@@ -13,6 +13,7 @@ import Lead from "@/models/lead";
 import ProjectRequest from "@/models/project-request";
 import type { ToolResult } from "./types";
 import { validateToolArgs } from "./tool-registry";
+import { sendEmail, generateInquiryReceivedEmail } from "@/lib/mail";
 
 function success(toolName: string, data: Record<string, unknown>): ToolResult {
   return { success: true, toolName, data, error: null, errorCode: null };
@@ -228,6 +229,16 @@ async function createInquiry(args: Record<string, unknown>): Promise<ToolResult>
     leadId = lead._id.toString();
     inquiry.lead = lead._id;
     await inquiry.save();
+  }
+
+  // Send confirmation email to the user
+  if (email && email !== "pending@wall-v.com") {
+    const emailContent = generateInquiryReceivedEmail({
+      clientName: name,
+      subject: subject || "Your Inquiry",
+      service: type || undefined,
+    });
+    sendEmail({ to: email, ...emailContent }).catch(() => {});
   }
 
   return success("create_inquiry", {

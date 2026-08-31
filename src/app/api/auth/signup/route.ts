@@ -18,6 +18,7 @@ import {
   logSecurityEvent,
   verifyCaptcha,
 } from "@/lib/security";
+import { sendEmail, generateAccountCreatedEmail } from "@/lib/mail";
 
 export async function POST(request: Request) {
   const ip = getClientIp(request);
@@ -196,6 +197,10 @@ export async function POST(request: Request) {
       path: "/api/auth/signup",
       method: "POST",
     });
+
+    // ─── Send Welcome Email ───────────────────────────────────────────
+    const welcomeEmail = generateAccountCreatedEmail({ name: sanitizedName, email: sanitizedEmail });
+    sendEmail({ to: sanitizedEmail, ...welcomeEmail }).catch(() => {});
 
     // ─── Issue Token ───────────────────────────────────────────────────
     const token = signToken({

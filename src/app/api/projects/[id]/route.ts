@@ -7,6 +7,7 @@ import { pickFields } from "@/lib/pick-fields";
 import { verifyCsrfToken, CSRF_HEADER_NAME } from "@/lib/csrf";
 import mongoose from "mongoose";
 import { logError } from "@/lib/error-logger";
+import { sendEmail, generateProjectStatusEmail } from "@/lib/mail";
 
 const PROJECT_UPDATE_FIELDS = ["name", "title", "description", "status", "requirements", "budget", "currency", "milestones", "demoHTML", "demoId", "client", "priority", "progress", "paymentStatus"];
 
@@ -116,9 +117,29 @@ export async function PUT(
       }
     }
 
+    const oldStatus = existingProject.status;
     const project = await Project.findByIdAndUpdate(id, projectData, { new: true }).lean();
     if (!project) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    }
+
+    // Send email if status changed
+    if (projectData.status && projectData.status !== oldStatus) {
+      const clientEmail = (typeof project.client === "object" && project.client !== null
+        ? (project.client as { email?: string }).email
+        : null) || "";
+      const clientName = (typeof project.client === "object" && project.client !== null
+        ? (project.client as { name?: string }).name
+        : "") || "Client";
+      if (clientEmail) {
+        const statusEmail = generateProjectStatusEmail({
+          clientName,
+          projectName: project.name || "Your Project",
+          oldStatus: oldStatus || "unknown",
+          newStatus: projectData.status,
+        });
+        sendEmail({ to: clientEmail, ...statusEmail }).catch(() => {});
+      }
     }
 
     return NextResponse.json({ project });
