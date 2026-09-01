@@ -281,6 +281,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </header>
 
         <main className="p-4 lg:p-6">{children}</main>
+
+        <footer className="border-t bg-muted/30 px-4 py-4 lg:px-6">
+          <p className="text-center text-xs text-muted-foreground">
+            © {new Date().getFullYear()}{" "}
+            <Link href="/copyright" className="underline underline-offset-2 hover:text-foreground transition-colors">
+              Wall-V
+            </Link>
+            . All rights reserved.
+          </p>
+        </footer>
       </div>
     </div>
   );

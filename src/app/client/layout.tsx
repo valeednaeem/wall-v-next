@@ -146,6 +146,16 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         <main className="p-4 lg:p-6">
           {children}
         </main>
+
+        <footer className="border-t bg-gray-50 px-4 py-4">
+          <p className="text-center text-xs text-gray-500">
+            © {new Date().getFullYear()}{" "}
+            <Link href="/copyright" className="underline underline-offset-2 hover:text-gray-800 transition-colors">
+              Wall-V
+            </Link>
+            . All rights reserved.
+          </p>
+        </footer>
       </div>
     </div>
   );
