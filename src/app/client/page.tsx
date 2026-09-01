@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { FolderKanban, FileText, CreditCard, Clock, ArrowRight, TrendingUp } from "lucide-react";
+import { FolderKanban, FileText, CreditCard, Clock, ArrowRight, TrendingUp, MessageSquare } from "lucide-react";
 
 interface Project {
   _id: string;
@@ -13,17 +13,27 @@ interface Project {
   milestones: { total: number; completed: number };
 }
 
+interface Inquiry {
+  _id: string;
+  subject: string;
+  status: string;
+  source?: string;
+  createdAt: string;
+}
+
 interface Stats {
   totalProjects: number;
   activeProjects: number;
   completedProjects: number;
   pendingInvoices: number;
   totalPaid: number;
+  totalInquiries: number;
 }
 
 export default function ClientDashboardPage() {
-  const [stats, setStats] = useState<Stats>({ totalProjects: 0, activeProjects: 0, completedProjects: 0, pendingInvoices: 0, totalPaid: 0 });
+  const [stats, setStats] = useState<Stats>({ totalProjects: 0, activeProjects: 0, completedProjects: 0, pendingInvoices: 0, totalPaid: 0, totalInquiries: 0 });
   const [recentProjects, setRecentProjects] = useState<Project[]>([]);
+  const [recentInquiries, setRecentInquiries] = useState<Inquiry[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -31,7 +41,8 @@ export default function ClientDashboardPage() {
       fetch("/api/client/projects?limit=50", { credentials: "include" }).then((r) => r.json()),
       fetch("/api/client/invoices?limit=50", { credentials: "include" }).then((r) => r.json()),
       fetch("/api/client/payments?limit=1", { credentials: "include" }).then((r) => r.json()),
-    ]).then(([projectsData, invoicesData, paymentsData]) => {
+      fetch("/api/client/inquiries?limit=5", { credentials: "include" }).then((r) => r.json()),
+    ]).then(([projectsData, invoicesData, paymentsData, inquiriesData]) => {
       const projects = projectsData.projects || [];
       const active = projects.filter((p: Project) => ["planning", "in-progress", "review", "testing", "new"].includes(p.status)).length;
       const completed = projects.filter((p: Project) => p.status === "completed").length;
@@ -43,8 +54,10 @@ export default function ClientDashboardPage() {
         completedProjects: completed,
         pendingInvoices,
         totalPaid: paymentsData.totalPaid || 0,
+        totalInquiries: inquiriesData.total || 0,
       });
       setRecentProjects(projects.slice(0, 5));
+      setRecentInquiries(inquiriesData.inquiries || []);
       setLoading(false);
     }).catch(() => setLoading(false));
   }, []);
@@ -53,8 +66,8 @@ export default function ClientDashboardPage() {
     { label: "Total Projects", value: stats.totalProjects, icon: FolderKanban, color: "text-blue-600 bg-blue-50" },
     { label: "Active Projects", value: stats.activeProjects, icon: TrendingUp, color: "text-emerald-600 bg-emerald-50" },
     { label: "Completed", value: stats.completedProjects, icon: FolderKanban, color: "text-purple-600 bg-purple-50" },
+    { label: "Inquiries", value: stats.totalInquiries, icon: MessageSquare, color: "text-amber-600 bg-amber-50" },
     { label: "Pending Invoices", value: stats.pendingInvoices, icon: FileText, color: "text-amber-600 bg-amber-50" },
-    { label: "Total Paid", value: `$${stats.totalPaid.toLocaleString()}`, icon: CreditCard, color: "text-emerald-600 bg-emerald-50" },
   ];
 
   const statusColor: Record<string, string> = {
@@ -139,6 +152,36 @@ export default function ClientDashboardPage() {
           </div>
         )}
       </div>
+
+      {/* Recent Inquiries */}
+      {recentInquiries.length > 0 && (
+        <div className="bg-white rounded-xl border">
+          <div className="flex items-center justify-between p-4 border-b">
+            <h2 className="font-semibold">Recent Inquiries</h2>
+            <Link href="/client/inquiries" className="text-sm text-primary hover:underline flex items-center gap-1">
+              View All <ArrowRight className="h-3 w-3" />
+            </Link>
+          </div>
+          <div className="divide-y">
+            {recentInquiries.map((inquiry) => (
+              <div key={inquiry._id} className="flex items-center gap-4 p-4">
+                <MessageSquare className="h-4 w-4 text-muted-foreground shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-sm truncate">{inquiry.subject}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {inquiry.source === "chat" ? "Via Chat" : inquiry.source === "voice" ? "Via Voice" : "Via Contact Form"}
+                    {" · "}
+                    {new Date(inquiry.createdAt).toLocaleDateString()}
+                  </p>
+                </div>
+                <span className={`text-xs px-2 py-1 rounded-full shrink-0 ${inquiry.status === "new" ? "bg-blue-100 text-blue-700" : inquiry.status === "resolved" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"}`}>
+                  {inquiry.status}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

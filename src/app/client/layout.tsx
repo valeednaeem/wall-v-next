@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/client", icon: LayoutDashboard },
   { label: "My Projects", href: "/client/projects", icon: FolderKanban },
+  { label: "Inquiries", href: "/client/inquiries", icon: MessageCircle },
   { label: "Invoices", href: "/client/invoices", icon: FileText },
   { label: "Payments", href: "/client/payments", icon: CreditCard },
   { label: "Downloads", href: "/client/downloads", icon: Download },
