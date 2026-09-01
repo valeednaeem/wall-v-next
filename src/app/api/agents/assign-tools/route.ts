@@ -3,6 +3,7 @@ import { getAuthUser } from "@/lib/auth";
 import { PERMISSIONS, hasPermission } from "@/lib/permissions";
 import Agent from "@/models/agent";
 import connectToDatabase from "@/lib/mongodb";
+import { invalidateAgentConfig } from "@/lib/agent-registry";
 
 export async function POST(request: NextRequest) {
   try {
@@ -31,6 +32,9 @@ export async function POST(request: NextRequest) {
 
     const updated = await Agent.findByIdAndUpdate(agentId, update, { new: true })
       .populate("tools", "name slug category type isWriteOperation riskLevel status");
+
+    // Invalidate registry cache
+    invalidateAgentConfig(agentId);
 
     return NextResponse.json({ agent: updated });
   } catch (error: unknown) {

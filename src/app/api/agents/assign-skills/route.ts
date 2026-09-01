@@ -4,6 +4,7 @@ import { PERMISSIONS, hasPermission } from "@/lib/permissions";
 import Agent from "@/models/agent";
 import AgentSkill from "@/models/agent-skill";
 import connectToDatabase from "@/lib/mongodb";
+import { invalidateAgentConfig } from "@/lib/agent-registry";
 
 export async function POST(request: NextRequest) {
   try {
@@ -41,6 +42,9 @@ export async function POST(request: NextRequest) {
         await AgentSkill.findByIdAndUpdate(skillId, { $addToSet: { supportedAgents: agentId } });
       }
     }
+
+    // Invalidate registry cache
+    invalidateAgentConfig(agentId);
 
     return NextResponse.json({ agent: updated });
   } catch (error: unknown) {

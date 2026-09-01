@@ -5,6 +5,7 @@ import Agent from "@/models/agent";
 import AgentConversation from "@/models/agent-conversation";
 import AgentExecution from "@/models/agent-execution";
 import connectToDatabase from "@/lib/mongodb";
+import { invalidateAgentConfig } from "@/lib/agent-registry";
 
 export async function GET(
   request: NextRequest,
@@ -81,6 +82,9 @@ export async function PUT(
     }
 
     await agent.save();
+
+    // Invalidate registry cache so runtime sees updated config
+    invalidateAgentConfig(id);
 
     return NextResponse.json({ agent });
   } catch (error: unknown) {

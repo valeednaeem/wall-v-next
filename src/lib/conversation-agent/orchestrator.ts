@@ -25,6 +25,7 @@ import { createVisitorState } from "./types";
 import { extractFromMessage, determineRequiredActions, shouldTriggerBilling, parseBudgetAmount } from "./state-manager";
 import { getOpenAITools } from "./tool-registry";
 import { executeConversationTool } from "./tool-executor";
+import { getEffectiveConfig, toOpenAITools, buildSkillContext, invalidateAgentConfig } from "@/lib/agent-registry";
 
 // ─── Logging ────────────────────────────────────────────────────────────────
 
@@ -320,6 +321,9 @@ export async function orchestrateConversation(params: {
     };
   }
 
+  // ── Step 6b: Load effective agent configuration from registry ───────
+  const effectiveConfig = await getEffectiveConfig(agent._id.toString());
+
   // ── Step 7: Validate provider ──────────────────────────────────────
   const model = agent.aiModel || "gpt-4o";
   const provider = detectProvider(model);
@@ -339,13 +343,14 @@ export async function orchestrateConversation(params: {
   }
 
   // ── Step 8: Build prompt and get LLM response ─────────────────────
+  const skillContext = effectiveConfig ? buildSkillContext(effectiveConfig.skills) : "";
   const systemPrompt = buildSystemPrompt(
     { name: agent.name, systemPrompt: agent.systemPrompt || "", instructions: agent.instructions || [] },
     state,
     toolCallsMade,
     primaryCapability,
     classified.requestType
-  );
+  ) + (skillContext ? `\n\n${skillContext}` : "");
 
   // Load conversation history
   let conversationHistory: { role: "user" | "assistant" | "tool"; content: string; tool_call_id?: string; tool_calls?: unknown[] }[] = [];
@@ -368,7 +373,11 @@ export async function orchestrateConversation(params: {
   ];
 
   const adapter = getProviderAdapter(model);
-  const tools = getOpenAITools();
+
+  // Load tools: merge hardcoded conversation tools with database-assigned tools
+  const tools = effectiveConfig
+    ? toOpenAITools(effectiveConfig.tools, true)
+    : getOpenAITools();
 
   let responseText: string;
   try {
