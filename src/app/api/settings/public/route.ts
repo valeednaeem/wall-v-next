@@ -57,7 +57,7 @@ export async function GET() {
         contact: {
           email: grouped.contact?.email || "info@wall-v.com",
           phone: adminProfile.phone || grouped.contact?.phone || "+92 300 1234567",
-          address: adminProfile.address || grouped.contact?.address || "Wall-V Technologies\nKarachi, Pakistan",
+          address: adminProfile.address || grouped.contact?.address || "C/o Dr. Naeem Ul Haq Minhas\nHafizabad Road, Near UBL\nBaghbanoura, Gujranwala\nPakistan",
           businessHours: grouped.contact?.businessHours || "Monday - Friday: 9:00 AM - 6:00 PM\nSaturday: 10:00 AM - 2:00 PM",
         },
       },
