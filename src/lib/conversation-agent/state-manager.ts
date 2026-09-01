@@ -314,3 +314,37 @@ export function determineRequiredActions(state: VisitorState): string[] {
 
   return actions;
 }
+
+/**
+ * Determine if billing should be triggered based on state.
+ * Only triggers when user has explicitly confirmed/proceeded with a billable service.
+ */
+export function shouldTriggerBilling(state: VisitorState): boolean {
+  // Must have enough info to invoice
+  if (!state.name || !state.email || !state.budget) return false;
+
+  // Must have a billable project type
+  const billableTypes = ["e-commerce", "web-application", "mobile-app", "ai-solution", "saas"];
+  if (!state.projectType || !billableTypes.includes(state.projectType)) return false;
+
+  // Must have a project request already created
+  if (!state.projectRequestId) return false;
+
+  // Must not already have an invoice
+  if (state.invoiceId) return false;
+
+  // Budget must be parseable to a positive number
+  const budgetNum = parseFloat(state.budget.replace(/[^0-9.]/g, ""));
+  if (isNaN(budgetNum) || budgetNum <= 0) return false;
+
+  return true;
+}
+
+/**
+ * Parse budget string to a numeric amount.
+ */
+export function parseBudgetAmount(budget: string): number {
+  const nums = budget.replace(/[^0-9.\-–]/g, "").split(/[-–]/).map(Number).filter((n) => !isNaN(n) && n > 0);
+  if (nums.length >= 2) return Math.round((nums[0] + nums[1]) / 2);
+  return nums[0] || 0;
+}

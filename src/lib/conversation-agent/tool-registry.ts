@@ -139,6 +139,50 @@ export const CONVERSATION_TOOLS: ConversationToolDefinition[] = [
       required: [],
     },
   },
+  {
+    name: "create_notification",
+    description: "Create a notification for admin users. Use this to alert staff about new inquiries, project requests, or important events.",
+    parameters: {
+      type: "object",
+      properties: {
+        userId: { type: "string", description: "Target user ID (optional, defaults to all admins)" },
+        title: { type: "string", description: "Notification title" },
+        message: { type: "string", description: "Notification message" },
+        type: { type: "string", description: "Notification type", enum: ["info", "success", "warning", "error"] },
+        link: { type: "string", description: "Link to related page" },
+      },
+      required: ["title", "message"],
+    },
+  },
+  {
+    name: "create_invoice",
+    description: "Create an invoice for a billable project or service. Use when a project has been confirmed and billing is required. Creates milestone-based invoice and sends email to client.",
+    parameters: {
+      type: "object",
+      properties: {
+        clientEmail: { type: "string", description: "Client's email address" },
+        clientName: { type: "string", description: "Client's name" },
+        projectId: { type: "string", description: "Related project ID if available" },
+        amount: { type: "number", description: "Total invoice amount in USD" },
+        description: { type: "string", description: "Description of what the invoice covers" },
+        projectName: { type: "string", description: "Name of the project" },
+      },
+      required: ["clientEmail", "clientName", "amount", "description"],
+    },
+  },
+  {
+    name: "delegate_to_agent",
+    description: "Delegate a task to a specialized AI agent. Use when a task requires domain-specific expertise beyond your capabilities. The delegated agent will execute the task and return a result.",
+    parameters: {
+      type: "object",
+      properties: {
+        agentId: { type: "string", description: "The target agent's ID or slug" },
+        message: { type: "string", description: "The task or question to delegate" },
+        context: { type: "object", description: "Additional context to pass (projectId, clientId, etc.)" },
+      },
+      required: ["agentId", "message"],
+    },
+  },
 ];
 
 /**

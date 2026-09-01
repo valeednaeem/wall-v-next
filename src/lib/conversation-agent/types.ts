@@ -38,10 +38,19 @@ export interface VisitorState {
   inquiryId: string | null;
   projectRequestId: string | null;
 
+  // Billing (populated after invoice creation)
+  invoiceId: string | null;
+  invoiceNumber: string | null;
+  invoiceAmount: number | null;
+  billingReady: boolean;
+
   // Tracking
   source: string;
   turnCount: number;
   missingRequiredFields: string[];
+
+  // Tool results (for verification)
+  lastToolResults: string[];
 }
 
 export function createVisitorState(overrides?: Partial<VisitorState>): VisitorState {
@@ -68,9 +77,14 @@ export function createVisitorState(overrides?: Partial<VisitorState>): VisitorSt
     projectId: null,
     inquiryId: null,
     projectRequestId: null,
+    invoiceId: null,
+    invoiceNumber: null,
+    invoiceAmount: null,
+    billingReady: false,
     source: "chat",
     turnCount: 0,
     missingRequiredFields: [],
+    lastToolResults: [],
     ...overrides,
   };
 }
@@ -112,6 +126,9 @@ export type ActionType =
   | "create_lead"
   | "create_project_request"
   | "create_project"
+  | "create_invoice"
+  | "create_notification"
+  | "delegate_to_agent"
   | "get_service_info"
   | "get_pricing"
   | "none";

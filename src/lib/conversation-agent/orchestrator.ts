@@ -22,7 +22,7 @@ import { detectProvider, validateProviderConfig, getProviderAdapter } from "@/li
 import { captureMemoriesFromMessage } from "@/lib/agent-memory";
 import type { VisitorState, ToolResult, OrchestrationResult } from "./types";
 import { createVisitorState } from "./types";
-import { extractFromMessage, determineRequiredActions } from "./state-manager";
+import { extractFromMessage, determineRequiredActions, shouldTriggerBilling, parseBudgetAmount } from "./state-manager";
 import { getOpenAITools } from "./tool-registry";
 import { executeConversationTool } from "./tool-executor";
 
@@ -92,7 +92,11 @@ function buildSystemPrompt(
     parts.push("## Actions Taken");
     for (const result of toolResults) {
       if (result.success) {
-        parts.push(`- ${result.toolName}: Success`);
+        const details = result.data ? Object.entries(result.data)
+          .filter(([k]) => ["userId", "clientId", "inquiryId", "projectRequestId", "invoiceId", "invoiceNumber", "amount", "created", "found", "existed"].includes(k))
+          .map(([k, v]) => `${k}=${typeof v === "object" ? JSON.stringify(v) : v}`)
+          .join(", ") : "";
+        parts.push(`- ${result.toolName}: Success${details ? ` (${details})` : ""}`);
       } else {
         parts.push(`- ${result.toolName}: Failed — ${result.error}`);
       }
@@ -121,6 +125,9 @@ function buildSystemPrompt(
   parts.push("- NEVER present a menu, numbered list, or \"option 1 / option 2\" choices.");
   parts.push("- If a tool failed, say what went wrong and ask how to proceed.");
   parts.push("- After tools create or update a record, tell the user they can see it in their dashboard.");
+  parts.push("- NEVER invent prices, invoice numbers, or payment status — use only tool results.");
+  parts.push("- NEVER create an invoice unless billing is shown in Actions Taken above.");
+  parts.push("- If billing was triggered, confirm the invoice was created and provide the invoice number from the tool result.");
   parts.push("");
 
   return parts.join("\n");
@@ -154,6 +161,9 @@ function formatStateForPrompt(state: VisitorState): string {
   if (state.clientId) lines.push(`(Client ID: ${state.clientId})`);
   if (state.projectRequestId) lines.push(`(Project Request: ${state.projectRequestId})`);
   if (state.inquiryId) lines.push(`(Inquiry: ${state.inquiryId})`);
+  if (state.invoiceId) lines.push(`(Invoice: ${state.invoiceNumber || state.invoiceId})`);
+  if (state.invoiceAmount) lines.push(`(Invoice Amount: $${state.invoiceAmount.toLocaleString()})`);
+  if (state.billingReady) lines.push(`(Billing: Ready to invoice)`);
 
   if (lines.length === 0) lines.push("No information collected yet — start by greeting the visitor.");
 
@@ -194,6 +204,9 @@ function getNextActionGuidance(
 
   // Everything collected — continue natural conversation
   if (missing.length === 0) {
+    if (state.features.length > 0 && !state.invoiceId && state.billingReady) {
+      return "All key information collected. The project is ready for billing. Create the invoice using the create_invoice tool with the client's details and budget amount.";
+    }
     if (state.features.length > 0) {
       return "All key information collected. Ask follow-up questions about their requirements if needed, or confirm what you have captured. Mention they can see details in their dashboard.";
     }
@@ -255,6 +268,29 @@ export async function orchestrateConversation(params: {
       data: toolResult.data ? Object.keys(toolResult.data) : null,
       error: toolResult.error,
     });
+  }
+
+  // ── Step 5b: Billing workflow (if project + budget are ready) ──────
+  if (shouldTriggerBilling(state)) {
+    log("billing", "Triggering invoice creation", {
+      email: state.email,
+      budget: state.budget,
+      projectType: state.projectType,
+    });
+
+    const billingResult = await executeAction("create_invoice", state, params);
+    toolCallsMade.push(billingResult);
+    state = applyToolResult(state, "create_invoice", billingResult);
+
+    log("billing", "Invoice result", {
+      success: billingResult.success,
+      invoiceId: billingResult.data?.invoiceId,
+      error: billingResult.error,
+    });
+
+    // Send notification to admins about new billing
+    const notificationResult = await executeAction("create_notification", state, params);
+    toolCallsMade.push(notificationResult);
   }
 
   // ── Step 6: Load agent ─────────────────────────────────────────────
@@ -609,6 +645,35 @@ async function executeAction(
         estimatedTimeline: state.timeline || undefined,
       });
     }
+    case "create_invoice": {
+      if (state.invoiceId) {
+        return { success: true, toolName: "create_invoice", data: { alreadyExists: true, invoiceId: state.invoiceId }, error: null, errorCode: null };
+      }
+      const amount = parseBudgetAmount(state.budget || "");
+      return executeConversationTool("create_invoice", {
+        clientEmail: state.email || "",
+        clientName: state.name || "",
+        projectId: state.projectId || undefined,
+        amount,
+        description: `${state.projectType || "Project"} — ${state.objective || "Custom development"}`,
+        projectName: `${(state.projectType || "Project").replace(/-/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())} for ${state.name || "Client"}`,
+      });
+    }
+    case "create_notification": {
+      return executeConversationTool("create_notification", {
+        title: "New Conversation Agent Activity",
+        message: `New ${state.projectType || "inquiry"} from ${state.name || "visitor"} (${state.email || "no email"}): ${state.objective || "Conversation in progress"}`,
+        type: "info",
+        link: state.inquiryId ? `/dashboard/crm/inquiries` : undefined,
+      });
+    }
+    case "delegate_to_agent": {
+      return executeConversationTool("delegate_to_agent", {
+        agentId: "project-manager",
+        message: `Handle project request: ${state.projectType} for ${state.name}. Objective: ${state.objective}. Features: ${state.features.join(", ")}. Budget: ${state.budget || "TBD"}. Timeline: ${state.timeline || "TBD"}.`,
+        context: { userId: state.userId, clientId: state.clientId, projectRequestId: state.projectRequestId },
+      });
+    }
     default:
       return { success: false, toolName: action, data: null, error: `Unknown action: ${action}`, errorCode: "UNKNOWN_ACTION" };
   }
@@ -620,6 +685,9 @@ function applyToolResult(state: VisitorState, action: string, result: ToolResult
   if (!result.success || !result.data) return state;
 
   const updated = { ...state };
+
+  // Track tool results for verification
+  updated.lastToolResults = [...state.lastToolResults, `${action}:${result.success ? "ok" : "fail"}`];
 
   switch (action) {
     case "lookup_user":
@@ -655,6 +723,19 @@ function applyToolResult(state: VisitorState, action: string, result: ToolResult
       if (result.data.inquiryId) {
         updated.inquiryId = result.data.inquiryId as string;
       }
+      break;
+    case "create_invoice":
+      if (result.data.invoiceId) {
+        updated.invoiceId = result.data.invoiceId as string;
+        updated.invoiceNumber = result.data.invoiceNumber as string;
+        updated.invoiceAmount = result.data.amount as number;
+      }
+      break;
+    case "create_notification":
+      // Notification is fire-and-forget, no state change needed
+      break;
+    case "delegate_to_agent":
+      // Delegation result is informational
       break;
   }
 

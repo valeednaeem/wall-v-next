@@ -396,6 +396,227 @@ async function getServiceInfo(args: Record<string, unknown>): Promise<ToolResult
   return success("get_service_info", info);
 }
 
+async function createNotificationTool(args: Record<string, unknown>): Promise<ToolResult> {
+  const { valid, missing, sanitized } = validateToolArgs("create_notification", args);
+  if (!valid) return failure("create_notification", `Missing: ${missing.join(", ")}`, "VALIDATION_ERROR");
+
+  const { userId, title, message, type, link } = sanitized as {
+    userId?: string; title: string; message: string; type?: string; link?: string;
+  };
+
+  await connectToDatabase();
+
+  const Notification = (await import("@/models/notification")).default;
+  const UserModel = (await import("@/models/user")).default;
+
+  let targetUserIds: string[] = [];
+  if (userId) {
+    targetUserIds = [userId];
+  } else {
+    const admins = await UserModel.find({ role: { $in: ["super-admin", "admin"] }, isActive: true }).select("_id").lean();
+    targetUserIds = admins.map((a: { _id: { toString(): string } }) => a._id.toString());
+  }
+
+  if (targetUserIds.length === 0) {
+    return success("create_notification", { created: false, count: 0, message: "No target users found" });
+  }
+
+  const notifications = await Notification.insertMany(
+    targetUserIds.map((uid) => ({
+      user: uid,
+      title,
+      message,
+      type: type || "info",
+      link: link || undefined,
+      read: false,
+    }))
+  );
+
+  return success("create_notification", {
+    created: true,
+    count: notifications.length,
+    title,
+    message,
+  });
+}
+
+async function createInvoiceTool(args: Record<string, unknown>): Promise<ToolResult> {
+  const { valid, missing, sanitized } = validateToolArgs("create_invoice", args);
+  if (!valid) return failure("create_invoice", `Missing: ${missing.join(", ")}`, "VALIDATION_ERROR");
+
+  const { clientEmail, clientName, projectId, amount, description, projectName } = sanitized as {
+    clientEmail: string; clientName: string; projectId?: string;
+    amount: number; description: string; projectName?: string;
+  };
+
+  if (!amount || amount <= 0) return failure("create_invoice", "Amount must be positive", "VALIDATION_ERROR");
+
+  await connectToDatabase();
+
+  const Invoice = (await import("@/models/invoice")).default;
+  const Project = (await import("@/models/project")).default;
+
+  // Generate invoice number
+  const now = new Date();
+  const datePart = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}`;
+  const random = Math.random().toString(36).substring(2, 8).toUpperCase();
+  const invoiceNumber = `INV-${datePart}-${random}`;
+
+  // Build milestone-based items
+  const milestones = [
+    { name: "Discovery & Planning", description: "Requirements gathering, sitemap, wireframes", pct: 15 },
+    { name: "Design", description: "UI/UX design, brand integration, responsive layouts", pct: 20 },
+    { name: "Development", description: "Frontend and backend implementation", pct: 35 },
+    { name: "Content & SEO", description: "Content creation, SEO optimization, meta tags", pct: 15 },
+    { name: "Testing & Launch", description: "QA testing, bug fixes, deployment", pct: 15 },
+  ];
+
+  const items = milestones.map((m) => ({
+    description: `${m.name} — ${m.description}`,
+    quantity: 1,
+    unitPrice: Math.round(amount * (m.pct / 100)),
+    total: Math.round(amount * (m.pct / 100)),
+  }));
+
+  const dueDate = new Date();
+  dueDate.setDate(dueDate.getDate() + 30);
+
+  // Find or link project
+  let linkedProject = null;
+  if (projectId) {
+    linkedProject = await Project.findById(projectId).lean();
+  }
+
+  const invoice = await Invoice.create({
+    invoiceNumber,
+    project: linkedProject?._id || undefined,
+    client: undefined, // Will be linked if client record exists
+    items,
+    subtotal: amount,
+    total: amount,
+    amountDue: amount,
+    currency: "USD",
+    status: "sent",
+    dueDate,
+    notes: description || `${projectName || "Project"} invoice`,
+    billingAddress: {
+      name: clientName,
+      email: clientEmail.toLowerCase().trim(),
+    },
+  });
+
+  // Try to link to client record
+  const clientDoc = await Client.findOne({ email: clientEmail.toLowerCase() });
+  if (clientDoc) {
+    invoice.client = clientDoc._id;
+    await invoice.save();
+  }
+
+  // Send invoice email
+  if (clientEmail && clientEmail.includes("@")) {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://wall-v.com";
+    sendEmail({
+      to: clientEmail,
+      subject: `Invoice ${invoiceNumber} — ${projectName || "Wall-V Project"}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #333;">Invoice ${invoiceNumber}</h2>
+          <p>Hi ${clientName},</p>
+          <p>Here's your project invoice:</p>
+          <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
+            <tr style="background: #f9f9f9;">
+              <th style="padding: 8px; text-align: left; border-bottom: 1px solid #eee;">Description</th>
+              <th style="padding: 8px; text-align: right; border-bottom: 1px solid #eee;">Amount</th>
+            </tr>
+            ${items.map((item) => `
+              <tr>
+                <td style="padding: 8px; border-bottom: 1px solid #eee;">${item.description}</td>
+                <td style="padding: 8px; text-align: right; border-bottom: 1px solid #eee;">$${item.total.toLocaleString()}</td>
+              </tr>
+            `).join("")}
+            <tr style="font-weight: bold; border-top: 2px solid #333;">
+              <td style="padding: 8px;">Total</td>
+              <td style="padding: 8px; text-align: right;">$${amount.toLocaleString()} USD</td>
+            </tr>
+          </table>
+          <a href="${appUrl}/client/invoices" style="display: inline-block; background: #000; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 8px; margin: 16px 0;">View Invoice</a>
+          <p style="color: #666; font-size: 14px;">Due by ${dueDate.toLocaleDateString()}. If you have questions, reply to this email.</p>
+        </div>
+      `,
+      template: "invoice-created",
+    }).catch(() => {});
+  }
+
+  return success("create_invoice", {
+    created: true,
+    invoiceId: invoice._id.toString(),
+    invoiceNumber,
+    amount,
+    currency: "USD",
+    status: "sent",
+    dueDate: dueDate.toISOString(),
+    clientEmail: clientEmail.toLowerCase().trim(),
+    milestoneCount: milestones.length,
+  });
+}
+
+async function delegateToAgent(args: Record<string, unknown>): Promise<ToolResult> {
+  const { valid, missing, sanitized } = validateToolArgs("delegate_to_agent", args);
+  if (!valid) return failure("delegate_to_agent", `Missing: ${missing.join(", ")}`, "VALIDATION_ERROR");
+
+  const { agentId, message, context } = sanitized as {
+    agentId: string; message: string; context?: Record<string, unknown>;
+  };
+
+  await connectToDatabase();
+
+  const AgentModel = (await import("@/models/agent")).default;
+  let agent;
+  if (agentId.match(/^[0-9a-fA-F]{24}$/)) {
+    agent = await AgentModel.findById(agentId).lean();
+  } else {
+    agent = await AgentModel.findOne({ slug: agentId, status: "active" }).lean();
+  }
+
+  if (!agent) return failure("delegate_to_agent", `Agent '${agentId}' not found`, "AGENT_NOT_FOUND");
+
+  // Use the AI provider adapter to call the agent
+  const { detectProvider, validateProviderConfig, getProviderAdapter } = await import("@/lib/ai-provider-adapter");
+  const model = agent.aiModel || "gpt-4o";
+  const provider = detectProvider(model);
+  const providerCheck = validateProviderConfig(provider);
+
+  if (!providerCheck.valid) {
+    return failure("delegate_to_agent", `Provider not available for model ${model}`, "PROVIDER_UNAVAILABLE");
+  }
+
+  const adapter = getProviderAdapter(model);
+  const contextStr = context ? `\n\nContext: ${JSON.stringify(context)}` : "";
+
+  try {
+    const result = await adapter.chat({
+      model,
+      messages: [
+        { role: "system", content: agent.systemPrompt || `You are ${agent.name}, a ${agent.role} agent for Wall-V.` },
+        { role: "user", content: message + contextStr },
+      ],
+      temperature: agent.temperature || 0.7,
+      maxTokens: agent.maxTokens || 2048,
+    });
+
+    return success("delegate_to_agent", {
+      delegated: true,
+      agentId: agent._id.toString(),
+      agentName: agent.name,
+      agentRole: agent.role,
+      response: result.content,
+    });
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : "Delegation failed";
+    return failure("delegate_to_agent", msg, "EXECUTION_ERROR");
+  }
+}
+
 // ─── Tool Dispatcher ────────────────────────────────────────────────────────
 
 const TOOL_MAP: Record<string, (args: Record<string, unknown>) => Promise<ToolResult>> = {
@@ -407,6 +628,9 @@ const TOOL_MAP: Record<string, (args: Record<string, unknown>) => Promise<ToolRe
   create_lead: createLead,
   create_project_request: createProjectRequest,
   get_service_info: getServiceInfo,
+  create_notification: createNotificationTool,
+  create_invoice: createInvoiceTool,
+  delegate_to_agent: delegateToAgent,
 };
 
 /**

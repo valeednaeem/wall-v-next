@@ -15,7 +15,7 @@
  */
 
 export { orchestrateConversation } from "./orchestrator";
-export { extractFromMessage, determineRequiredActions } from "./state-manager";
+export { extractFromMessage, determineRequiredActions, shouldTriggerBilling, parseBudgetAmount } from "./state-manager";
 export { createVisitorState } from "./types";
 export { executeConversationTool } from "./tool-executor";
 export { CONVERSATION_TOOLS, getOpenAITools, validateToolArgs } from "./tool-registry";
