@@ -238,7 +238,7 @@ async function createInquiry(args: Record<string, unknown>): Promise<ToolResult>
       subject: subject || "Your Inquiry",
       service: type || undefined,
     });
-    sendEmail({ to: email, ...emailContent }).catch(() => {});
+    sendEmail({ to: email, ...emailContent, template: "inquiry-received" }).catch(() => {});
   }
 
   return success("create_inquiry", {

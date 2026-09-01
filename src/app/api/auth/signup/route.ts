@@ -200,7 +200,7 @@ export async function POST(request: Request) {
 
     // ─── Send Welcome Email ───────────────────────────────────────────
     const welcomeEmail = generateAccountCreatedEmail({ name: sanitizedName, email: sanitizedEmail });
-    sendEmail({ to: sanitizedEmail, ...welcomeEmail }).catch(() => {});
+    sendEmail({ to: sanitizedEmail, ...welcomeEmail, template: "account-created" }).catch(() => {});
 
     // ─── Issue Token ───────────────────────────────────────────────────
     const token = signToken({

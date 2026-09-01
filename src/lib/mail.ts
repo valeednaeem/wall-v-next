@@ -1,10 +1,12 @@
 import nodemailer from "nodemailer";
+import EmailLog from "@/models/email-log";
 
 interface EmailOptions {
   to: string;
   subject: string;
   html: string;
   text?: string;
+  template?: string;
 }
 
 function getTransporter() {
@@ -19,7 +21,7 @@ function getTransporter() {
   });
 }
 
-export async function sendEmail({ to, subject, html, text }: EmailOptions): Promise<boolean> {
+export async function sendEmail({ to, subject, html, text, template }: EmailOptions): Promise<boolean> {
   try {
     const transporter = getTransporter();
     await transporter.sendMail({
@@ -30,9 +32,12 @@ export async function sendEmail({ to, subject, html, text }: EmailOptions): Prom
       text,
     });
     console.log("Email sent:", { to, subject });
+    EmailLog.create({ to, subject, template: template || "general", status: "sent" }).catch(() => {});
     return true;
   } catch (error) {
     console.error("Email error:", error);
+    const errMsg = error instanceof Error ? error.message : "Unknown error";
+    EmailLog.create({ to, subject, template: template || "general", status: "failed", error: errMsg }).catch(() => {});
     return false;
   }
 }

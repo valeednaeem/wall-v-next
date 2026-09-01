@@ -138,7 +138,7 @@ export async function PUT(
           oldStatus: oldStatus || "unknown",
           newStatus: projectData.status,
         });
-        sendEmail({ to: clientEmail, ...statusEmail }).catch(() => {});
+        sendEmail({ to: clientEmail, ...statusEmail, template: "project-status" }).catch(() => {});
       }
     }
 
