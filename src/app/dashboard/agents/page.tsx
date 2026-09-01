@@ -131,9 +131,18 @@ export default function AgentsPage() {
   const fetchAgents = useCallback(async (page = 1) => {
     setLoading(true);
     try {
+      // For grouped/list view, fetch ALL agents (no pagination limit)
+      // so every division shows its complete agent list
+      const isListView = viewMode === "list";
+
       const params = new URLSearchParams();
-      params.set("page", String(page));
-      params.set("limit", "50");
+      if (isListView) {
+        params.set("page", "1");
+        params.set("limit", "500"); // Fetch all agents for grouped view
+      } else {
+        params.set("page", String(page));
+        params.set("limit", "50");
+      }
       if (debouncedSearch) params.set("search", debouncedSearch);
       if (filterStatus !== "all") params.set("status", filterStatus);
       if (filterRole !== "all") params.set("role", filterRole);
@@ -144,10 +153,15 @@ export default function AgentsPage() {
       setAgents(data.agents || []);
       if (data.pagination) setPagination(data.pagination);
     } catch { console.error("Failed to fetch agents"); } finally { setLoading(false); }
-  }, [debouncedSearch, filterStatus, filterRole, filterDivision]);
+  }, [debouncedSearch, filterStatus, filterRole, filterDivision, viewMode]);
 
   useEffect(() => { fetchStats(); }, [fetchStats]);
   useEffect(() => { fetchAgents(1); }, [fetchAgents]);
+
+  // Re-fetch when view mode changes (list needs all agents, grid uses pagination)
+  const handleViewModeChange = useCallback((mode: "grid" | "list") => {
+    setViewMode(mode);
+  }, []);
 
   const toggleStatus = async (agent: Agent) => {
     const newStatus = agent.status === "active" ? "inactive" : "active";
@@ -390,9 +404,9 @@ export default function AgentsPage() {
             <option value="internal">Internal Only</option>
           </select>
           <div className="flex items-center gap-1 border rounded-lg">
-            <button onClick={() => setViewMode("grid")} className={cn("p-2", viewMode === "grid" && "bg-muted")}>
+            <button onClick={() => handleViewModeChange("grid")} className={cn("p-2", viewMode === "grid" && "bg-muted")}>
               <LayoutGrid className="h-4 w-4" /></button>
-            <button onClick={() => setViewMode("list")} className={cn("p-2", viewMode === "list" && "bg-muted")}>
+            <button onClick={() => handleViewModeChange("list")} className={cn("p-2", viewMode === "list" && "bg-muted")}>
               <List className="h-4 w-4" /></button>
           </div>
         </div>
@@ -506,24 +520,30 @@ export default function AgentsPage() {
                 {isExpanded && (
                   <div className="border-t divide-y">
                     {divAgents.map((agent) => (
-                      <div key={agent._id} className="flex items-center gap-4 px-4 py-3 hover:bg-muted/30">
-                        <button onClick={() => toggleSelect(agent._id)}>
+                      <div key={agent._id} className="flex items-start gap-4 px-4 py-3 hover:bg-muted/30">
+                        <button onClick={() => toggleSelect(agent._id)} className="mt-0.5">
                           {selectedIds.has(agent._id)
                             ? <CheckSquare className="h-4 w-4 text-primary" />
                             : <Square className="h-4 w-4 text-muted-foreground" />}
                         </button>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <p className="text-sm font-medium truncate">{agent.name}</p>
-                            <span className={cn("text-xs px-2 py-0.5 rounded", STATUS_COLORS[agent.status])}>{agent.status}</span>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="text-sm font-medium">{agent.name}</p>
+                            <span className={cn("text-xs px-2 py-0.5 rounded shrink-0", STATUS_COLORS[agent.status])}>{agent.status}</span>
+                            {agent.division && (
+                              <span className={cn("text-xs px-2 py-0.5 rounded shrink-0", DIVISION_COLORS[agent.division] || "bg-gray-100 text-gray-600")}>
+                                {agent.divisionLabel || agent.division}
+                              </span>
+                            )}
                           </div>
-                          <p className="text-xs text-muted-foreground truncate">{agent.description}</p>
+                          <p className="text-xs text-muted-foreground mt-1 break-words whitespace-normal">{agent.description}</p>
+                          <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1.5 flex-wrap">
+                            <span>{agent.aiModel}</span>
+                            <span>{agent.stats?.totalConversations || 0} convos</span>
+                            <span>{agent.skills?.length || 0} skills</span>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground shrink-0">
-                          <span>{agent.stats?.totalConversations || 0} convos</span>
-                          <span>{agent.skills?.length || 0} skills</span>
-                        </div>
-                        <div className="flex items-center gap-1 shrink-0">
+                        <div className="flex items-center gap-1 shrink-0 self-start">
                           <Link href={`/dashboard/agents/${agent._id}`} className="px-2 py-1 text-xs bg-muted rounded hover:bg-muted/80">Details</Link>
                           <Link href={`/dashboard/agents/${agent._id}/test`} className="px-2 py-1 text-xs bg-primary/10 text-primary rounded hover:bg-primary/20">Test</Link>
                           <button onClick={() => toggleStatus(agent)} className="px-2 py-1 text-xs border rounded hover:bg-muted">
