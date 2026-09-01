@@ -1110,12 +1110,41 @@ export async function runAgentWithTools(opts: {
   temperature: number;
   maxTokens: number;
   maxIterations?: number;
+  agentId?: string;
 }): Promise<{ response: string; toolCalls: { name: string; args: unknown; result: unknown }[] }> {
-  const { systemPrompt, messages, model, temperature, maxTokens, maxIterations = 5 } = opts;
+  const { systemPrompt, messages, model, temperature, maxTokens, maxIterations = 5, agentId } = opts;
   const apiKey = process.env.OPENAI_API_KEY;
 
   if (!apiKey) {
     return { response: "AI service is not configured.", toolCalls: [] };
+  }
+
+  // Load tools from registry if agentId provided, otherwise use all hardcoded tools
+  let toolDefinitions = AGENT_TOOL_DEFINITIONS;
+  if (agentId) {
+    try {
+      const { getEffectiveConfig, toOpenAITools } = await import("@/lib/agent-registry");
+      const config = await getEffectiveConfig(agentId);
+      if (config) {
+        const registryTools = toOpenAITools(config.tools, false);
+        // Convert registry tools to AgentToolDefinition format
+        const dbToolDefs = registryTools.map((t) => ({
+          type: "function" as const,
+          function: {
+            name: t.function.name,
+            description: t.function.description,
+            parameters: t.function.parameters as { type: "object"; properties: Record<string, unknown>; required?: string[] },
+          },
+        }));
+        // Merge: hardcoded tools + DB-assigned tools (deduplicated by name)
+        const seenNames = new Set(AGENT_TOOL_DEFINITIONS.map((t) => t.function.name));
+        const uniqueDbTools = dbToolDefs.filter((t) => !seenNames.has(t.function.name));
+        toolDefinitions = [...AGENT_TOOL_DEFINITIONS, ...uniqueDbTools];
+        console.log(`[Agent Tools] Loaded ${uniqueDbTools.length} DB tools for agent ${agentId}, total: ${toolDefinitions.length}`);
+      }
+    } catch (err) {
+      console.error("[Agent Tools] Failed to load agent config from registry, using defaults", err);
+    }
   }
 
   const allMessages: { role: string; content: string; tool_calls?: unknown[]; tool_call_id?: string; name?: string }[] = [
@@ -1129,12 +1158,12 @@ export async function runAgentWithTools(opts: {
     const requestBody = {
       model,
       messages: allMessages,
-      tools: AGENT_TOOL_DEFINITIONS,
+      tools: toolDefinitions,
       temperature,
       max_tokens: maxTokens,
     };
 
-    console.log(`[Agent Tools] Iteration ${iteration + 1}, sending ${AGENT_TOOL_DEFINITIONS.length} tools to OpenAI`);
+    console.log(`[Agent Tools] Iteration ${iteration + 1}, sending ${toolDefinitions.length} tools to OpenAI`);
 
     const apiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
