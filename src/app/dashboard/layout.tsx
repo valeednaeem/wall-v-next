@@ -8,7 +8,7 @@ import {
   LayoutDashboard, FileText, FolderKanban, Users,
   Cloud, Globe, Settings, ShoppingBag, ChevronRight,
   Menu, X, LogOut, User, CreditCard, Shield, Search, Bell, AlertTriangle,
-  BarChart3, Bot, ClipboardList, CheckSquare, Activity, Scan, MessageSquare
+  BarChart3, Bot, ClipboardList, CheckSquare, Activity, Scan, MessageSquare, DollarSign
 } from "lucide-react";
 
 interface SidebarChild {
@@ -34,6 +34,7 @@ const sidebarItems: SidebarItem[] = [
   { label: "Monitor", href: "/dashboard/monitoring", icon: <Activity className="h-4 w-4" />, permission: "projects:view" },
   { label: "Scanner", href: "/dashboard/scanner", icon: <Scan className="h-4 w-4" />, permission: "projects:view" },
   { label: "Comms", href: "/dashboard/communications", icon: <MessageSquare className="h-4 w-4" />, permission: "projects:view" },
+  { label: "Financials", href: "/dashboard/financials", icon: <DollarSign className="h-4 w-4" />, permission: "projects:view" },
   { label: "E-Commerce", href: "/dashboard/ecommerce/products", icon: <ShoppingBag className="h-4 w-4" />, permission: "products:view", children: [
     { label: "Products", href: "/dashboard/ecommerce/products", permission: "products:view" },
     { label: "Categories", href: "/dashboard/ecommerce/products/categories", permission: "categories:view" },
