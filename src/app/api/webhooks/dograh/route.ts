@@ -8,7 +8,7 @@ import Project from "@/models/project";
 import Preview, { createPreviewToken } from "@/models/preview";
 import ServicePrice from "@/models/service-price";
 import { generateDemoHTML } from "@/lib/demo-generator";
-import { sendEmail, projectCreatedEmail } from "@/services/email";
+import { sendEmail, generateProjectCreatedEmail } from "@/lib/mail";
 import { corsHeaders, handleOPTIONS } from "@/lib/cors";
 import { logError } from "@/lib/error-logger";
 import { checkRateLimit, getClientIp, logSecurityEvent } from "@/lib/security";
@@ -821,8 +821,11 @@ export async function POST(request: Request) {
       if (clientEmail && clientEmail.includes("@")) {
         const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://wall-v.com";
         const previewUrl = `${appUrl}/preview/${preview.token}`;
-        const emailContent = projectCreatedEmail(projectName, clientName, previewUrl);
-        sendEmail({ ...emailContent, to: clientEmail }).catch((err) =>
+        const emailContent = generateProjectCreatedEmail({
+          clientName,
+          projectName,
+        });
+        sendEmail({ to: clientEmail, ...emailContent }).catch((err) =>
           console.error("[Dograh Webhook] Failed to send preview email:", err)
         );
       }

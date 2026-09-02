@@ -524,3 +524,42 @@ export function generateContactConfirmationEmail(opts: {
     `,
   };
 }
+
+export function generateAdminNewProjectEmail(opts: {
+  projectName: string;
+  clientName: string;
+  projectType?: string;
+  budget?: string;
+}): { subject: string; html: string } {
+  return {
+    subject: `New project created: "${opts.projectName}"`,
+    html: `
+      <div style="max-width: 600px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif;">
+        <div style="background: linear-gradient(135deg, #2563eb, #6366f1); padding: 24px; border-radius: 12px 12px 0 0;">
+          <h1 style="color: white; margin: 0; font-size: 20px;">New Project Created</h1>
+        </div>
+        <div style="background: #f9fafb; padding: 24px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px;">
+          <p style="color: #374151;">A new project has been created by the AI agent:</p>
+          <div style="background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin: 16px 0;">
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="padding: 8px 0; color: #6b7280;">Project:</td>
+                <td style="padding: 8px 0; text-align: right; font-weight: bold;">${opts.projectName}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; color: #6b7280;">Client:</td>
+                <td style="padding: 8px 0; text-align: right;">${opts.clientName}</td>
+              </tr>
+              ${opts.projectType ? `<tr><td style="padding: 8px 0; color: #6b7280;">Type:</td><td style="padding: 8px 0; text-align: right;">${opts.projectType}</td></tr>` : ""}
+              ${opts.budget ? `<tr><td style="padding: 8px 0; color: #6b7280;">Budget:</td><td style="padding: 8px 0; text-align: right;">${opts.budget}</td></tr>` : ""}
+            </table>
+          </div>
+          <a href="${process.env.NEXT_PUBLIC_APP_URL || "https://www.wall-v.com"}/dashboard/projects" style="display: inline-block; background: #7c3aed; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; margin: 16px 0;">View in Dashboard</a>
+        </div>
+        <div style="text-align: center; padding: 16px; color: #9ca3af; font-size: 12px;">
+          Wall-V Digital Agency
+        </div>
+      </div>
+    `,
+  };
+}

@@ -47,10 +47,19 @@ export async function requireAuthFromCookie(
 // ─── Role-Based Access ───────────────────────────────────────────────────────
 // Use these for simple role-gating where permission granularity isn't needed.
 
-const SUPER_ADMIN_ROLES = ["super-admin"];
-const ADMIN_ROLES = ["super-admin", "admin"];
-const INTERNAL_ROLES = ["super-admin", "admin", "project-manager", "staff", "developer", "designer", "marketing", "sales", "support"];
-const ALL_AUTHENTICATED = ["super-admin", "admin", "project-manager", "staff", "developer", "designer", "marketing", "sales", "support", "customer"];
+export const SUPER_ADMIN_ROLES = ["super-admin"];
+export const ADMIN_ROLES = ["super-admin", "admin"];
+export const INTERNAL_ROLES = ["super-admin", "admin", "project-manager", "staff", "developer", "designer", "marketing", "sales", "support"];
+export const ALL_AUTHENTICATED = ["super-admin", "admin", "project-manager", "staff", "developer", "designer", "marketing", "sales", "support", "customer"];
+
+/** Roles that receive notifications about new contacts/inquiries */
+export const NOTIFY_ROLES = ["super-admin", "admin", "project-manager"];
+
+/** Roles that can manage CRM entities (clients, leads, inquiries) */
+export const CRM_ROLES = ["super-admin", "admin", "manager", "staff"];
+
+/** Roles that can manage content (blog, products, projects) */
+export const CONTENT_ROLES = ["super-admin", "admin", "manager"];
 
 export function requireRole(
   user: JWTPayload,
@@ -158,4 +167,10 @@ export function successResponse(data: Record<string, unknown>, status = 200): Ne
 
 export function errorResponse(message: string, status = 400): NextResponse {
   return NextResponse.json({ error: message }, { status });
+}
+
+export function handleApiError(error: unknown, context?: string): NextResponse {
+  console.error(`[API] ${context || "Error"}:`, error);
+  const message = error instanceof Error ? error.message : "Internal server error";
+  return NextResponse.json({ error: message }, { status: 500 });
 }

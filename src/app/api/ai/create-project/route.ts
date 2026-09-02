@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { runProductionWorkflow, type ProductionRequirements } from "@/lib/production-workflow";
-import { sendEmail, projectCreatedEmail, adminNewProjectEmail } from "@/services/email";
+import { sendEmail, generateProjectCreatedEmail, generateAdminNewProjectEmail } from "@/lib/mail";
 import { notifyAdmins } from "@/lib/notify";
 import { logError } from "@/lib/error-logger";
 import { getAuthUser } from "@/lib/auth";
@@ -81,20 +81,21 @@ export async function POST(request: Request) {
 
     // Send email notifications (non-blocking)
     if (clientEmail) {
-      const clientEmailData = projectCreatedEmail(
-        result.projectName,
+      const clientEmailData = generateProjectCreatedEmail({
         clientName,
-        result.previewUrl || result.checkoutUrl
-      );
-      sendEmail({ ...clientEmailData, to: clientEmail }).catch(() => {});
+        projectName: result.projectName,
+        projectType: result.projectType,
+        budget,
+      });
+      sendEmail({ to: clientEmail, ...clientEmailData }).catch(() => {});
     }
-    const adminEmailData = adminNewProjectEmail(
-      result.projectName,
+    const adminEmailData = generateAdminNewProjectEmail({
+      projectName: result.projectName,
       clientName,
-      result.projectType,
-      budget || "TBD"
-    );
-    sendEmail({ ...adminEmailData, to: process.env.ADMIN_EMAIL || "admin@wall-v.com" }).catch(() => {});
+      projectType: result.projectType,
+      budget,
+    });
+    sendEmail({ to: process.env.ADMIN_EMAIL || "admin@wall-v.com", ...adminEmailData }).catch(() => {});
     notifyAdmins(
       "New Project Created",
       `"${result.projectName}" was created by AI agent`,

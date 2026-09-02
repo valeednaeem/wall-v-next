@@ -3,7 +3,7 @@ import { connectToDatabase } from "@/lib/mongodb";
 import Project from "@/models/project";
 import Client from "@/models/client";
 import Invoice from "@/models/invoice";
-import { sendEmail, milestonePaidEmail } from "@/services/email";
+import { sendEmail } from "@/lib/mail";
 import { corsHeaders, handleOPTIONS } from "@/lib/cors";
 
 function generateInvoiceNumber(): string {

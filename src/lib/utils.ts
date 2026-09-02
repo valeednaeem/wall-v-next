@@ -13,12 +13,38 @@ export function formatDate(date: Date | string): string {
   });
 }
 
+export function formatDateShort(date: Date | string): string {
+  return new Date(date).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+export function formatDateTime(date: Date | string): string {
+  return new Date(date).toLocaleString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 export function formatCurrency(amount: number, currency = "USD"): string {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency,
     minimumFractionDigits: amount % 1 === 0 ? 0 : 2,
   }).format(amount);
+}
+
+export function formatPrice(amount: number, currency = "USD"): string {
+  return formatCurrency(amount, currency);
+}
+
+export function formatPriceCompact(amount: number): string {
+  return `$${amount.toFixed(2)}`;
 }
 
 export function truncate(str: string, length: number): string {
@@ -34,6 +60,14 @@ export function slugify(text: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
+export function generateId(): string {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+}
+
+export function generateOrderNumber(): string {
+  return Math.random().toString(36).substring(2, 8).toUpperCase();
+}
+
 export function generateRandomString(length: number): string {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
   let result = "";
@@ -41,6 +75,19 @@ export function generateRandomString(length: number): string {
     result += chars.charAt(Math.floor(Math.random() * chars.length));
   }
   return result;
+}
+
+export function capitalize(str: string): string {
+  if (!str) return str;
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+export function capitalizeWords(str: string): string {
+  return str.replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+export function slugToDisplay(slug: string): string {
+  return slug.replace(/-/g, " ");
 }
 
 export function getInitials(name: string): string {

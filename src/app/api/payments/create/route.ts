@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import Project from "@/models/project";
 import Invoice from "@/models/invoice";
-import { sendEmail, milestonePaidEmail } from "@/services/email";
+import { sendEmail, generatePaymentConfirmationEmail } from "@/lib/mail";
 import { notifyAdmins } from "@/lib/notify";
 import { getAuthUser } from "@/lib/auth";
 
@@ -94,8 +94,14 @@ export async function POST(request: Request) {
       ? project.milestones[milestoneIndex]?.name || "Project Phase"
       : project.name;
     if (project.client?.email) {
-      const emailData = milestonePaidEmail(project.name, milestoneName, amount, invoiceNumber);
-      sendEmail({ ...emailData, to: project.client.email }).catch(() => {});
+      const emailData = generatePaymentConfirmationEmail({
+        clientName: project.client?.name || "Client",
+        projectName: project.name,
+        amount,
+        currency: "USD",
+        paymentId: invoiceNumber,
+      });
+      sendEmail({ to: project.client.email, ...emailData }).catch(() => {});
     }
     notifyAdmins("Payment Received", `${project.client?.name || "Client"} paid $${amount} for "${project.name}" — ${milestoneName}`, "success", `/dashboard/projects`).catch(() => {});
 
