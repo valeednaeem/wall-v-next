@@ -14,6 +14,9 @@ import Task from "@/models/task";
 import Agent from "@/models/agent";
 import User from "@/models/user";
 
+export { decomposeProject } from "./pm-decomposition";
+export { generateSchedule, getProjectHealth } from "./pm-planning";
+
 export interface PmToolResult {
   success: boolean;
   data: unknown;
