@@ -15,7 +15,6 @@ import AgentWorkflow from "@/models/agent-workflow";
 import Agent from "@/models/agent";
 import PmAuditLog from "@/models/pm-audit-log";
 import Notification from "@/models/notification";
-import User from "@/models/user";
 
 export interface WorkflowTemplate {
   id: string;

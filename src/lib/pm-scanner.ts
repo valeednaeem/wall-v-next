@@ -24,7 +24,6 @@ import PmRisk from "@/models/pm-risk";
 import PmIssue from "@/models/pm-issue";
 import PmAuditLog from "@/models/pm-audit-log";
 import Notification from "@/models/notification";
-import User from "@/models/user";
 
 export interface ScanResult {
   timestamp: Date;
