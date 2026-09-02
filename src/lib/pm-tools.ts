@@ -26,6 +26,7 @@ export { generateReport, getReports, getReportById, REPORT_TEMPLATES } from "./p
 export { getPmConfig, updatePmConfig, getAgentTemplates, deployFromTemplate } from "./pm-config";
 export { getWorkflows, getWorkflowById, createFromTemplate, executeWorkflow, getWorkflowTemplates } from "./pm-workflows";
 export { getIntegrations, updateIntegration, getWebhooks, createWebhook, testWebhook, getIntegrationSummary } from "./pm-integrations";
+export { getAdminCenterData } from "./pm-admin-center";
 
 export interface PmToolResult {
   success: boolean;

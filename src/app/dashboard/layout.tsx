@@ -39,6 +39,7 @@ const sidebarItems: SidebarItem[] = [
   { label: "Config", href: "/dashboard/config", icon: <Settings className="h-4 w-4" />, permission: "projects:view" },
   { label: "Workflows", href: "/dashboard/workflows", icon: <GitBranch className="h-4 w-4" />, permission: "projects:view" },
   { label: "Integrations", href: "/dashboard/integrations", icon: <Puzzle className="h-4 w-4" />, permission: "projects:view" },
+  { label: "Admin Center", href: "/dashboard/admin-center", icon: <LayoutDashboard className="h-4 w-4" />, permission: "projects:view" },
   { label: "E-Commerce", href: "/dashboard/ecommerce/products", icon: <ShoppingBag className="h-4 w-4" />, permission: "products:view", children: [
     { label: "Products", href: "/dashboard/ecommerce/products", permission: "products:view" },
     { label: "Categories", href: "/dashboard/ecommerce/products/categories", permission: "categories:view" },
