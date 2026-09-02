@@ -23,6 +23,7 @@ export { sendNotification, routeAlertNotification, sendDailyDigest } from "./pm-
 export { generateProjectUpdate, generateProgressReport, getCalendarEvents, sendClientUpdate } from "./pm-client-comm";
 export { getProjectFinancials, getFinancialSummary, checkBudgetAlerts, generateBudgetAlerts } from "./pm-financials";
 export { generateReport, getReports, getReportById, REPORT_TEMPLATES } from "./pm-reports";
+export { getPmConfig, updatePmConfig, getAgentTemplates, deployFromTemplate } from "./pm-config";
 
 export interface PmToolResult {
   success: boolean;

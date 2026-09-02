@@ -36,6 +36,7 @@ const sidebarItems: SidebarItem[] = [
   { label: "Comms", href: "/dashboard/communications", icon: <MessageSquare className="h-4 w-4" />, permission: "projects:view" },
   { label: "Financials", href: "/dashboard/financials", icon: <DollarSign className="h-4 w-4" />, permission: "projects:view" },
   { label: "Reports", href: "/dashboard/reports", icon: <FileText className="h-4 w-4" />, permission: "projects:view" },
+  { label: "Config", href: "/dashboard/config", icon: <Settings className="h-4 w-4" />, permission: "projects:view" },
   { label: "E-Commerce", href: "/dashboard/ecommerce/products", icon: <ShoppingBag className="h-4 w-4" />, permission: "products:view", children: [
     { label: "Products", href: "/dashboard/ecommerce/products", permission: "products:view" },
     { label: "Categories", href: "/dashboard/ecommerce/products/categories", permission: "categories:view" },
