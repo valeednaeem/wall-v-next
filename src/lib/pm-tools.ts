@@ -25,6 +25,7 @@ export { getProjectFinancials, getFinancialSummary, checkBudgetAlerts, generateB
 export { generateReport, getReports, getReportById, REPORT_TEMPLATES } from "./pm-reports";
 export { getPmConfig, updatePmConfig, getAgentTemplates, deployFromTemplate } from "./pm-config";
 export { getWorkflows, getWorkflowById, createFromTemplate, executeWorkflow, getWorkflowTemplates } from "./pm-workflows";
+export { getIntegrations, updateIntegration, getWebhooks, createWebhook, testWebhook, getIntegrationSummary } from "./pm-integrations";
 
 export interface PmToolResult {
   success: boolean;
