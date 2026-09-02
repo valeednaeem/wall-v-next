@@ -138,6 +138,26 @@ export async function POST(request: Request) {
       tasks: body.tasks || [],
     });
 
+    // PM Auto-Intake: create intake record for new project
+    try {
+      const { createPmIntake } = await import("@/lib/pm-intake");
+      await createPmIntake({
+        source: "admin",
+        sourceRef: project._id.toString(),
+        client: body.clientRef || body.client,
+        clientName: typeof body.client === "object" ? body.client?.name : "",
+        clientEmail: typeof body.client === "object" ? body.client?.email : "",
+        title: project.name,
+        description: project.description || "",
+        requiredSkills: body.requiredSkills || [],
+        priority: project.priority || "medium",
+        estimatedEffort: body.estimatedEffort || 0,
+        estimatedBudget: project.budget || 0,
+      });
+    } catch {
+      // Non-critical: don't fail project creation if intake fails
+    }
+
     return NextResponse.json({ project }, { status: 201 });
   } catch (error) {
     await logError({
