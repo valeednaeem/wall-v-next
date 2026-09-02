@@ -18,6 +18,8 @@ export { decomposeProject } from "./pm-decomposition";
 export { generateSchedule, getProjectHealth } from "./pm-planning";
 export { getAiWorkforce, getHumanWorkforce, getWorkforceSummary, findCapableResources } from "./pm-workforce";
 export { getSystemHealth, generateAlertsFromHealth, getMonitoringTimeline } from "./pm-monitoring";
+export { runFullScan, runQuickScan, getScanHistory } from "./pm-scanner";
+export { sendNotification, routeAlertNotification, sendDailyDigest } from "./pm-notifications";
 
 export interface PmToolResult {
   success: boolean;
