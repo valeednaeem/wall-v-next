@@ -8,7 +8,7 @@ import {
   LayoutDashboard, FileText, FolderKanban, Users,
   Cloud, Globe, Settings, ShoppingBag, ChevronRight,
   Menu, X, LogOut, User, CreditCard, Shield, Search, Bell, AlertTriangle,
-  BarChart3, Bot, ClipboardList, CheckSquare, Activity, Scan
+  BarChart3, Bot, ClipboardList, CheckSquare, Activity, Scan, MessageSquare
 } from "lucide-react";
 
 interface SidebarChild {
@@ -33,6 +33,7 @@ const sidebarItems: SidebarItem[] = [
   { label: "Workforce", href: "/dashboard/workforce", icon: <Users className="h-4 w-4" />, permission: "projects:view" },
   { label: "Monitor", href: "/dashboard/monitoring", icon: <Activity className="h-4 w-4" />, permission: "projects:view" },
   { label: "Scanner", href: "/dashboard/scanner", icon: <Scan className="h-4 w-4" />, permission: "projects:view" },
+  { label: "Comms", href: "/dashboard/communications", icon: <MessageSquare className="h-4 w-4" />, permission: "projects:view" },
   { label: "E-Commerce", href: "/dashboard/ecommerce/products", icon: <ShoppingBag className="h-4 w-4" />, permission: "products:view", children: [
     { label: "Products", href: "/dashboard/ecommerce/products", permission: "products:view" },
     { label: "Categories", href: "/dashboard/ecommerce/products/categories", permission: "categories:view" },
@@ -152,7 +153,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* Logo */}
       <div className="flex h-16 items-center justify-between border-b px-6">
         <Link href="/dashboard" className="flex items-center gap-2 text-xl font-bold">
-          <span className="text-primary">Wall</span>-V
+          <img src="/wall-v-logo-lg.png" alt="Wall-V" className="h-8 w-auto" />
         </Link>
         <button className="lg:hidden p-1" onClick={() => setSidebarOpen(false)}>
           <X className="h-5 w-5" />

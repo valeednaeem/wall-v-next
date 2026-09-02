@@ -25,7 +25,7 @@ function fetchSettings(): Promise<SiteBranding> {
       return settings;
     })
     .catch(() => {
-      const fallback: SiteBranding = { siteName: "Wall-V", logo: "", favicon: "" };
+      const fallback: SiteBranding = { siteName: "Wall-V", logo: "/wall-v-logo-lg.png", favicon: "/wall-v-logo-lg.png" };
       cachedSettings = fallback;
       return fallback;
     });
@@ -34,7 +34,7 @@ function fetchSettings(): Promise<SiteBranding> {
 
 export function useSiteSettings() {
   const [settings, setSettings] = useState<SiteBranding>(
-    cachedSettings || { siteName: "Wall-V", logo: "", favicon: "" }
+    cachedSettings || { siteName: "Wall-V", logo: "/wall-v-logo-lg.png", favicon: "/wall-v-logo-lg.png" }
   );
 
   useEffect(() => {
