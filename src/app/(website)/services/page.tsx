@@ -95,7 +95,7 @@ export default async function ServicesPage() {
                 <div key={service._id} className="rounded-xl border bg-card p-6 hover:shadow-lg transition-shadow">
                   <h3 className="text-lg font-semibold mb-2">{service.name}</h3>
                   {service.description && (
-                    <p className="text-sm text-muted-foreground mb-4">{service.description}</p>
+                    <p className="text-sm text-muted-foreground mb-4" dangerouslySetInnerHTML={{ __html: service.description }} />
                   )}
                   <div className="text-primary font-bold text-lg mb-4">
                     {formatPrice(service)}
