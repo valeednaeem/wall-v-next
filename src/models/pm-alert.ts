@@ -44,7 +44,7 @@ const PmAlertSchema = new Schema<IPmAlert>(
     acknowledgedAt: Date,
     resolvedAt: Date,
     resolution: { type: String, default: "" },
-    metadata: { type: Schema.Types.ObjectId, ref: "Metadata" },
+    metadata: { type: Schema.Types.Mixed, default: {} },
   },
   { timestamps: true }
 );

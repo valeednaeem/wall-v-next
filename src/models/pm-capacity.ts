@@ -44,7 +44,7 @@ const PmCapacitySchema = new Schema<IPmCapacity>(
         status: { type: String, default: "assigned" },
       },
     ],
-    metadata: { type: Schema.Types.ObjectId, ref: "Metadata" },
+    metadata: { type: Schema.Types.Mixed, default: {} },
   },
   { timestamps: true }
 );

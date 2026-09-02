@@ -42,7 +42,7 @@ const PmRiskSchema = new Schema<IPmRisk>(
     affectedResources: [{ type: Schema.Types.ObjectId }],
     resolution: { type: String, default: "" },
     resolvedAt: Date,
-    metadata: { type: Schema.Types.ObjectId, ref: "Metadata" },
+    metadata: { type: Schema.Types.Mixed, default: {} },
   },
   { timestamps: true }
 );

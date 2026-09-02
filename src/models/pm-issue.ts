@@ -50,7 +50,7 @@ const PmIssueSchema = new Schema<IPmIssue>(
     relatedRisks: [{ type: Schema.Types.ObjectId, ref: "PmRisk" }],
     priority: { type: String, enum: ["low", "medium", "high", "urgent"], default: "medium", index: true },
     dueDate: Date,
-    metadata: { type: Schema.Types.ObjectId, ref: "Metadata" },
+    metadata: { type: Schema.Types.Mixed, default: {} },
   },
   { timestamps: true }
 );

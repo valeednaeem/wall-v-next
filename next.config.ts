@@ -51,7 +51,6 @@ const nextConfig: NextConfig = {
     { source: "/dashboard/voice-agent-conversations", destination: "/dashboard/ai-conversations", permanent: true },
     { source: "/dashboard/invoices", destination: "/dashboard/projects", permanent: true },
     { source: "/dashboard/sales", destination: "/dashboard/projects", permanent: true },
-    { source: "/dashboard/project-manager", destination: "/dashboard/projects", permanent: true },
     { source: "/dashboard/production", destination: "/dashboard/projects", permanent: true },
     { source: "/dashboard/client-portal", destination: "/dashboard/projects", permanent: true },
     { source: "/dashboard/previews", destination: "/dashboard/projects", permanent: true },
