@@ -27,6 +27,7 @@ export function ContactForm() {
   });
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [warning, setWarning] = useState("");
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -60,6 +61,7 @@ export function ContactForm() {
       }
 
       setSuccess(true);
+      setWarning(data.warning || "");
       setForm({ name: "", email: "", phone: "", type: "general", subject: "", message: "" });
     } catch {
       setError("Something went wrong. Please try again.");
@@ -85,6 +87,12 @@ export function ContactForm() {
             {success && (
               <div className="rounded-lg bg-green-50 border border-green-200 p-4 mb-6 text-sm text-green-800">
                 Your message has been sent successfully. We&apos;ll get back to you soon!
+              </div>
+            )}
+
+            {warning && (
+              <div className="rounded-lg bg-yellow-50 border border-yellow-200 p-4 mb-6 text-sm text-yellow-800">
+                {warning}
               </div>
             )}
 

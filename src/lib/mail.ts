@@ -425,3 +425,102 @@ export function generateProjectStatusEmail(opts: {
     `,
   };
 }
+
+export function generateContactAdminEmail(opts: {
+  contactId: string;
+  name: string;
+  email: string;
+  phone?: string;
+  subject: string;
+  message: string;
+  type: string;
+  submittedAt: string;
+}): { subject: string; html: string } {
+  const typeLabels: Record<string, string> = {
+    general: "General Inquiry",
+    sales: "Sales",
+    support: "Support",
+    partnership: "Partnership",
+  };
+  return {
+    subject: `New Contact Form Submission: ${opts.subject}`,
+    html: `
+      <div style="max-width: 600px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif;">
+        <div style="background: linear-gradient(135deg, #2563eb, #6366f1); padding: 24px; border-radius: 12px 12px 0 0;">
+          <h1 style="color: white; margin: 0; font-size: 20px;">New Contact Form Submission</h1>
+        </div>
+        <div style="background: #f9fafb; padding: 24px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px;">
+          <div style="background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin: 0 0 16px 0;">
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="padding: 8px 0; color: #6b7280; width: 120px;">From:</td>
+                <td style="padding: 8px 0; font-weight: bold;">${opts.name}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; color: #6b7280;">Email:</td>
+                <td style="padding: 8px 0;"><a href="mailto:${opts.email}" style="color: #7c3aed;">${opts.email}</a></td>
+              </tr>
+              ${opts.phone ? `<tr>
+                <td style="padding: 8px 0; color: #6b7280;">Phone:</td>
+                <td style="padding: 8px 0;">${opts.phone}</td>
+              </tr>` : ""}
+              <tr>
+                <td style="padding: 8px 0; color: #6b7280;">Type:</td>
+                <td style="padding: 8px 0;"><span style="background: #ede9fe; color: #7c3aed; padding: 2px 8px; border-radius: 4px; font-size: 13px;">${typeLabels[opts.type] || opts.type}</span></td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; color: #6b7280;">Submitted:</td>
+                <td style="padding: 8px 0; font-size: 13px; color: #6b7280;">${opts.submittedAt}</td>
+              </tr>
+            </table>
+          </div>
+          <div style="background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin: 0 0 16px 0;">
+            <p style="margin: 0 0 8px 0; color: #6b7280; font-size: 13px; text-transform: uppercase; font-weight: bold;">Subject</p>
+            <p style="margin: 0; color: #374151; font-weight: bold;">${opts.subject}</p>
+          </div>
+          <div style="background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin: 0 0 16px 0;">
+            <p style="margin: 0 0 8px 0; color: #6b7280; font-size: 13px; text-transform: uppercase; font-weight: bold;">Message</p>
+            <p style="margin: 0; color: #374151; white-space: pre-wrap;">${opts.message}</p>
+          </div>
+          <p style="color: #6b7280; font-size: 13px; margin: 0;">
+            Reference: ${opts.contactId}
+          </p>
+        </div>
+        <div style="text-align: center; padding: 16px; color: #9ca3af; font-size: 12px;">
+          Wall-V Digital Agency
+        </div>
+      </div>
+    `,
+  };
+}
+
+export function generateContactConfirmationEmail(opts: {
+  name: string;
+  subject: string;
+  contactId: string;
+}): { subject: string; html: string } {
+  return {
+    subject: `We Received Your Message — ${opts.subject}`,
+    html: `
+      <div style="max-width: 600px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif;">
+        <div style="background: linear-gradient(135deg, #059669, #10b981); padding: 24px; border-radius: 12px 12px 0 0;">
+          <h1 style="color: white; margin: 0; font-size: 20px;">Message Received</h1>
+        </div>
+        <div style="background: #f9fafb; padding: 24px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px;">
+          <p style="color: #374151; font-size: 16px;">Hi ${opts.name},</p>
+          <p style="color: #374151;">Thank you for reaching out. We've received your message and our team will get back to you within 24 hours.</p>
+          <div style="background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin: 16px 0;">
+            <p style="margin: 0; color: #6b7280;">Subject: <strong>${opts.subject}</strong></p>
+            <p style="margin: 4px 0 0; color: #6b7280; font-size: 13px;">Reference: ${opts.contactId}</p>
+          </div>
+          <p style="color: #6b7280; font-size: 14px;">
+            If your matter is urgent, you can also reach us at <a href="mailto:${process.env.ADMIN_EMAIL || "admin@wall-v.com"}" style="color: #7c3aed;">${process.env.ADMIN_EMAIL || "admin@wall-v.com"}</a>.
+          </p>
+        </div>
+        <div style="text-align: center; padding: 16px; color: #9ca3af; font-size: 12px;">
+          Wall-V Digital Agency
+        </div>
+      </div>
+    `,
+  };
+}
