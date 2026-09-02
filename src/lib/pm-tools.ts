@@ -22,6 +22,7 @@ export { runFullScan, runQuickScan, getScanHistory } from "./pm-scanner";
 export { sendNotification, routeAlertNotification, sendDailyDigest } from "./pm-notifications";
 export { generateProjectUpdate, generateProgressReport, getCalendarEvents, sendClientUpdate } from "./pm-client-comm";
 export { getProjectFinancials, getFinancialSummary, checkBudgetAlerts, generateBudgetAlerts } from "./pm-financials";
+export { generateReport, getReports, getReportById, REPORT_TEMPLATES } from "./pm-reports";
 
 export interface PmToolResult {
   success: boolean;
