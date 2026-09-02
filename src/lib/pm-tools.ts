@@ -16,6 +16,7 @@ import User from "@/models/user";
 
 export { decomposeProject } from "./pm-decomposition";
 export { generateSchedule, getProjectHealth } from "./pm-planning";
+export { getAiWorkforce, getHumanWorkforce, getWorkforceSummary, findCapableResources } from "./pm-workforce";
 
 export interface PmToolResult {
   success: boolean;

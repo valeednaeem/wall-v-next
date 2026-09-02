@@ -30,6 +30,7 @@ const sidebarItems: SidebarItem[] = [
   { label: "Projects", href: "/dashboard/projects", icon: <FolderKanban className="h-4 w-4" />, permission: "projects:view" },
   { label: "Tasks", href: "/dashboard/tasks", icon: <CheckSquare className="h-4 w-4" />, permission: "projects:view" },
   { label: "Project Manager", href: "/dashboard/project-manager", icon: <ClipboardList className="h-4 w-4" />, permission: "projects:view" },
+  { label: "Workforce", href: "/dashboard/workforce", icon: <Users className="h-4 w-4" />, permission: "projects:view" },
   { label: "E-Commerce", href: "/dashboard/ecommerce/products", icon: <ShoppingBag className="h-4 w-4" />, permission: "products:view", children: [
     { label: "Products", href: "/dashboard/ecommerce/products", permission: "products:view" },
     { label: "Categories", href: "/dashboard/ecommerce/products/categories", permission: "categories:view" },
