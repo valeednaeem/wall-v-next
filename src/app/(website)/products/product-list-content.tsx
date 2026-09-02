@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { useCart } from "@/lib/cart-context";
 import { isProductAvailable } from "@/lib/product-availability";
+import DOMPurify from "isomorphic-dompurify";
 import {
   Select,
   SelectContent,
@@ -298,9 +299,7 @@ export function ProductListContent() {
                       {product.name}
                     </h3>
                   </Link>
-                  <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
-                    {product.shortDescription || product.description}
-                  </p>
+                  <p className="text-sm text-muted-foreground mb-3 line-clamp-2" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(product.shortDescription || product.description || "") }} />
                   <div className="flex items-baseline gap-2 mb-4">
                     {product.salePrice ? (
                       <>

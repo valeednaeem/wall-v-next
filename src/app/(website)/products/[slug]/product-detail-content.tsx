@@ -191,7 +191,7 @@ export function ProductDetailContent() {
             </div>
           )}
 
-          <p className="text-muted-foreground mb-6">{product.shortDescription || product.description}</p>
+          <div className="text-muted-foreground mb-6" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(product.shortDescription || product.description || "") }} />
 
           <Card>
             <CardContent className="p-6">
@@ -345,9 +345,10 @@ export function ProductDetailContent() {
             dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(product.content) }}
           />
         ) : (
-          <div className="prose prose-lg max-w-none whitespace-pre-wrap text-muted-foreground">
-            {product.description}
-          </div>
+          <div
+            className="prose prose-lg max-w-none text-muted-foreground"
+            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(product.description || "") }}
+          />
         )}
       </div>
 
