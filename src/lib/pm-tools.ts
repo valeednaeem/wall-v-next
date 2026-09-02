@@ -24,6 +24,7 @@ export { generateProjectUpdate, generateProgressReport, getCalendarEvents, sendC
 export { getProjectFinancials, getFinancialSummary, checkBudgetAlerts, generateBudgetAlerts } from "./pm-financials";
 export { generateReport, getReports, getReportById, REPORT_TEMPLATES } from "./pm-reports";
 export { getPmConfig, updatePmConfig, getAgentTemplates, deployFromTemplate } from "./pm-config";
+export { getWorkflows, getWorkflowById, createFromTemplate, executeWorkflow, getWorkflowTemplates } from "./pm-workflows";
 
 export interface PmToolResult {
   success: boolean;
