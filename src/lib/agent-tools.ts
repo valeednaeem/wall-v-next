@@ -1,4 +1,6 @@
 // Tool definition for OpenAI function calling
+import { ADMIN_ROLES } from "@/lib/api-middleware";
+
 export interface AgentToolDefinition {
   type: "function";
   function: {
@@ -652,7 +654,7 @@ async function executeCreateNotification(args: Record<string, unknown>) {
     targetUserIds = [args.userId as string];
   } else {
     const User = (await import("@/models/user")).default;
-    const admins = await User.find({ role: { $in: ["super-admin", "admin"] }, isActive: true }).select("_id").lean();
+    const admins = await User.find({ role: { $in: ADMIN_ROLES }, isActive: true }).select("_id").lean();
     targetUserIds = admins.map((a: { _id: { toString(): string } }) => a._id.toString());
   }
 

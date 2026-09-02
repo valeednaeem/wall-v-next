@@ -4,13 +4,14 @@ import Client from "@/models/client";
 import { getAuthUser } from "@/lib/auth";
 import { pickFields } from "@/lib/pick-fields";
 import { escapeRegex } from "@/lib/escape-regex";
+import { CRM_ROLES, CONTENT_ROLES } from "@/lib/api-middleware";
 
 const CLIENT_FIELDS = ["name", "email", "company", "phone", "address", "city", "country", "status", "notes", "avatar"];
 
 export async function GET(request: Request) {
   try {
     const user = await getAuthUser();
-    if (!user || !["super-admin", "admin", "manager", "staff"].includes(user.role)) {
+    if (!user || !CRM_ROLES.includes(user.role)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -41,7 +42,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const user = await getAuthUser();
-    if (!user || !["super-admin", "admin", "manager"].includes(user.role)) {
+    if (!user || !CONTENT_ROLES.includes(user.role)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

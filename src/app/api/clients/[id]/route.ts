@@ -2,11 +2,12 @@ import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import Client from "@/models/client";
 import { getAuthUser } from "@/lib/auth";
+import { CRM_ROLES, CONTENT_ROLES, ADMIN_ROLES } from "@/lib/api-middleware";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await getAuthUser();
-    if (!user || !["super-admin", "admin", "manager", "staff"].includes(user.role)) {
+    if (!user || !CRM_ROLES.includes(user.role)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
     const { id } = await params;
@@ -23,7 +24,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await getAuthUser();
-    if (!user || !["super-admin", "admin", "manager"].includes(user.role)) {
+    if (!user || !CONTENT_ROLES.includes(user.role)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
     const { id } = await params;
@@ -46,7 +47,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await getAuthUser();
-    if (!user || !["super-admin", "admin"].includes(user.role)) {
+    if (!user || !ADMIN_ROLES.includes(user.role)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
     const { id } = await params;

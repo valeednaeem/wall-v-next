@@ -1,6 +1,7 @@
 import { connectToDatabase } from "@/lib/mongodb";
 import Notification from "@/models/notification";
 import User from "@/models/user";
+import { ADMIN_ROLES } from "@/lib/api-middleware";
 
 export async function createNotification(
   userId: string,
@@ -26,7 +27,7 @@ export async function notifyAdmins(
 ) {
   try {
     await connectToDatabase();
-    const admins = await User.find({ role: { $in: ["super-admin", "admin"] } }).select("_id").lean();
+    const admins = await User.find({ role: { $in: ADMIN_ROLES } }).select("_id").lean();
 
     for (const admin of admins) {
       await createNotification(admin._id.toString(), title, message, type, link);

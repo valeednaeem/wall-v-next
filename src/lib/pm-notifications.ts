@@ -10,6 +10,7 @@
 import connectToDatabase from "@/lib/mongodb";
 import Notification from "@/models/notification";
 import User from "@/models/user";
+import { NOTIFY_ROLES } from "@/lib/api-middleware";
 import PmAlert from "@/models/pm-alert";
 import PmRisk from "@/models/pm-risk";
 import PmIssue from "@/models/pm-issue";
@@ -50,7 +51,7 @@ export async function sendNotification(opts: SendNotificationOpts): Promise<{ se
     targetUserIds = users.map((u: any) => u._id.toString());
   } else {
     // Default: all admins and project managers
-    const users = await User.find({ role: { $in: ["super-admin", "admin", "project-manager"] }, isActive: true }).select("_id").lean();
+    const users = await User.find({ role: { $in: NOTIFY_ROLES }, isActive: true }).select("_id").lean();
     targetUserIds = users.map((u: any) => u._id.toString());
   }
 

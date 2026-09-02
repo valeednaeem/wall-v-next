@@ -21,6 +21,7 @@ import PmAlert from "@/models/pm-alert";
 import PmRisk from "@/models/pm-risk";
 import PmIssue from "@/models/pm-issue";
 import User from "@/models/user";
+import { NOTIFY_ROLES } from "@/lib/api-middleware";
 import Notification from "@/models/notification";
 import { getSystemHealth } from "./pm-monitoring";
 import { getFinancialSummary } from "./pm-financials";
@@ -236,7 +237,7 @@ export async function generateReport(
   });
 
   // Notify admins
-  const admins = await User.find({ role: { $in: ["super-admin", "admin", "project-manager"] }, isActive: true }).select("_id").lean();
+  const admins = await User.find({ role: { $in: NOTIFY_ROLES }, isActive: true }).select("_id").lean();
   for (const admin of admins) {
     await Notification.create({
       user: (admin as any)._id,

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import ServicePrice from "@/models/service-price";
 import { getAuthUser } from "@/lib/auth";
+import { ADMIN_ROLES } from "@/lib/api-middleware";
 
 const PRICE_FIELDS = [
   "serviceKey", "name", "description", "category", "type", "basePrice",
@@ -17,7 +18,7 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if (!["super-admin", "admin"].includes(user.role)) {
+    if (!ADMIN_ROLES.includes(user.role)) {
       return NextResponse.json({ error: "Forbidden: insufficient permissions" }, { status: 403 });
     }
 
@@ -36,7 +37,7 @@ export async function POST(request: Request) {
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    if (!["super-admin", "admin"].includes(user.role)) {
+    if (!ADMIN_ROLES.includes(user.role)) {
       return NextResponse.json({ error: "Forbidden: insufficient permissions" }, { status: 403 });
     }
 
@@ -70,7 +71,7 @@ export async function PUT(request: Request) {
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    if (!["super-admin", "admin"].includes(user.role)) {
+    if (!ADMIN_ROLES.includes(user.role)) {
       return NextResponse.json({ error: "Forbidden: insufficient permissions" }, { status: 403 });
     }
 
@@ -108,7 +109,7 @@ export async function DELETE(request: Request) {
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    if (!["super-admin", "admin"].includes(user.role)) {
+    if (!ADMIN_ROLES.includes(user.role)) {
       return NextResponse.json({ error: "Forbidden: insufficient permissions" }, { status: 403 });
     }
 

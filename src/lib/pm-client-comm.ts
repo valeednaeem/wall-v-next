@@ -15,6 +15,7 @@ import Project from "@/models/project";
 import Task from "@/models/task";
 import Client from "@/models/client";
 import User from "@/models/user";
+import { NOTIFY_ROLES } from "@/lib/api-middleware";
 import Notification from "@/models/notification";
 import PmAuditLog from "@/models/pm-audit-log";
 
@@ -234,7 +235,7 @@ export async function sendClientUpdate(update: ProjectUpdate): Promise<{ sent: b
   });
 
   // In-app notification for admins
-  const admins = await User.find({ role: { $in: ["super-admin", "admin", "project-manager"] }, isActive: true }).select("_id").lean();
+  const admins = await User.find({ role: { $in: NOTIFY_ROLES }, isActive: true }).select("_id").lean();
   for (const admin of admins) {
     await Notification.create({
       user: (admin as any)._id,
