@@ -8,6 +8,16 @@ interface ContactSettings {
   phone: string;
   address: string;
   businessHours: string;
+  mapAddressType: "home" | "work" | "business";
+  homeAddress: string;
+  homeLat: number | null;
+  homeLng: number | null;
+  workAddress: string;
+  workLat: number | null;
+  workLng: number | null;
+  businessAddress: string;
+  businessLat: number | null;
+  businessLng: number | null;
 }
 
 export function ContactForm() {
@@ -16,6 +26,16 @@ export function ContactForm() {
     phone: "",
     address: "",
     businessHours: "",
+    mapAddressType: "business",
+    homeAddress: "",
+    homeLat: null,
+    homeLng: null,
+    workAddress: "",
+    workLat: null,
+    workLng: null,
+    businessAddress: "",
+    businessLat: null,
+    businessLng: null,
   });
   const [form, setForm] = useState({
     name: "",
@@ -226,7 +246,26 @@ export function ContactForm() {
 
         <div className="mt-12 rounded-xl border overflow-hidden">
           <iframe
-            src="https://maps.google.com/maps?q=1692+B+Block+Master+City+Housing+Society+Near+Peoples+Colony+Gujranwala+Pakistan&t=&z=15&ie=UTF8&iwloc=&output=embed"
+            src={(() => {
+              const { mapAddressType, businessAddress, businessLat, businessLng, workAddress, workLat, workLng, homeAddress, homeLat, homeLng } = contactInfo;
+              let address = businessAddress;
+              let lat = businessLat;
+              let lng = businessLng;
+              if (mapAddressType === "work" && workAddress) {
+                address = workAddress;
+                lat = workLat;
+                lng = workLng;
+              } else if (mapAddressType === "home" && homeAddress) {
+                address = homeAddress;
+                lat = homeLat;
+                lng = homeLng;
+              }
+              if (lat && lng) {
+                return `https://maps.google.com/maps?q=${lat},${lng}&z=15&ie=UTF8&iwloc=&output=embed`;
+              }
+              const query = encodeURIComponent(address || "Gujranwala, Pakistan");
+              return `https://maps.google.com/maps?q=${query}&t=&z=15&ie=UTF8&iwloc=&output=embed`;
+            })()}
             width="100%"
             height="400"
             style={{ border: 0 }}

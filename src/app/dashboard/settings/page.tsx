@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Save, Globe, Search, Share2, Key, Eye, EyeOff, Loader2, Upload, X, Image } from "lucide-react";
+import { Save, Globe, Search, Share2, Key, Eye, EyeOff, Loader2, Upload, X, Image, MapPin } from "lucide-react";
 import HtmlEditor from "@/components/editor/html-editor";
 
 interface SiteSettings {
@@ -78,8 +78,24 @@ interface VoiceAgentSettings {
   systemPrompt: string;
 }
 
+interface ContactMapSettings {
+  email: string;
+  phone: string;
+  businessHours: string;
+  mapAddressType: "home" | "work" | "business";
+  homeAddress: string;
+  homeLat: string;
+  homeLng: string;
+  workAddress: string;
+  workLat: string;
+  workLng: string;
+  businessAddress: string;
+  businessLat: string;
+  businessLng: string;
+}
+
 export default function GeneralSettingsPage() {
-  const [activeTab, setActiveTab] = useState<"site" | "seo" | "api" | "social" | "ads" | "voice">("site");
+  const [activeTab, setActiveTab] = useState<"site" | "seo" | "api" | "social" | "ads" | "voice" | "contact">("site");
   const [saving, setSaving] = useState(false);
   const [showSecrets, setShowSecrets] = useState<Record<string, boolean>>({});
   const [saveMessage, setSaveMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -203,6 +219,22 @@ BEHAVIOR:
 - Never make up information — if they don't provide something, note it as unknown`,
   });
 
+  const [contactMap, setContactMap] = useState<ContactMapSettings>({
+    email: "info@wall-v.com",
+    phone: "+92 300 1234567",
+    businessHours: "Monday - Friday: 9:00 AM - 6:00 PM\nSaturday: 10:00 AM - 2:00 PM",
+    mapAddressType: "business",
+    homeAddress: "",
+    homeLat: "",
+    homeLng: "",
+    workAddress: "",
+    workLat: "",
+    workLng: "",
+    businessAddress: "1692, B Block, Master City Housing Society\nNear Peoples Colony, Gujranwala\nPakistan",
+    businessLat: "32.1878",
+    businessLng: "74.1945",
+  });
+
   useEffect(() => {
     fetch("/api/settings/general")
       .then((r) => {
@@ -217,6 +249,7 @@ BEHAVIOR:
           if (d.data.social) setSocial((prev) => ({ ...prev, ...d.data.social }));
           if (d.data.ads) setAds((prev) => ({ ...prev, ...d.data.ads }));
           if (d.data.voice) setVoice((prev) => ({ ...prev, ...d.data.voice }));
+          if (d.data.contact) setContactMap((prev) => ({ ...prev, ...d.data.contact }));
         }
       })
       .catch(() => {});
@@ -233,7 +266,7 @@ BEHAVIOR:
       const res = await fetch("/api/settings/general", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ site, seo, apiKeys, social, ads, voice }),
+        body: JSON.stringify({ site, seo, apiKeys, social, ads, voice, contact: contactMap }),
       });
       if (res.status === 401) { window.location.href = "/login?callbackUrl=/dashboard/settings"; return; }
       const data = await res.json();
@@ -255,6 +288,7 @@ BEHAVIOR:
     { id: "social" as const, label: "Social", icon: Share2 },
     { id: "ads" as const, label: "Google Ads", icon: Globe },
     { id: "voice" as const, label: "Voice Agent", icon: Globe },
+    { id: "contact" as const, label: "Contact & Map", icon: MapPin },
   ];
 
   const ImageUpload = ({ label, value, onChange, accept = "image/*", description }: { label: string; value: string; onChange: (v: string) => void; accept?: string; description?: string }) => {
@@ -734,6 +768,125 @@ BEHAVIOR:
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Contact & Map */}
+      {activeTab === "contact" && (
+        <div className="space-y-6">
+          <div className="rounded-lg border p-6 space-y-4">
+            <h3 className="font-semibold">Contact Information</h3>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium">Email</label>
+                <input type="email" value={contactMap.email} onChange={(e) => setContactMap({ ...contactMap, email: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Phone</label>
+                <input type="text" value={contactMap.phone} onChange={(e) => setContactMap({ ...contactMap, phone: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" />
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Business Hours</label>
+              <textarea value={contactMap.businessHours} onChange={(e) => setContactMap({ ...contactMap, businessHours: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" rows={2} />
+            </div>
+          </div>
+
+          <div className="rounded-lg border p-6 space-y-4">
+            <h3 className="font-semibold">Map Location</h3>
+            <p className="text-sm text-muted-foreground">
+              Select which address to display on the Google Map in the contact page. Add coordinates for accurate pin placement.
+            </p>
+
+            <div>
+              <label className="text-sm font-medium">Show on Map</label>
+              <select
+                value={contactMap.mapAddressType}
+                onChange={(e) => setContactMap({ ...contactMap, mapAddressType: e.target.value as "home" | "work" | "business" })}
+                className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+              >
+                <option value="business">Business Address</option>
+                <option value="work">Work Address</option>
+                <option value="home">Home Address</option>
+              </select>
+            </div>
+
+            {/* Business Address */}
+            <div className={`rounded-lg border p-4 space-y-3 ${contactMap.mapAddressType === "business" ? "border-primary bg-primary/5" : "opacity-60"}`}>
+              <div className="flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-primary" />
+                <span className="text-sm font-medium">Business Address</span>
+                {contactMap.mapAddressType === "business" && <span className="text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded-full">Active</span>}
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">Address</label>
+                <textarea value={contactMap.businessAddress} onChange={(e) => setContactMap({ ...contactMap, businessAddress: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" rows={2} placeholder="1692, B Block, Master City Housing Society..." />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-muted-foreground">Latitude</label>
+                  <input type="text" value={contactMap.businessLat} onChange={(e) => setContactMap({ ...contactMap, businessLat: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm font-mono" placeholder="32.1878" />
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground">Longitude</label>
+                  <input type="text" value={contactMap.businessLng} onChange={(e) => setContactMap({ ...contactMap, businessLng: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm font-mono" placeholder="74.1945" />
+                </div>
+              </div>
+            </div>
+
+            {/* Work Address */}
+            <div className={`rounded-lg border p-4 space-y-3 ${contactMap.mapAddressType === "work" ? "border-primary bg-primary/5" : "opacity-60"}`}>
+              <div className="flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-amber-600" />
+                <span className="text-sm font-medium">Work Address</span>
+                {contactMap.mapAddressType === "work" && <span className="text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded-full">Active</span>}
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">Address</label>
+                <textarea value={contactMap.workAddress} onChange={(e) => setContactMap({ ...contactMap, workAddress: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" rows={2} placeholder="Your work address..." />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-muted-foreground">Latitude</label>
+                  <input type="text" value={contactMap.workLat} onChange={(e) => setContactMap({ ...contactMap, workLat: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm font-mono" placeholder="32.1878" />
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground">Longitude</label>
+                  <input type="text" value={contactMap.workLng} onChange={(e) => setContactMap({ ...contactMap, workLng: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm font-mono" placeholder="74.1945" />
+                </div>
+              </div>
+            </div>
+
+            {/* Home Address */}
+            <div className={`rounded-lg border p-4 space-y-3 ${contactMap.mapAddressType === "home" ? "border-primary bg-primary/5" : "opacity-60"}`}>
+              <div className="flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-emerald-600" />
+                <span className="text-sm font-medium">Home Address</span>
+                {contactMap.mapAddressType === "home" && <span className="text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded-full">Active</span>}
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">Address</label>
+                <textarea value={contactMap.homeAddress} onChange={(e) => setContactMap({ ...contactMap, homeAddress: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" rows={2} placeholder="Your home address..." />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-muted-foreground">Latitude</label>
+                  <input type="text" value={contactMap.homeLat} onChange={(e) => setContactMap({ ...contactMap, homeLat: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm font-mono" placeholder="32.1878" />
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground">Longitude</label>
+                  <input type="text" value={contactMap.homeLng} onChange={(e) => setContactMap({ ...contactMap, homeLng: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm font-mono" placeholder="74.1945" />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800">
+              <p className="font-medium">Finding Coordinates</p>
+              <p className="mt-1 text-xs">
+                Right-click the location on <a href="https://maps.google.com" target="_blank" rel="noopener noreferrer" className="underline">Google Maps</a> and select &quot;What&apos;s here?&quot; to copy latitude and longitude values.
+              </p>
+            </div>
           </div>
         </div>
       )}
