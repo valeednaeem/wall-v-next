@@ -3,6 +3,7 @@ import { connectToDatabase } from "@/lib/mongodb";
 import SiteSettings from "@/models/site-settings";
 import GoogleServiceConfig from "@/models/google-services";
 import { auth } from "@/lib/auth";
+import { clearSettingsCache } from "@/lib/site-settings";
 
 const ALLOWED_ROLES = ["super-admin", "admin", "manager"];
 
@@ -58,6 +59,7 @@ export async function PUT(request: Request) {
       }
     }
     await Promise.all(updates);
+    clearSettingsCache();
 
     if (body.seo?.googleAnalyticsId !== undefined) {
       const measurementId = body.seo.googleAnalyticsId as string;

@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import SiteSettings from "@/models/site-settings";
-import User from "@/models/user";
 
 export async function GET() {
   try {
@@ -14,16 +13,17 @@ export async function GET() {
       grouped[s.category][shortKey] = s.value;
     });
 
-    // Get admin profile as primary source for contact info
-    let adminProfile: Record<string, unknown> = {};
-    const admin = await User.findOne({ role: { $in: ["super-admin", "admin"] } }).select("name email phone company location").lean();
-    if (admin) {
-      adminProfile = {
-        email: admin.email || "",
-        phone: admin.phone || "",
-        address: [admin.company, admin.location].filter(Boolean).join("\n") || "",
-      };
-    }
+    // Build structured address from contact settings (single source of truth)
+    const contact = grouped.contact || {};
+    const addressParts = [
+      contact.addressLine1,
+      contact.addressLine2,
+      contact.city,
+      contact.state,
+      contact.postalCode,
+      contact.country,
+    ].filter(Boolean);
+    const fullAddress = addressParts.join(", ") || "1692, B Block, Master City Housing Society, Near Peoples Colony, Gujranwala, Pakistan";
 
     return NextResponse.json({
       success: true,
@@ -55,20 +55,18 @@ export async function GET() {
           apiUrl: grouped.voice?.apiUrl || process.env.DOGRAH_API_URL || "",
         },
         contact: {
-          email: grouped.contact?.email || "info@wall-v.com",
-          phone: adminProfile.phone || grouped.contact?.phone || "+92 300 1234567",
-          address: adminProfile.address || grouped.contact?.address || "1692, B Block, Master City Housing Society\nNear Peoples Colony, Gujranwala\nPakistan",
-          businessHours: grouped.contact?.businessHours || "Monday - Friday: 9:00 AM - 6:00 PM\nSaturday: 10:00 AM - 2:00 PM",
-          mapAddressType: grouped.contact?.mapAddressType || "business",
-          homeAddress: grouped.contact?.homeAddress || "",
-          homeLat: grouped.contact?.homeLat || null,
-          homeLng: grouped.contact?.homeLng || null,
-          workAddress: grouped.contact?.workAddress || "",
-          workLat: grouped.contact?.workLat || null,
-          workLng: grouped.contact?.workLng || null,
-          businessAddress: grouped.contact?.businessAddress || "1692, B Block, Master City Housing Society\nNear Peoples Colony, Gujranwala\nPakistan",
-          businessLat: grouped.contact?.businessLat || 32.1878,
-          businessLng: grouped.contact?.businessLng || 74.1945,
+          email: contact.email || "info@wall-v.com",
+          phone: contact.phone || "+92 300 1234567",
+          address: fullAddress,
+          addressLine1: contact.addressLine1 || "",
+          addressLine2: contact.addressLine2 || "",
+          city: contact.city || "",
+          state: contact.state || "",
+          postalCode: contact.postalCode || "",
+          country: contact.country || "",
+          businessHours: contact.businessHours || "Monday - Friday: 9:00 AM - 6:00 PM\nSaturday: 10:00 AM - 2:00 PM",
+          latitude: contact.latitude || 32.1878,
+          longitude: contact.longitude || 74.1945,
         },
       },
     });

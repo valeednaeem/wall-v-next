@@ -78,20 +78,18 @@ interface VoiceAgentSettings {
   systemPrompt: string;
 }
 
-interface ContactMapSettings {
+interface LocationSettings {
   email: string;
   phone: string;
   businessHours: string;
-  mapAddressType: "home" | "work" | "business";
-  homeAddress: string;
-  homeLat: string;
-  homeLng: string;
-  workAddress: string;
-  workLat: string;
-  workLng: string;
-  businessAddress: string;
-  businessLat: string;
-  businessLng: string;
+  addressLine1: string;
+  addressLine2: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  country: string;
+  latitude: string;
+  longitude: string;
 }
 
 export default function GeneralSettingsPage() {
@@ -219,20 +217,18 @@ BEHAVIOR:
 - Never make up information — if they don't provide something, note it as unknown`,
   });
 
-  const [contactMap, setContactMap] = useState<ContactMapSettings>({
+  const [location, setLocation] = useState<LocationSettings>({
     email: "info@wall-v.com",
     phone: "+92 300 1234567",
     businessHours: "Monday - Friday: 9:00 AM - 6:00 PM\nSaturday: 10:00 AM - 2:00 PM",
-    mapAddressType: "business",
-    homeAddress: "",
-    homeLat: "",
-    homeLng: "",
-    workAddress: "",
-    workLat: "",
-    workLng: "",
-    businessAddress: "1692, B Block, Master City Housing Society\nNear Peoples Colony, Gujranwala\nPakistan",
-    businessLat: "32.1878",
-    businessLng: "74.1945",
+    addressLine1: "1692, B Block, Master City Housing Society",
+    addressLine2: "Near Peoples Colony",
+    city: "Gujranwala",
+    state: "Punjab",
+    postalCode: "52250",
+    country: "Pakistan",
+    latitude: "32.1878",
+    longitude: "74.1945",
   });
 
   useEffect(() => {
@@ -249,7 +245,7 @@ BEHAVIOR:
           if (d.data.social) setSocial((prev) => ({ ...prev, ...d.data.social }));
           if (d.data.ads) setAds((prev) => ({ ...prev, ...d.data.ads }));
           if (d.data.voice) setVoice((prev) => ({ ...prev, ...d.data.voice }));
-          if (d.data.contact) setContactMap((prev) => ({ ...prev, ...d.data.contact }));
+          if (d.data.contact) setLocation((prev) => ({ ...prev, ...d.data.contact }));
         }
       })
       .catch(() => {});
@@ -266,7 +262,7 @@ BEHAVIOR:
       const res = await fetch("/api/settings/general", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ site, seo, apiKeys, social, ads, voice, contact: contactMap }),
+        body: JSON.stringify({ site, seo, apiKeys, social, ads, voice, contact: location }),
       });
       if (res.status === 401) { window.location.href = "/login?callbackUrl=/dashboard/settings"; return; }
       const data = await res.json();
@@ -780,112 +776,102 @@ BEHAVIOR:
             <div className="grid md:grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-medium">Email</label>
-                <input type="email" value={contactMap.email} onChange={(e) => setContactMap({ ...contactMap, email: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" />
+                <input type="email" value={location.email} onChange={(e) => setLocation({ ...location, email: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" />
               </div>
               <div>
                 <label className="text-sm font-medium">Phone</label>
-                <input type="text" value={contactMap.phone} onChange={(e) => setContactMap({ ...contactMap, phone: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" />
+                <input type="text" value={location.phone} onChange={(e) => setLocation({ ...location, phone: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" />
               </div>
             </div>
             <div>
               <label className="text-sm font-medium">Business Hours</label>
-              <textarea value={contactMap.businessHours} onChange={(e) => setContactMap({ ...contactMap, businessHours: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" rows={2} />
+              <textarea value={location.businessHours} onChange={(e) => setLocation({ ...location, businessHours: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" rows={2} />
             </div>
           </div>
 
           <div className="rounded-lg border p-6 space-y-4">
-            <h3 className="font-semibold">Map Location</h3>
+            <div className="flex items-center gap-2">
+              <MapPin className="h-5 w-5 text-primary" />
+              <h3 className="font-semibold">Business Location</h3>
+            </div>
             <p className="text-sm text-muted-foreground">
-              Select which address to display on the Google Map in the contact page. Add coordinates for accurate pin placement.
+              This is the single source of truth for Wall-V&apos;s location. The Contact page map updates automatically when you save changes here.
             </p>
 
-            <div>
-              <label className="text-sm font-medium">Show on Map</label>
-              <select
-                value={contactMap.mapAddressType}
-                onChange={(e) => setContactMap({ ...contactMap, mapAddressType: e.target.value as "home" | "work" | "business" })}
-                className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
-              >
-                <option value="business">Business Address</option>
-                <option value="work">Work Address</option>
-                <option value="home">Home Address</option>
-              </select>
-            </div>
-
-            {/* Business Address */}
-            <div className={`rounded-lg border p-4 space-y-3 ${contactMap.mapAddressType === "business" ? "border-primary bg-primary/5" : "opacity-60"}`}>
-              <div className="flex items-center gap-2">
-                <MapPin className="h-4 w-4 text-primary" />
-                <span className="text-sm font-medium">Business Address</span>
-                {contactMap.mapAddressType === "business" && <span className="text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded-full">Active</span>}
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="md:col-span-2">
+                <label className="text-sm font-medium">Address Line 1</label>
+                <input type="text" value={location.addressLine1} onChange={(e) => setLocation({ ...location, addressLine1: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" placeholder="Street address, building, suite" />
+              </div>
+              <div className="md:col-span-2">
+                <label className="text-sm font-medium">Address Line 2</label>
+                <input type="text" value={location.addressLine2} onChange={(e) => setLocation({ ...location, addressLine2: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" placeholder="Landmark, area (optional)" />
               </div>
               <div>
-                <label className="text-xs text-muted-foreground">Address</label>
-                <textarea value={contactMap.businessAddress} onChange={(e) => setContactMap({ ...contactMap, businessAddress: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" rows={2} placeholder="1692, B Block, Master City Housing Society..." />
+                <label className="text-sm font-medium">City</label>
+                <input type="text" value={location.city} onChange={(e) => setLocation({ ...location, city: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" />
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs text-muted-foreground">Latitude</label>
-                  <input type="text" value={contactMap.businessLat} onChange={(e) => setContactMap({ ...contactMap, businessLat: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm font-mono" placeholder="32.1878" />
-                </div>
-                <div>
-                  <label className="text-xs text-muted-foreground">Longitude</label>
-                  <input type="text" value={contactMap.businessLng} onChange={(e) => setContactMap({ ...contactMap, businessLng: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm font-mono" placeholder="74.1945" />
-                </div>
+              <div>
+                <label className="text-sm font-medium">State / Province</label>
+                <input type="text" value={location.state} onChange={(e) => setLocation({ ...location, state: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Postal / ZIP Code</label>
+                <input type="text" value={location.postalCode} onChange={(e) => setLocation({ ...location, postalCode: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Country</label>
+                <input type="text" value={location.country} onChange={(e) => setLocation({ ...location, country: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" />
               </div>
             </div>
 
-            {/* Work Address */}
-            <div className={`rounded-lg border p-4 space-y-3 ${contactMap.mapAddressType === "work" ? "border-primary bg-primary/5" : "opacity-60"}`}>
-              <div className="flex items-center gap-2">
-                <MapPin className="h-4 w-4 text-amber-600" />
-                <span className="text-sm font-medium">Work Address</span>
-                {contactMap.mapAddressType === "work" && <span className="text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded-full">Active</span>}
+            <div className="grid md:grid-cols-2 gap-4 pt-2">
+              <div>
+                <label className="text-sm font-medium">Latitude</label>
+                <input type="text" value={location.latitude} onChange={(e) => setLocation({ ...location, latitude: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm font-mono" placeholder="e.g. 32.1878" />
+                <p className="text-xs text-muted-foreground mt-1">Range: -90 to 90</p>
               </div>
               <div>
-                <label className="text-xs text-muted-foreground">Address</label>
-                <textarea value={contactMap.workAddress} onChange={(e) => setContactMap({ ...contactMap, workAddress: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" rows={2} placeholder="Your work address..." />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs text-muted-foreground">Latitude</label>
-                  <input type="text" value={contactMap.workLat} onChange={(e) => setContactMap({ ...contactMap, workLat: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm font-mono" placeholder="32.1878" />
-                </div>
-                <div>
-                  <label className="text-xs text-muted-foreground">Longitude</label>
-                  <input type="text" value={contactMap.workLng} onChange={(e) => setContactMap({ ...contactMap, workLng: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm font-mono" placeholder="74.1945" />
-                </div>
-              </div>
-            </div>
-
-            {/* Home Address */}
-            <div className={`rounded-lg border p-4 space-y-3 ${contactMap.mapAddressType === "home" ? "border-primary bg-primary/5" : "opacity-60"}`}>
-              <div className="flex items-center gap-2">
-                <MapPin className="h-4 w-4 text-emerald-600" />
-                <span className="text-sm font-medium">Home Address</span>
-                {contactMap.mapAddressType === "home" && <span className="text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded-full">Active</span>}
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground">Address</label>
-                <textarea value={contactMap.homeAddress} onChange={(e) => setContactMap({ ...contactMap, homeAddress: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" rows={2} placeholder="Your home address..." />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs text-muted-foreground">Latitude</label>
-                  <input type="text" value={contactMap.homeLat} onChange={(e) => setContactMap({ ...contactMap, homeLat: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm font-mono" placeholder="32.1878" />
-                </div>
-                <div>
-                  <label className="text-xs text-muted-foreground">Longitude</label>
-                  <input type="text" value={contactMap.homeLng} onChange={(e) => setContactMap({ ...contactMap, homeLng: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm font-mono" placeholder="74.1945" />
-                </div>
+                <label className="text-sm font-medium">Longitude</label>
+                <input type="text" value={location.longitude} onChange={(e) => setLocation({ ...location, longitude: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm font-mono" placeholder="e.g. 74.1945" />
+                <p className="text-xs text-muted-foreground mt-1">Range: -180 to 180</p>
               </div>
             </div>
 
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800">
-              <p className="font-medium">Finding Coordinates</p>
+              <p className="font-medium">How to find coordinates</p>
               <p className="mt-1 text-xs">
-                Right-click the location on <a href="https://maps.google.com" target="_blank" rel="noopener noreferrer" className="underline">Google Maps</a> and select &quot;What&apos;s here?&quot; to copy latitude and longitude values.
+                Open <a href="https://maps.google.com" target="_blank" rel="noopener noreferrer" className="underline font-medium">Google Maps</a>, right-click the location, and select &quot;What&apos;s here?&quot; to copy latitude and longitude.
               </p>
+            </div>
+          </div>
+
+          {/* Map Preview */}
+          <div className="rounded-lg border p-6 space-y-4">
+            <h3 className="font-semibold">Location Preview</h3>
+            <p className="text-sm text-muted-foreground">This is how your location appears on the Contact page.</p>
+            <div className="rounded-lg overflow-hidden border">
+              <iframe
+                src={(() => {
+                  const lat = parseFloat(location.latitude);
+                  const lng = parseFloat(location.longitude);
+                  if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+                    return `https://maps.google.com/maps?q=${lat},${lng}&z=15&ie=UTF8&iwloc=&output=embed`;
+                  }
+                  const fullAddress = [location.addressLine1, location.addressLine2, location.city, location.state, location.postalCode, location.country].filter(Boolean).join(", ");
+                  return `https://maps.google.com/maps?q=${encodeURIComponent(fullAddress || "Gujranwala, Pakistan")}&t=&z=15&ie=UTF8&iwloc=&output=embed`;
+                })()}
+                width="100%"
+                height="300"
+                style={{ border: 0 }}
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                title="Business Location Preview"
+              />
+            </div>
+            <div className="text-xs text-muted-foreground">
+              <p className="font-medium">Full address: {[location.addressLine1, location.addressLine2, location.city, location.state, location.postalCode, location.country].filter(Boolean).join(", ")}</p>
+              <p>Coordinates: {location.latitude || "—"}, {location.longitude || "—"}</p>
             </div>
           </div>
         </div>

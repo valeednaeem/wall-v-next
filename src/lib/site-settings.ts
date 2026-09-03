@@ -82,15 +82,9 @@ export async function getContactSettings() {
     address?: string;
     city?: string;
     country?: string;
-    mapAddressType?: "home" | "work" | "business";
-    homeAddress?: string;
-    homeLat?: number;
-    homeLng?: number;
-    workAddress?: string;
-    workLat?: number;
-    workLng?: number;
-    businessAddress?: string;
-    businessLat?: number;
-    businessLng?: number;
+    businessHours?: string;
+    latitude?: number;
+    longitude?: number;
+    mapsUrl?: string;
   }>("contact");
 }
