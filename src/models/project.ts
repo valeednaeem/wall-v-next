@@ -6,7 +6,7 @@ export interface IProject extends Document {
   title?: string;
   description: string;
   client: mongoose.Types.ObjectId | { name: string; email: string; phone?: string };
-  projectType: "web-development" | "mobile-app" | "graphic-design" | "logo-design" | "seo" | "social-media" | "video" | "consultancy" | "ai-solution" | "e-commerce" | "hosting" | "other";
+  projectType: "web-development" | "mobile-app" | "graphic-design" | "logo-design" | "seo" | "social-media" | "video" | "consultancy" | "ai-solution" | "e-commerce" | "hosting" | "internal" | "other";
   status: "new" | "planning" | "in-progress" | "review" | "testing" | "completed" | "on-hold" | "cancelled" | "demo" | "pending-payment";
   lifecycleStatus: "request" | "inquiry" | "project-created" | "requirements-gathered" | "quoted" | "scope-approved" | "invoiced" | "paid" | "executing" | "completed" | "maintenance";
   priority: "low" | "medium" | "high" | "urgent";
@@ -117,7 +117,7 @@ const ProjectSchema = new Schema<IProject>(
     client: { type: Schema.Types.Mixed, required: true },
     projectType: {
       type: String,
-      enum: ["web-development", "mobile-app", "graphic-design", "logo-design", "seo", "social-media", "video", "consultancy", "ai-solution", "e-commerce", "hosting", "other"],
+      enum: ["web-development", "mobile-app", "graphic-design", "logo-design", "seo", "social-media", "video", "consultancy", "ai-solution", "e-commerce", "hosting", "internal", "other"],
       default: "other",
     },
     status: {

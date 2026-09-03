@@ -67,6 +67,7 @@ export interface IAgent extends Document {
     support: boolean;
   };
   isClientFacing: boolean;
+  agentMode: "client-facing" | "internal" | "dual";
   isMasterAgent: boolean;
   masterConfig?: {
     canCreateProjects: boolean;
@@ -171,6 +172,7 @@ const AgentSchema = new Schema<IAgent>(
       support: { type: Boolean, default: false },
     },
     isClientFacing: { type: Boolean, default: false },
+    agentMode: { type: String, enum: ["client-facing", "internal", "dual"], default: "internal" },
     isMasterAgent: { type: Boolean, default: false },
     masterConfig: {
       canCreateProjects: { type: Boolean, default: true },
@@ -211,6 +213,7 @@ AgentSchema.index({ slug: 1 });
 AgentSchema.index({ status: 1 });
 AgentSchema.index({ role: 1 });
 AgentSchema.index({ isClientFacing: 1 });
+AgentSchema.index({ agentMode: 1 });
 AgentSchema.index({ isMasterAgent: 1 });
 AgentSchema.index({ createdBy: 1 });
 

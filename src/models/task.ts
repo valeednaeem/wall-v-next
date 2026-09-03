@@ -6,6 +6,7 @@ export interface ITask extends Document {
   project: mongoose.Types.ObjectId;
   stage?: mongoose.Types.ObjectId;
   assignee?: mongoose.Types.ObjectId;
+  agentAssignee?: mongoose.Types.ObjectId;
   reporter: mongoose.Types.ObjectId;
   status: "todo" | "in-progress" | "review" | "done" | "cancelled";
   priority: "low" | "medium" | "high" | "urgent";
@@ -45,6 +46,7 @@ const TaskSchema = new Schema<ITask>(
     project: { type: Schema.Types.ObjectId, ref: "Project", required: true },
     stage: { type: Schema.Types.ObjectId, ref: "ProjectStage" },
     assignee: { type: Schema.Types.ObjectId, ref: "User" },
+    agentAssignee: { type: Schema.Types.ObjectId, ref: "Agent" },
     reporter: { type: Schema.Types.ObjectId, ref: "User", required: true },
     status: {
       type: String,
@@ -96,6 +98,7 @@ const TaskSchema = new Schema<ITask>(
 TaskSchema.index({ project: 1 });
 TaskSchema.index({ stage: 1 });
 TaskSchema.index({ assignee: 1 });
+TaskSchema.index({ agentAssignee: 1 });
 TaskSchema.index({ status: 1 });
 
 export default mongoose.models.Task ||

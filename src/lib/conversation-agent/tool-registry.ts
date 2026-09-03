@@ -183,6 +183,98 @@ export const CONVERSATION_TOOLS: ConversationToolDefinition[] = [
       required: ["agentId", "message"],
     },
   },
+  // ─── Internal / Master Agent Tools ────────────────────────────────────────
+  {
+    name: "get_workforce_overview",
+    description: "Get a summary of the AI workforce: total agents, active, client-facing, internal, by division, current workload. Use when asked about workforce status.",
+    parameters: {
+      type: "object",
+      properties: {},
+      required: [],
+    },
+  },
+  {
+    name: "get_agent_status",
+    description: "Get detailed status of a specific agent including stats, conversations, executions, and health.",
+    parameters: {
+      type: "object",
+      properties: {
+        agentId: { type: "string", description: "Agent ID or slug" },
+      },
+      required: ["agentId"],
+    },
+  },
+  {
+    name: "get_project_overview",
+    description: "Get an overview of projects: total, by status, at risk, recently updated. Use for operational awareness.",
+    parameters: {
+      type: "object",
+      properties: {
+        status: { type: "string", description: "Filter by status" },
+        limit: { type: "number", description: "Max results (default 10)" },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "create_internal_task",
+    description: "Create an internal task for the workforce. Use when Admin requests work to be done.",
+    parameters: {
+      type: "object",
+      properties: {
+        title: { type: "string", description: "Task title" },
+        description: { type: "string", description: "Task description" },
+        projectId: { type: "string", description: "Related project ID" },
+        priority: { type: "string", description: "Priority level", enum: ["low", "medium", "high", "urgent"] },
+        assigneeId: { type: "string", description: "User or Agent ID to assign to" },
+        dueDate: { type: "string", description: "Due date (ISO)" },
+      },
+      required: ["title", "description"],
+    },
+  },
+  {
+    name: "get_pending_approvals",
+    description: "Get pending approval requests that need Admin attention.",
+    parameters: {
+      type: "object",
+      properties: {},
+      required: [],
+    },
+  },
+  {
+    name: "get_system_health",
+    description: "Check application system health: recent errors, failed workflows, agent failures, build status.",
+    parameters: {
+      type: "object",
+      properties: {},
+      required: [],
+    },
+  },
+  {
+    name: "get_task_list",
+    description: "List internal tasks with optional filters. Use to check what work is in progress.",
+    parameters: {
+      type: "object",
+      properties: {
+        status: { type: "string", description: "Filter by status (todo, in-progress, review, done)" },
+        projectId: { type: "string", description: "Filter by project" },
+        limit: { type: "number", description: "Max results (default 20)" },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "generate_report",
+    description: "Generate an operational report: daily ops, workforce utilization, project status, financial summary.",
+    parameters: {
+      type: "object",
+      properties: {
+        type: { type: "string", description: "Report type", enum: ["daily-ops", "workforce", "projects", "financial", "health"] },
+        dateRange: { type: "string", description: "Date range (today, week, month)" },
+      },
+      required: ["type"],
+    },
+  },
 ];
 
 /**
