@@ -57,7 +57,7 @@ export async function GET() {
         contact: {
           email: grouped.contact?.email || "info@wall-v.com",
           phone: adminProfile.phone || grouped.contact?.phone || "+92 300 1234567",
-          address: adminProfile.address || grouped.contact?.address || "C/o Dr. Naeem Ul Haq Minhas\nHafizabad Road, Near UBL\nBaghbanoura, Gujranwala\nPakistan",
+          address: adminProfile.address || grouped.contact?.address || "1692, B Block, Master City Housing Society\nNear Peoples Colony, Gujranwala\nPakistan",
           businessHours: grouped.contact?.businessHours || "Monday - Friday: 9:00 AM - 6:00 PM\nSaturday: 10:00 AM - 2:00 PM",
         },
       },

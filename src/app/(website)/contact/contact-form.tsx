@@ -226,7 +226,7 @@ export function ContactForm() {
 
         <div className="mt-12 rounded-xl border overflow-hidden">
           <iframe
-            src="https://maps.google.com/maps?q=C/o+Dr.+Naeem+Ul+Haq+Minhas,+Hafizabad+Road,+Near+UBL,+Baghbanoura,+Gujranwala,+Pakistan&t=&z=15&ie=UTF8&iwloc=&output=embed"
+            src="https://maps.google.com/maps?q=1692+B+Block+Master+City+Housing+Society+Near+Peoples+Colony+Gujranwala+Pakistan&t=&z=15&ie=UTF8&iwloc=&output=embed"
             width="100%"
             height="400"
             style={{ border: 0 }}
