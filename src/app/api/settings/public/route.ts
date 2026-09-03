@@ -53,6 +53,11 @@ export async function GET() {
           enabled: grouped.voice?.enabled ?? true,
           widgetUrl: grouped.voice?.widgetUrl || process.env.NEXT_PUBLIC_DOGRAH_WIDGET_URL || "",
           apiUrl: grouped.voice?.apiUrl || process.env.DOGRAH_API_URL || "",
+          agentId: grouped.voice?.agentId || "",
+          position: grouped.voice?.position || "bottom-left",
+          buttonColor: grouped.voice?.buttonColor || "#7c3aed",
+          buttonText: grouped.voice?.buttonText || "Talk to AI",
+          systemPrompt: grouped.voice?.systemPrompt || "",
         },
         contact: {
           email: contact.email || "info@wall-v.com",

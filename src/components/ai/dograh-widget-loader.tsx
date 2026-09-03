@@ -4,28 +4,34 @@ import { useEffect, useState } from "react";
 
 export function DograhWidgetLoader() {
   const [widgetUrl, setWidgetUrl] = useState<string | null>(null);
+  const [enabled, setEnabled] = useState<boolean>(true);
 
   useEffect(() => {
-    async function loadWidgetUrl() {
+    async function loadConfig() {
       let url = process.env.NEXT_PUBLIC_DOGRAH_WIDGET_URL;
+      let isEnabled = true;
 
       try {
         const res = await fetch("/api/settings/public");
         if (res.ok) {
           const data = await res.json();
-          const dbUrl = data?.data?.voice?.widgetUrl;
-          if (dbUrl) {
-            url = dbUrl;
+          const voice = data?.data?.voice;
+          if (voice) {
+            isEnabled = voice.enabled ?? true;
+            if (voice.widgetUrl) {
+              url = voice.widgetUrl;
+            }
           }
         }
       } catch {
         // Fallback to env var
       }
 
-      setWidgetUrl(url ?? null);
+      setEnabled(isEnabled);
+      setWidgetUrl(isEnabled ? (url ?? null) : null);
     }
 
-    loadWidgetUrl();
+    loadConfig();
   }, []);
 
   useEffect(() => {
@@ -52,6 +58,9 @@ export function DograhWidgetLoader() {
     fjs.parentNode?.insertBefore(js, fjs);
     console.log("[Dograh] Widget script tag injected");
   }, [widgetUrl]);
+
+  // Don't render anything if disabled
+  if (!enabled) return null;
 
   return null;
 }

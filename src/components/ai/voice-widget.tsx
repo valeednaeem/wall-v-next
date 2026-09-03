@@ -6,6 +6,16 @@ import { useDograh } from "./voice-agent";
 import { Mic, PhoneOff, Loader2, X, Volume2, User, Mail, Phone, ExternalLink, CreditCard, CheckCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+interface VoiceSettings {
+  enabled: boolean;
+  widgetUrl: string;
+  agentId: string;
+  position: "bottom-left" | "bottom-right";
+  buttonColor: string;
+  buttonText: string;
+  systemPrompt: string;
+}
+
 interface FloatingVoiceWidgetProps {
   position?: "bottom-left" | "bottom-right";
 }
@@ -23,7 +33,19 @@ const SUGGESTIONS = [
   "I need hosting for my website",
 ];
 
-export function FloatingVoiceWidget({ position = "bottom-left" }: FloatingVoiceWidgetProps) {
+const DEFAULT_VOICE_SETTINGS: VoiceSettings = {
+  enabled: true,
+  widgetUrl: "",
+  agentId: "",
+  position: "bottom-left",
+  buttonColor: "#7c3aed",
+  buttonText: "Talk to AI",
+  systemPrompt: "",
+};
+
+export function FloatingVoiceWidget({ position: positionProp }: FloatingVoiceWidgetProps) {
+  const [voiceSettings, setVoiceSettings] = useState<VoiceSettings>(DEFAULT_VOICE_SETTINGS);
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [dismissed, setDismissed] = useState(false);
@@ -34,6 +56,30 @@ export function FloatingVoiceWidget({ position = "bottom-left" }: FloatingVoiceW
 
   const clientDetailsRef = useRef(clientDetails);
   clientDetailsRef.current = clientDetails;
+
+  const voiceSettingsRef = useRef(voiceSettings);
+  voiceSettingsRef.current = voiceSettings;
+
+  // Fetch voice settings from DB
+  useEffect(() => {
+    fetch("/api/settings/public")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d?.data?.voice) {
+          setVoiceSettings({
+            enabled: d.data.voice.enabled ?? true,
+            widgetUrl: d.data.voice.widgetUrl || "",
+            agentId: d.data.voice.agentId || "",
+            position: d.data.voice.position || "bottom-left",
+            buttonColor: d.data.voice.buttonColor || "#7c3aed",
+            buttonText: d.data.voice.buttonText || "Talk to AI",
+            systemPrompt: d.data.voice.systemPrompt || "",
+          });
+        }
+        setSettingsLoaded(true);
+      })
+      .catch(() => setSettingsLoaded(true));
+  }, []);
 
   const handleCallEnd = useCallback((data: { agentId: string; workflowRunId: string; durationSeconds: number }) => {
     console.log("[Voice Widget] Call ended, saving:", data);
@@ -75,16 +121,17 @@ export function FloatingVoiceWidget({ position = "bottom-left" }: FloatingVoiceW
     duration,
   } = useDograh({
     mode: "headless",
+    widgetScriptUrl: voiceSettings.widgetUrl || undefined,
     onCallConnected: (data) => setCallData(data),
     onCallDisconnected: handleCallEnd,
   });
 
   useEffect(() => {
-    if (!dismissed) {
+    if (!dismissed && voiceSettings.enabled) {
       const timer = setTimeout(() => setShowWelcome(true), 2000);
       return () => clearTimeout(timer);
     }
-  }, [dismissed]);
+  }, [dismissed, voiceSettings.enabled]);
 
   useEffect(() => {
     if (isLive) {
@@ -113,18 +160,33 @@ export function FloatingVoiceWidget({ position = "bottom-left" }: FloatingVoiceW
 
   const handleSubmitDetails = useCallback(() => {
     if (window.DograhWidget) {
+      // Pass client details as context
       window.DograhWidget.setContext({
         client_name: clientDetails.name,
         client_email: clientDetails.email,
         client_phone: clientDetails.phone,
         selected_option: selectedSuggestion,
       });
-      console.log("[Voice Widget] Context set via setContext()");
+
+      // Pass system prompt as context so Dograh uses it as instructions
+      const prompt = voiceSettingsRef.current.systemPrompt;
+      if (prompt) {
+        window.DograhWidget.setContext({
+          system_prompt: prompt,
+          instructions: prompt,
+        });
+      }
+
+      console.log("[Voice Widget] Context + system prompt set via setContext()");
     }
     setShowForm(false);
     startCall();
   }, [startCall, clientDetails, selectedSuggestion]);
 
+  // Don't render if voice is disabled
+  if (!settingsLoaded || !voiceSettings.enabled) return null;
+
+  const position = positionProp || voiceSettings.position;
   const positionClasses = position === "bottom-left" ? "left-6" : "right-6";
 
   const formatDuration = (s: number) => {
@@ -232,10 +294,11 @@ export function FloatingVoiceWidget({ position = "bottom-left" }: FloatingVoiceW
 
             <button
               onClick={handleShowForm}
-              className="w-full rounded-xl bg-primary text-primary-foreground py-2.5 text-sm font-semibold hover:bg-primary/90 transition-all flex items-center justify-center gap-2"
+              className="w-full rounded-xl text-white py-2.5 text-sm font-semibold hover:opacity-90 transition-all flex items-center justify-center gap-2"
+              style={{ backgroundColor: voiceSettings.buttonColor }}
             >
               <Mic className="h-4 w-4" />
-              {scriptLoaded ? "Start Voice Chat" : "Loading..."}
+              {scriptLoaded ? voiceSettings.buttonText : "Loading..."}
             </button>
           </div>
         </div>
@@ -312,7 +375,8 @@ export function FloatingVoiceWidget({ position = "bottom-left" }: FloatingVoiceW
             <button
               onClick={handleSubmitDetails}
               disabled={!scriptLoaded}
-              className="w-full rounded-xl bg-primary text-primary-foreground py-2.5 text-sm font-semibold hover:bg-primary/90 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+              className="w-full rounded-xl text-white py-2.5 text-sm font-semibold hover:opacity-90 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+              style={{ backgroundColor: voiceSettings.buttonColor }}
             >
               <Mic className="h-4 w-4" />
               Start Call
@@ -333,8 +397,9 @@ export function FloatingVoiceWidget({ position = "bottom-left" }: FloatingVoiceW
         className={cn(
           "fixed bottom-6 z-50 flex items-center gap-2 rounded-full px-5 py-3.5 text-sm font-semibold text-white shadow-lg transition-all hover:scale-105",
           positionClasses,
-          isLive ? "bg-green-500 hover:bg-green-600" : "bg-primary hover:bg-primary/90"
+          isLive ? "bg-green-500 hover:bg-green-600" : "hover:opacity-90"
         )}
+        style={!isLive ? { backgroundColor: voiceSettings.buttonColor } : undefined}
         disabled={status === "connecting"}
       >
         {status === "connecting" ? (
@@ -344,7 +409,7 @@ export function FloatingVoiceWidget({ position = "bottom-left" }: FloatingVoiceW
         ) : (
           <Mic className="h-4 w-4" />
         )}
-        <span>{getStatusLabel()}</span>
+        <span>{isLive ? "End Call" : voiceSettings.buttonText}</span>
         {isLive && (
           <span className="ml-1 text-xs opacity-80">{formatDuration(duration)}</span>
         )}

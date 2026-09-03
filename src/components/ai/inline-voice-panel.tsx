@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useCallback } from "react";
+import { useId, useCallback, useEffect, useRef, useState } from "react";
 import { useDograh } from "./voice-agent";
 import { Mic, PhoneOff, Loader2, Phone, Volume2, AlertCircle, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -19,6 +19,21 @@ export function InlineVoicePanel({
   className,
 }: InlineVoicePanelProps) {
   const containerId = useId();
+  const [systemPrompt, setSystemPrompt] = useState("");
+  const systemPromptRef = useRef("");
+  systemPromptRef.current = systemPrompt;
+
+  // Fetch system prompt from DB
+  useEffect(() => {
+    fetch("/api/settings/public")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d?.data?.voice?.systemPrompt) {
+          setSystemPrompt(d.data.voice.systemPrompt);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const handleCallDisconnected = useCallback(
     (data: { agentId: string; workflowRunId: string; durationSeconds: number }) => {
@@ -53,6 +68,18 @@ export function InlineVoicePanel({
     inlineContainerId: containerId,
     onCallDisconnected: handleCallDisconnected,
   });
+
+  // Pass system prompt when call starts
+  const handleStartCall = useCallback(() => {
+    if (window.DograhWidget && systemPromptRef.current) {
+      window.DograhWidget.setContext({
+        system_prompt: systemPromptRef.current,
+        instructions: systemPromptRef.current,
+      });
+      console.log("[Inline Voice] System prompt set via setContext()");
+    }
+    startCall();
+  }, [startCall]);
 
   const formatDuration = (seconds: number) => {
     const m = Math.floor(seconds / 60);
@@ -98,7 +125,7 @@ export function InlineVoicePanel({
           <button
             onClick={() => {
               if (isLive) endCall();
-              else startCall();
+              else handleStartCall();
             }}
             className={cn(
               "relative flex items-center gap-3 rounded-full px-8 py-4 text-base font-semibold text-white shadow-lg transition-all hover:scale-105",

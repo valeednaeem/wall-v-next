@@ -666,18 +666,18 @@ BEHAVIOR:
                     placeholder="You are Wall-V's AI voice assistant..."
                   />
                   <p className="text-xs text-muted-foreground mt-1">
-                    This prompt defines how the voice agent behaves. Include navigation helpers, service descriptions, and tone instructions. Copy this into your Dograh agent&apos;s node prompts.
+                    This prompt is automatically passed to the voice agent as instructions when a call starts. The agent will follow these instructions — it will NOT read them aloud. Include navigation helpers, service descriptions, tone, and information collection goals.
                   </p>
                 </div>
 
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-800">
-                  <p className="font-medium">How to apply this prompt</p>
-                  <ol className="mt-2 space-y-1 list-decimal list-inside text-xs">
-                    <li>Open your Dograh dashboard at <code className="bg-amber-100 px-1 rounded">your-dograh-instance.com/workflow</code></li>
-                    <li>Select your agent and click the Agent node in the graph</li>
-                    <li>Paste the prompt above into the node&apos;s system prompt field</li>
-                    <li>Save and test with a Web Call</li>
-                  </ol>
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-sm text-green-800">
+                  <p className="font-medium">How the prompt works</p>
+                  <ul className="mt-2 space-y-1 list-disc list-inside text-xs">
+                    <li>The prompt is sent to the agent as <code className="bg-green-100 px-1 rounded">system_prompt</code> context when a call connects</li>
+                    <li>The agent follows it as instructions — it does NOT read it aloud to the caller</li>
+                    <li>Edit the prompt above and click Save — changes take effect on the next call</li>
+                    <li>You can test by calling from the <code className="bg-green-100 px-1 rounded">/voice-agent</code> page</li>
+                  </ul>
                 </div>
 
                 <div>
@@ -686,10 +686,10 @@ BEHAVIOR:
                   <p className="text-xs text-muted-foreground mt-1">Comma-separated. Leave empty to allow all domains.</p>
                 </div>
 
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-sm text-green-800">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800">
                   <p className="font-medium">Voice Agent Page</p>
                   <p className="mt-1">
-                    A dedicated voice agent page is available at <code className="bg-green-100 px-1 rounded">/voice-agent</code> with an inline voice panel.
+                    A dedicated voice agent page is available at <code className="bg-blue-100 px-1 rounded">/voice-agent</code> with an inline voice panel.
                   </p>
                 </div>
               </div>
