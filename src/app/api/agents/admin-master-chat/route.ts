@@ -98,7 +98,11 @@ async function handleCreateInternalTask(params: { title: string; description: st
   if (params.assigneeId) taskData.assignee = params.assigneeId;
   if (params.dueDate) taskData.dueDate = new Date(params.dueDate);
 
-  if (!taskData.project) return { error: "No projects found. Create a project first." };
+  if (!taskData.project) {
+    const fallbackProject = await Project.findOne({}).lean();
+    if (!fallbackProject) return { error: "No projects found. Create a project first." };
+    taskData.project = fallbackProject._id;
+  }
 
   const task = await Task.create(taskData);
   return { task: { id: task._id, title: task.title, status: task.status, priority: task.priority } };
