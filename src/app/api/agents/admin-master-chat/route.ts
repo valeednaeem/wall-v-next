@@ -357,11 +357,17 @@ Always respond in a professional, concise manner suitable for an operations dash
       completedAt: new Date(),
     });
 
-    // Update stats
-    masterAgent.stats.totalConversations = (masterAgent.stats.totalConversations || 0) + (conversation.messageCount <= 2 ? 1 : 0);
-    masterAgent.stats.totalMessages = (masterAgent.stats.totalMessages || 0) + 1;
-    masterAgent.stats.lastActive = new Date();
-    await masterAgent.save();
+    // Update stats (use updateOne to bypass validation on legacy fields)
+    await Agent.updateOne(
+      { _id: masterAgent._id },
+      {
+        $set: { "stats.lastActive": new Date() },
+        $inc: {
+          "stats.totalMessages": 1,
+          ...(conversation.messageCount <= 2 ? { "stats.totalConversations": 1 } : {}),
+        },
+      }
+    );
 
     return NextResponse.json({
       response: responseText,
