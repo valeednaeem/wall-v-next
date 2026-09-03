@@ -85,10 +85,17 @@ async function handleCreateInternalTask(params: { title: string; description: st
   let reporter = await User.findOne({ role: { $in: ["super-admin", "admin"] } }).select("_id");
   if (!reporter) reporter = await User.findOne({}).select("_id");
 
+  let projectId = params.projectId;
+  if (!projectId) {
+    const fallbackProject = await Project.findOne({}).lean();
+    if (!fallbackProject) return { error: "No projects found. Create a project first." };
+    projectId = fallbackProject._id.toString();
+  }
+
   const taskData: Record<string, unknown> = {
     title: params.title,
     description: params.description,
-    project: params.projectId || (await Project.findOne({})?._id),
+    project: projectId,
     reporter: reporter?._id,
     priority: params.priority || "medium",
     status: "todo",
@@ -97,12 +104,6 @@ async function handleCreateInternalTask(params: { title: string; description: st
 
   if (params.assigneeId) taskData.assignee = params.assigneeId;
   if (params.dueDate) taskData.dueDate = new Date(params.dueDate);
-
-  if (!taskData.project) {
-    const fallbackProject = await Project.findOne({}).lean();
-    if (!fallbackProject) return { error: "No projects found. Create a project first." };
-    taskData.project = fallbackProject._id;
-  }
 
   const task = await Task.create(taskData);
   return { task: { id: task._id, title: task.title, status: task.status, priority: task.priority } };
