@@ -58,15 +58,6 @@ interface SocialMedia {
   tiktokUrl: string;
 }
 
-interface GoogleAds {
-  enabled: boolean;
-  conversionId: string;
-  conversionLabel: string;
-  remarketingTag: string;
-  campaignBudget: number;
-  dailyBudget: number;
-}
-
 interface VoiceAgentSettings {
   enabled: boolean;
   widgetUrl: string;
@@ -93,7 +84,7 @@ interface LocationSettings {
 }
 
 export default function GeneralSettingsPage() {
-  const [activeTab, setActiveTab] = useState<"site" | "seo" | "api" | "social" | "ads" | "voice" | "contact">("site");
+  const [activeTab, setActiveTab] = useState<"site" | "seo" | "api" | "social" | "voice" | "contact">("site");
   const [saving, setSaving] = useState(false);
   const [showSecrets, setShowSecrets] = useState<Record<string, boolean>>({});
   const [saveMessage, setSaveMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -150,15 +141,6 @@ export default function GeneralSettingsPage() {
     instagramUrl: "",
     youtubeUrl: "",
     tiktokUrl: "",
-  });
-
-  const [ads, setAds] = useState<GoogleAds>({
-    enabled: true,
-    conversionId: "",
-    conversionLabel: "",
-    remarketingTag: "",
-    campaignBudget: 500,
-    dailyBudget: 20,
   });
 
   const [voice, setVoice] = useState<VoiceAgentSettings>({
@@ -243,7 +225,6 @@ BEHAVIOR:
           if (d.data.seo) setSeo((prev) => ({ ...prev, ...d.data.seo }));
           if (d.data.apiKeys) setApiKeys((prev) => ({ ...prev, ...d.data.apiKeys }));
           if (d.data.social) setSocial((prev) => ({ ...prev, ...d.data.social }));
-          if (d.data.ads) setAds((prev) => ({ ...prev, ...d.data.ads }));
           if (d.data.voice) setVoice((prev) => ({ ...prev, ...d.data.voice }));
           if (d.data.contact) setLocation((prev) => ({ ...prev, ...d.data.contact }));
         }
@@ -262,7 +243,7 @@ BEHAVIOR:
       const res = await fetch("/api/settings/general", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ site, seo, apiKeys, social, ads, voice, contact: location }),
+        body: JSON.stringify({ site, seo, apiKeys, social, voice, contact: location }),
       });
       if (res.status === 401) { window.location.href = "/login?callbackUrl=/dashboard/settings"; return; }
       const data = await res.json();
@@ -282,7 +263,6 @@ BEHAVIOR:
     { id: "seo" as const, label: "SEO", icon: Search },
     { id: "api" as const, label: "API Keys", icon: Key },
     { id: "social" as const, label: "Social", icon: Share2 },
-    { id: "ads" as const, label: "Google Ads", icon: Globe },
     { id: "voice" as const, label: "Voice Agent", icon: Globe },
     { id: "contact" as const, label: "Contact & Map", icon: MapPin },
   ];
@@ -614,56 +594,6 @@ BEHAVIOR:
               <SecretInput label="LinkedIn Client ID" value={social.linkedinClientId} onChange={(v) => setSocial({ ...social, linkedinClientId: v })} />
               <SecretInput label="LinkedIn Client Secret" value={social.linkedinClientSecret} onChange={(v) => setSocial({ ...social, linkedinClientSecret: v })} />
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Google Ads */}
-      {activeTab === "ads" && (
-        <div className="space-y-6">
-          <div className="rounded-lg border p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="font-semibold">Google Ads Integration</h3>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" checked={ads.enabled} onChange={(e) => setAds({ ...ads, enabled: e.target.checked })} className="sr-only peer" />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:ring-2 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-              </label>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              Enable Google Ads for remarketing and conversion tracking. Start with free services during launch.
-            </p>
-
-            {ads.enabled && (
-              <div className="space-y-4 pt-4 border-t">
-                <div className="grid md:grid-cols-2 gap-4">
-                  <SecretInput label="Conversion ID" value={ads.conversionId} onChange={(v) => setAds({ ...ads, conversionId: v })} placeholder="AW-XXXXXXXXX" />
-                  <SecretInput label="Conversion Label" value={ads.conversionLabel} onChange={(v) => setAds({ ...ads, conversionLabel: v })} />
-                  <SecretInput label="Remarketing Tag" value={ads.remarketingTag} onChange={(v) => setAds({ ...ads, remarketingTag: v })} />
-                </div>
-
-                <div className="grid md:grid-cols-2 gap-4 pt-4 border-t">
-                  <div>
-                    <label className="text-sm font-medium">Monthly Campaign Budget (USD)</label>
-                    <div className="relative mt-1">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">$</span>
-                      <input type="number" value={ads.campaignBudget} onChange={(e) => setAds({ ...ads, campaignBudget: Number(e.target.value) })} className="w-full rounded-lg border pl-7 pr-3 py-2 text-sm" />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium">Daily Budget (USD)</label>
-                    <div className="relative mt-1">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">$</span>
-                      <input type="number" value={ads.dailyBudget} onChange={(e) => setAds({ ...ads, dailyBudget: Number(e.target.value) })} className="w-full rounded-lg border pl-7 pr-3 py-2 text-sm" />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800">
-                  <p className="font-medium">Launch Promotion Active</p>
-                  <p className="mt-1">Free Google Ads setup and initial campaign management included with your first project. Basic charges apply only after the launch phase.</p>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       )}

@@ -30,41 +30,6 @@ const DEFAULT_SERVICES = [
       verificationMethod: "html_tag",
     },
   },
-  {
-    serviceId: "business_profile",
-    name: "Business Profile",
-    icon: "Building2",
-    description: "Manage business listings, reviews, and local presence",
-    configUrl: "/dashboard/marketing/google/business-profile",
-    defaultConfig: {
-      accountId: "",
-      locationIds: [],
-    },
-  },
-  {
-    serviceId: "merchant_center",
-    name: "Merchant Center",
-    icon: "ShoppingBag",
-    description: "Sync products for Google Shopping and free listings",
-    configUrl: "/dashboard/marketing/google/merchant-center",
-    defaultConfig: {
-      merchantId: "",
-      dataSourceId: "",
-      autoSync: false,
-    },
-  },
-  {
-    serviceId: "ads",
-    name: "Google Ads",
-    icon: "Megaphone",
-    description: "Configure conversion tracking and campaign readiness",
-    configUrl: "/dashboard/marketing/google/ads",
-    defaultConfig: {
-      customerId: "",
-      conversionIds: [],
-      developerToken: "",
-    },
-  },
 ];
 
 async function ensureDefaultServices() {

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { BarChart3, Globe2, SearchCheck, Store, Target, Share2, LineChart, Zap, AlertCircle, CheckCircle2, Loader2, ExternalLink, Settings, RefreshCw, ArrowRight } from "lucide-react";
+import { BarChart3, Globe2, SearchCheck, AlertCircle, CheckCircle2, Loader2, RefreshCw, ArrowRight, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 
@@ -23,9 +23,6 @@ interface GoogleService {
 const SERVICE_ICONS: Record<string, React.ReactNode> = {
   analytics: <BarChart3 className="h-5 w-5" />,
   search_console: <SearchCheck className="h-5 w-5" />,
-  business_profile: <Store className="h-5 w-5" />,
-  merchant_center: <Target className="h-5 w-5" />,
-  ads: <Zap className="h-5 w-5" />,
 };
 
 export default function GoogleServicesPage() {
@@ -101,8 +98,8 @@ export default function GoogleServicesPage() {
             <p className="text-sm text-muted-foreground mt-1">Connect and manage all Google services from one place</p>
           </div>
         </div>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-          {[1, 2, 3, 4, 5].map((i) => (
+        <div className="grid gap-4 md:grid-cols-2">
+          {[1, 2].map((i) => (
             <div key={i} className="rounded-lg border p-6 animate-pulse">
               <div className="h-10 bg-muted rounded mb-4" />
               <div className="h-4 bg-muted rounded w-3/4 mb-2" />
@@ -124,7 +121,7 @@ export default function GoogleServicesPage() {
             <Globe2 className="h-6 w-6 text-primary" />
             Google Services
           </h2>
-          <p className="text-sm text-muted-foreground mt-1">Connect and manage all Google services from one place. Each service shows real connection status.</p>
+          <p className="text-sm text-muted-foreground mt-1">Connect and manage Google services. Each service shows real connection status.</p>
         </div>
         <button onClick={fetchServices} disabled={loading} className="flex items-center gap-2 text-sm border rounded-lg px-3 py-2 hover:bg-accent transition-colors">
           <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
@@ -132,9 +129,9 @@ export default function GoogleServicesPage() {
         </button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+      <div className="grid gap-4 md:grid-cols-2">
         {loading ? (
-          [1, 2, 3, 4, 5].map((i) => (
+          [1, 2].map((i) => (
             <div key={i} className="rounded-lg border p-6 animate-pulse">
               <div className="h-10 bg-muted rounded mb-4" />
               <div className="h-4 bg-muted rounded w-3/4 mb-2" />
@@ -187,7 +184,7 @@ export default function GoogleServicesPage() {
       {/* Quick Actions */}
       <div className="rounded-lg border p-6 bg-gray-50">
         <h3 className="font-semibold mb-4">Quick Actions</h3>
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2">
           <Link href="/dashboard/marketing/google/search-console" className="p-4 rounded-lg bg-white border hover:border-primary/50 transition-colors">
             <h4 className="font-medium flex items-center gap-2"><SearchCheck className="h-5 w-5" /> Search Console</h4>
             <p className="text-sm text-muted-foreground mt-1">Verify ownership, submit sitemaps, inspect URLs</p>
@@ -195,10 +192,6 @@ export default function GoogleServicesPage() {
           <Link href="/dashboard/marketing/google/analytics" className="p-4 rounded-lg bg-white border hover:border-primary/50 transition-colors">
             <h4 className="font-medium flex items-center gap-2"><BarChart3 className="h-5 w-5" /> Analytics (GA4)</h4>
             <p className="text-sm text-muted-foreground mt-1">Measurement ID, events, conversions, consent mode</p>
-          </Link>
-          <Link href="/dashboard/marketing/google/merchant-center" className="p-4 rounded-lg bg-white border hover:border-primary/50 transition-colors">
-            <h4 className="font-medium flex items-center gap-2"><Store className="h-5 w-5" /> Merchant Center</h4>
-            <p className="text-sm text-muted-foreground mt-1">Product feeds, Google Shopping, free listings</p>
           </Link>
         </div>
       </div>

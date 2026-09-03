@@ -41,7 +41,6 @@ export default function ConversionsPage() {
     value: 0,
     currency: "USD",
     isActive: true,
-    googleAdsConversionId: "",
     metaPixelId: "",
     ga4ConversionName: "",
     countMethod: "once_per_session",
@@ -89,7 +88,6 @@ export default function ConversionsPage() {
         value: 0,
         currency: "USD",
         isActive: true,
-        googleAdsConversionId: "",
         metaPixelId: "",
         ga4ConversionName: "",
         countMethod: "once_per_session",
@@ -179,7 +177,7 @@ export default function ConversionsPage() {
             <Target className="h-6 w-6 text-primary" />
             Conversion Tracking
           </h2>
-          <p className="text-sm text-muted-foreground mt-1">Define conversion goals, assign values, and map to Google Ads & Meta Pixel</p>
+          <p className="text-sm text-muted-foreground mt-1">Define conversion goals, assign values, and map to Meta Pixel</p>
         </div>
         <button onClick={() => handleOpenModal()} className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary/90">
           <Plus className="h-4 w-4" />
@@ -246,12 +244,6 @@ export default function ConversionsPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1.5">
-                        {goal.googleAdsConversionId && (
-                          <span className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-green-100 text-green-700 rounded">
-                            <DollarSign className="h-3 w-3" />
-                            Ads
-                          </span>
-                        )}
                         {goal.metaPixelId && (
                           <span className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded">
                             <Target className="h-3 w-3" />
@@ -264,7 +256,7 @@ export default function ConversionsPage() {
                             GA4
                           </span>
                         )}
-                        {!goal.googleAdsConversionId && !goal.metaPixelId && !goal.ga4ConversionName && (
+                        {!goal.metaPixelId && !goal.ga4ConversionName && (
                           <span className="text-xs text-muted-italic">Not mapped</span>
                         )}
                       </div>
@@ -415,18 +407,7 @@ export default function ConversionsPage() {
 
               <div className="space-y-4">
                 <h4 className="font-medium">Platform Mapping</h4>
-                <div className="grid md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="text-sm font-medium">Google Ads Conversion ID</label>
-                    <input
-                      type="text"
-                      value={formData.googleAdsConversionId}
-                      onChange={(e) => setFormData({ ...formData, googleAdsConversionId: e.target.value })}
-                      className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
-                      placeholder="AW-123456789/ABCDefGhIjK"
-                    />
-                    <p className="text-xs text-muted-foreground mt-1">From Google Ads {'>'} Conversions {'>'} Settings</p>
-                  </div>
+                <div className="grid md:grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm font-medium">Meta Pixel ID</label>
                     <input

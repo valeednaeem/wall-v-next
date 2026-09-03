@@ -174,7 +174,7 @@ export default function EcommerceTrackingPage() {
           <div className="bg-muted/50 rounded-lg p-3 font-mono text-xs">
             {`<!-- Add to your <head> -->\n<script>gtag('event', 'add_to_cart', { items: [{ item_id: '...', item_name: '...', price: 0, quantity: 1 }] });</script>`}
           </div>
-          <p>Ensure your GA4 Measurement ID and Google Ads Conversion ID are configured in <a href="/dashboard/marketing/tracking" className="text-primary hover:underline">Tracking Settings</a>.</p>
+          <p>Ensure your GA4 Measurement ID is configured in <a href="/dashboard/marketing/tracking" className="text-primary hover:underline">Tracking Settings</a>.</p>
         </div>
       </div>
     </div>

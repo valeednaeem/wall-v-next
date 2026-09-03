@@ -14,7 +14,6 @@ interface TrackingOverview {
   topEvents: Array<{ eventName: string; count: number; category: string }>;
   topConversions: Array<{ eventName: string; count: number; value: number }>;
   ga4Connected: boolean;
-  adsConnected: boolean;
   metaPixelConnected: boolean;
   lastUpdated: string;
 }
@@ -97,7 +96,7 @@ export default function TrackingPage() {
             <Target className="h-6 w-6 text-primary" />
             Event Tracking Overview
           </h2>
-          <p className="text-sm text-muted-foreground mt-1">Monitor events, conversions, and e-commerce tracking across GA4, Google Ads, and Meta Pixel</p>
+          <p className="text-sm text-muted-foreground mt-1">Monitor events, conversions, and e-commerce tracking across GA4 and Meta Pixel</p>
         </div>
         <div className="flex items-center gap-3">
           <a href="/dashboard/marketing/tracking/events" className="inline-flex items-center gap-2 text-sm border rounded-lg px-3 py-2 hover:bg-accent transition-colors">
@@ -121,12 +120,6 @@ export default function TrackingPage() {
             )}>
               {overview.ga4Connected ? <CheckCircle2 className="h-3.5 w-3.5" /> : <XCircle className="h-3.5 w-3.5" />}
               GA4
-            </span>
-            <span className={cn("inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium",
-              overview.adsConnected ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-700"
-            )}>
-              {overview.adsConnected ? <CheckCircle2 className="h-3.5 w-3.5" /> : <XCircle className="h-3.5 w-3.5" />}
-              Google Ads
             </span>
             <span className={cn("inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium",
               overview.metaPixelConnected ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-700"

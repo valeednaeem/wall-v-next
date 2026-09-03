@@ -110,82 +110,6 @@ async function runGoogleChecks(): Promise<DiagnosticCheck[]> {
     });
   }
 
-  // Merchant Center
-  const mcConfig = await GoogleServiceConfig.findOne({ serviceId: "merchant_center" }).lean();
-  if (!mcConfig || !mcConfig.enabled) {
-    checks.push({
-      id: "mc_not_configured",
-      name: "Merchant Center Configuration",
-      category: "google",
-      status: "unknown",
-      message: "Merchant Center not configured",
-      details: "Optional for e-commerce sites. Configure to sync products to Google Shopping.",
-      fixUrl: "/dashboard/marketing/google",
-      fixLabel: "Configure",
-      lastChecked: now,
-    });
-  } else if (!mcConfig.config.merchantId) {
-    checks.push({
-      id: "mc_no_merchant_id",
-      name: "Merchant Center Merchant ID",
-      category: "google",
-      status: "fail",
-      message: "Merchant ID not set",
-      details: "Merchant Center enabled but Merchant ID missing.",
-      fixUrl: "/dashboard/marketing/google",
-      fixLabel: "Set Merchant ID",
-      lastChecked: now,
-    });
-  } else {
-    checks.push({
-      id: "mc_configured",
-      name: "Merchant Center Configuration",
-      category: "google",
-      status: "pass",
-      message: "Merchant Center configured",
-      details: `Merchant ID: ${mcConfig.config.merchantId}`,
-      lastChecked: now,
-    });
-  }
-
-  // Google Ads
-  const adsConfig = await GoogleServiceConfig.findOne({ serviceId: "ads" }).lean();
-  if (!adsConfig || !adsConfig.enabled) {
-    checks.push({
-      id: "ads_not_configured",
-      name: "Google Ads Configuration",
-      category: "google",
-      status: "unknown",
-      message: "Google Ads not configured",
-      details: "Optional for paid campaigns. Link Ads account for conversion tracking.",
-      fixUrl: "/dashboard/marketing/google",
-      fixLabel: "Configure",
-      lastChecked: now,
-    });
-  } else if (!adsConfig.config.customerId) {
-    checks.push({
-      id: "ads_no_customer_id",
-      name: "Google Ads Customer ID",
-      category: "google",
-      status: "fail",
-      message: "Customer ID not set",
-      details: "Google Ads enabled but Customer ID missing.",
-      fixUrl: "/dashboard/marketing/google",
-      fixLabel: "Set Customer ID",
-      lastChecked: now,
-    });
-  } else {
-    checks.push({
-      id: "ads_configured",
-      name: "Google Ads Configuration",
-      category: "google",
-      status: "pass",
-      message: "Google Ads configured",
-      details: `Customer ID: ${adsConfig.config.customerId}`,
-      lastChecked: now,
-    });
-  }
-
   // OAuth Token
   const token = await getValidGoogleToken("system"); // Would use actual user in real implementation
   if (!token) {
@@ -679,7 +603,7 @@ async function runTrackingChecks(): Promise<DiagnosticCheck[]> {
       category: "tracking",
       status: "warning",
       message: "No conversion events mapped to Ads/Pixel",
-      details: "Map key events (purchase, lead, sign_up) to Google Ads and Meta Pixel for conversion tracking.",
+      details: "Map key events (purchase, lead, sign_up) to Meta Pixel for conversion tracking.",
       fixUrl: "/dashboard/marketing/tracking/events",
       fixLabel: "Map Conversions",
       lastChecked: now,
@@ -880,7 +804,7 @@ async function runContentChecks(): Promise<DiagnosticCheck[]> {
       category: "content",
       status: "warning",
       message: "No published products",
-      details: "Add products to enable e-commerce and Merchant Center sync.",
+      details: "Add products to enable e-commerce tracking.",
       fixUrl: "/dashboard/products",
       fixLabel: "Add Products",
       lastChecked: now,
