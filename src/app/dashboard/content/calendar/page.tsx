@@ -10,6 +10,9 @@ import {
   FileText,
   Share2,
   Video,
+  Play,
+  Clock,
+  Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -54,6 +57,8 @@ export default function CalendarPage() {
   const [items, setItems] = useState<CalendarItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
+  const [executing, setExecuting] = useState(false);
+  const [executionResult, setExecutionResult] = useState<string | null>(null);
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -100,6 +105,32 @@ export default function CalendarPage() {
     setSelectedDay(null);
   };
 
+  const executeDaily = async () => {
+    setExecuting(true);
+    setExecutionResult(null);
+    try {
+      const res = await fetch("/api/content/execute-daily", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const data = await res.json();
+      if (data.success) {
+        const r = data.data;
+        setExecutionResult(
+          `Executed: ${r.executed} items | Published: ${r.published} | Pending approval: ${r.pendingApproval}${r.errors.length > 0 ? ` | Errors: ${r.errors.length}` : ""}`
+        );
+        fetchCalendar();
+      } else {
+        setExecutionResult(`Error: ${data.error}`);
+      }
+    } catch {
+      setExecutionResult("Failed to execute daily content");
+    } finally {
+      setExecuting(false);
+    }
+  };
+
   const getItemsForDay = (day: number) => {
     return items.filter((item) => {
       const d = new Date(item.scheduledAt);
@@ -120,10 +151,37 @@ export default function CalendarPage() {
             {items.length} items scheduled this month
           </p>
         </div>
-        <button className="inline-flex items-center gap-2 bg-primary text-primary-foreground rounded-lg px-4 py-2 text-sm font-medium hover:bg-primary/90 transition-colors">
-          <Plus className="h-4 w-4" /> Generate 30-Day Plan
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={executeDaily}
+            disabled={executing}
+            className="inline-flex items-center gap-2 border rounded-lg px-4 py-2 text-sm font-medium hover:bg-muted transition-colors disabled:opacity-50"
+          >
+            {executing ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Play className="h-4 w-4" />
+            )}
+            Run Daily Execution
+          </button>
+          <button className="inline-flex items-center gap-2 bg-primary text-primary-foreground rounded-lg px-4 py-2 text-sm font-medium hover:bg-primary/90 transition-colors">
+            <Plus className="h-4 w-4" /> Generate 30-Day Plan
+          </button>
+        </div>
       </div>
+
+      {executionResult && (
+        <div className="flex items-center gap-2 text-sm p-3 rounded-lg bg-muted/50">
+          <Zap className="h-4 w-4 text-primary shrink-0" />
+          <span>{executionResult}</span>
+          <button
+            onClick={() => setExecutionResult(null)}
+            className="ml-auto text-muted-foreground hover:text-foreground"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
 
       {/* Month Navigation */}
       <div className="flex items-center justify-between">
@@ -203,6 +261,8 @@ export default function CalendarPage() {
                     <div className="space-y-1">
                       {dayItems.slice(0, 3).map((item) => {
                         const Icon = TYPE_ICONS[item.type] || FileText;
+                        const isScheduled = item.status === "scheduled";
+                        const isAutoPublish = item.status === "approved";
                         return (
                           <div
                             key={item._id}
@@ -213,7 +273,13 @@ export default function CalendarPage() {
                             title={item.title}
                           >
                             <div className="flex items-center gap-1">
-                              <Icon className="h-2.5 w-2.5 shrink-0" />
+                              {isScheduled ? (
+                                <Clock className="h-2.5 w-2.5 shrink-0" />
+                              ) : isAutoPublish ? (
+                                <Zap className="h-2.5 w-2.5 shrink-0" />
+                              ) : (
+                                <Icon className="h-2.5 w-2.5 shrink-0" />
+                              )}
                               <span className="truncate">{item.title}</span>
                             </div>
                           </div>
@@ -254,17 +320,27 @@ export default function CalendarPage() {
               <div className="space-y-2">
                 {selectedItems.map((item) => {
                   const Icon = TYPE_ICONS[item.type] || FileText;
+                  const isScheduled = item.status === "scheduled";
+                  const isAutoPublish = item.status === "approved";
                   return (
                     <div
                       key={item._id}
                       className="flex items-center justify-between p-3 rounded-lg border"
                     >
                       <div className="flex items-center gap-3">
-                        <Icon className="h-4 w-4 text-muted-foreground" />
+                        {isScheduled ? (
+                          <Clock className="h-4 w-4 text-blue-500" />
+                        ) : isAutoPublish ? (
+                          <Zap className="h-4 w-4 text-purple-500" />
+                        ) : (
+                          <Icon className="h-4 w-4 text-muted-foreground" />
+                        )}
                         <div>
                           <p className="text-sm font-medium">{item.title}</p>
                           <p className="text-xs text-muted-foreground capitalize">
                             {item.type} {item.platform ? `• ${item.platform}` : ""}
+                            {isScheduled && " • scheduled"}
+                            {isAutoPublish && " • auto-publish"}
                           </p>
                         </div>
                       </div>

@@ -15,6 +15,9 @@ import {
   generateSocialVariants,
   generateImagePrompt,
 } from "@/lib/content-generator";
+import { runQualityPipeline } from "@/lib/content-quality";
+import { findInternalLinks } from "@/lib/content-linking";
+import { checkForDuplicates } from "@/lib/content-analytics";
 
 // ─── Campaign Management ─────────────────────────────────────────────────────
 
@@ -430,6 +433,18 @@ export async function executePlan(
         break;
       }
 
+      const duplicateCheck = await checkForDuplicates(
+        topic.title,
+        topic.primaryKeyword || topic.title,
+        plan.campaign.toString()
+      );
+      if (duplicateCheck.isDuplicate) {
+        errors.push(
+          `Topic "${topic.title}" is a duplicate of existing content: ${duplicateCheck.similarItems[0]?.title || "unknown"}`
+        );
+        continue;
+      }
+
       const articleItem = await ContentItem.create({
         campaign: plan.campaign,
         plan: planId,
@@ -443,12 +458,56 @@ export async function executePlan(
       });
 
       const articleData = await generateArticle(articleItem, topic, campaign);
+
+      // Update with generated content before quality check
       await ContentItem.findByIdAndUpdate(articleItem._id, {
         content: articleData.content,
         excerpt: articleData.excerpt,
         seo: articleData.seo,
-        internalLinks: articleData.internalLinks,
-        status: "review",
+        internalLinks: articleData.internalLinks || [],
+      });
+
+      // Run quality pipeline
+      let qualityResults;
+      try {
+        qualityResults = await runQualityPipeline(
+          articleItem._id.toString(),
+          ["factCheck", "seoReview", "brandReview", "conversionReview"]
+        );
+      } catch {
+        qualityResults = null;
+      }
+
+      // Find enhanced internal links after quality check
+      const linkSuggestions = await findInternalLinks(
+        articleData.content || "",
+        topic.primaryKeyword || topic.title
+      );
+
+      // Merge AI-suggested links with discovered links
+      const aiLinks = articleData.internalLinks || [];
+      const discoveredLinks = linkSuggestions.slice(0, 5).map((s) => ({
+        text: s.anchorText,
+        url: s.url,
+      }));
+
+      const mergedLinks = [...aiLinks];
+      for (const dl of discoveredLinks) {
+        if (!mergedLinks.some((l) => l.url === dl.url)) {
+          mergedLinks.push(dl);
+        }
+      }
+
+      // Update item with merged links and quality-driven status
+      const newStatus = qualityResults && qualityResults.overallScore >= 7
+        ? "approved"
+        : qualityResults && qualityResults.overallScore >= 4
+          ? "review"
+          : "fact_check";
+
+      await ContentItem.findByIdAndUpdate(articleItem._id, {
+        internalLinks: mergedLinks,
+        status: newStatus,
       });
 
       const socials = await generateSocialVariants(

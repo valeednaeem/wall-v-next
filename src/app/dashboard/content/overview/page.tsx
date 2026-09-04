@@ -12,6 +12,9 @@ import {
   CheckCircle2,
   Clock,
   Circle,
+  Play,
+  Zap,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -53,6 +56,14 @@ interface OverviewData {
     pendingApproval: number;
     totalSocialPosts: number;
   };
+  nextScheduled: ContentItem | null;
+  lastExecution: {
+    executedAt: string;
+    executed: number;
+    published: number;
+    pendingApproval: number;
+    errors: string[];
+  } | null;
 }
 
 const PLATFORM_ICONS: Record<string, string> = {
@@ -75,14 +86,17 @@ const STATUS_COLORS: Record<string, string> = {
 export default function ContentOverviewPage() {
   const [data, setData] = useState<OverviewData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [executing, setExecuting] = useState(false);
+  const [executionResult, setExecutionResult] = useState<string | null>(null);
 
   const fetchOverview = useCallback(async () => {
     setLoading(true);
     try {
-      const [campaignsRes, itemsRes, connectionsRes] = await Promise.allSettled([
+      const [campaignsRes, itemsRes, connectionsRes, scheduleRes] = await Promise.allSettled([
         fetch("/api/content/campaigns"),
         fetch("/api/content/items?limit=50"),
         fetch("/api/content/connections"),
+        fetch("/api/content/schedule?days=7"),
       ]);
 
       const campaigns =
@@ -91,6 +105,8 @@ export default function ContentOverviewPage() {
         itemsRes.status === "fulfilled" ? await itemsRes.value.json() : { data: [] };
       const connections =
         connectionsRes.status === "fulfilled" ? await connectionsRes.value.json() : { connections: {} };
+      const schedule =
+        scheduleRes.status === "fulfilled" ? await scheduleRes.value.json() : { data: [] };
 
       const allItems: ContentItem[] = items.data || [];
       const now = new Date();
@@ -130,6 +146,19 @@ export default function ContentOverviewPage() {
         ).length,
       };
 
+      const allScheduled = allItems
+        .filter((i) => i.scheduledAt && new Date(i.scheduledAt) > new Date())
+        .sort(
+          (a, b) =>
+            new Date(a.scheduledAt!).getTime() - new Date(b.scheduledAt!).getTime()
+        );
+      const nextScheduled = allScheduled[0] || null;
+
+      const savedExecution = typeof window !== "undefined"
+        ? localStorage.getItem("lastContentExecution")
+        : null;
+      const lastExecution = savedExecution ? JSON.parse(savedExecution) : null;
+
       setData({
         campaigns: campaigns.data || [],
         todayItems,
@@ -137,6 +166,8 @@ export default function ContentOverviewPage() {
         recentPublished,
         connections: connections.connections || {},
         metrics,
+        nextScheduled,
+        lastExecution,
       });
     } catch (error) {
       console.error("Failed to fetch overview:", error);
@@ -148,6 +179,40 @@ export default function ContentOverviewPage() {
   useEffect(() => {
     fetchOverview();
   }, [fetchOverview]);
+
+  const executeDaily = async () => {
+    setExecuting(true);
+    setExecutionResult(null);
+    try {
+      const res = await fetch("/api/content/execute-daily", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const data = await res.json();
+      if (data.success) {
+        const r = data.data;
+        const result = {
+          executedAt: new Date().toISOString(),
+          executed: r.executed,
+          published: r.published,
+          pendingApproval: r.pendingApproval,
+          errors: r.errors,
+        };
+        localStorage.setItem("lastContentExecution", JSON.stringify(result));
+        setExecutionResult(
+          `Executed: ${r.executed} items | Published: ${r.published} | Pending approval: ${r.pendingApproval}`
+        );
+        fetchOverview();
+      } else {
+        setExecutionResult(`Error: ${data.error}`);
+      }
+    } catch {
+      setExecutionResult("Failed to execute daily content");
+    } finally {
+      setExecuting(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -451,6 +516,18 @@ export default function ContentOverviewPage() {
 
       {/* Quick Actions */}
       <div className="flex flex-wrap gap-3">
+        <button
+          onClick={executeDaily}
+          disabled={executing}
+          className="inline-flex items-center gap-2 border rounded-lg px-4 py-2 text-sm font-medium hover:bg-muted transition-colors disabled:opacity-50"
+        >
+          {executing ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Play className="h-4 w-4" />
+          )}
+          Run Daily Execution
+        </button>
         <Link
           href="/dashboard/content/campaigns/new"
           className="inline-flex items-center gap-2 bg-primary text-primary-foreground rounded-lg px-4 py-2 text-sm font-medium hover:bg-primary/90 transition-colors"
@@ -469,6 +546,92 @@ export default function ContentOverviewPage() {
         >
           <CalendarDays className="h-4 w-4" /> View Calendar
         </Link>
+      </div>
+
+      {executionResult && (
+        <div className="flex items-center gap-2 text-sm p-3 rounded-lg bg-muted/50">
+          <Zap className="h-4 w-4 text-primary shrink-0" />
+          <span>{executionResult}</span>
+          <button
+            onClick={() => setExecutionResult(null)}
+            className="ml-auto text-muted-foreground hover:text-foreground"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      {/* Execution Status */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Clock className="h-4 w-4" /> Next Scheduled Execution
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {data.nextScheduled ? (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between p-2 rounded-lg bg-muted/30">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate">{data.nextScheduled.title}</p>
+                    <p className="text-xs text-muted-foreground capitalize">
+                      {data.nextScheduled.type} {data.nextScheduled.platform ? `• ${data.nextScheduled.platform}` : ""}
+                    </p>
+                  </div>
+                  <span className="text-xs text-muted-foreground">
+                    {new Date(data.nextScheduled.scheduledAt!).toLocaleDateString()}
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Scheduled for {new Date(data.nextScheduled.scheduledAt!).toLocaleString()}
+                </p>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                No upcoming scheduled content
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Zap className="h-4 w-4" /> Last Execution
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {data.lastExecution ? (
+              <div className="space-y-2">
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <div className="p-2 rounded-lg bg-muted/30">
+                    <p className="text-lg font-bold">{data.lastExecution.executed}</p>
+                    <p className="text-xs text-muted-foreground">Executed</p>
+                  </div>
+                  <div className="p-2 rounded-lg bg-muted/30">
+                    <p className="text-lg font-bold text-green-600">{data.lastExecution.published}</p>
+                    <p className="text-xs text-muted-foreground">Published</p>
+                  </div>
+                  <div className="p-2 rounded-lg bg-muted/30">
+                    <p className="text-lg font-bold text-yellow-600">{data.lastExecution.pendingApproval}</p>
+                    <p className="text-xs text-muted-foreground">Pending</p>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground text-center">
+                  Last run: {new Date(data.lastExecution.executedAt).toLocaleString()}
+                  {data.lastExecution.errors.length > 0 && (
+                    <span className="text-red-500 ml-2">• {data.lastExecution.errors.length} error(s)</span>
+                  )}
+                </p>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                No executions yet. Run daily execution to start.
+              </p>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

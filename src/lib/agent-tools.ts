@@ -1,5 +1,6 @@
 // Tool definition for OpenAI function calling
 import { ADMIN_ROLES } from "@/lib/api-middleware";
+import { CONTENT_TOOL_DEFINITIONS, executeContentTool } from "@/lib/content-agent-tools";
 
 export interface AgentToolDefinition {
   type: "function";
@@ -358,6 +359,7 @@ export const AGENT_TOOL_DEFINITIONS: AgentToolDefinition[] = [
       },
     },
   },
+  ...CONTENT_TOOL_DEFINITIONS,
 ];
 
 const COMPANY_INFO = `
@@ -1099,6 +1101,19 @@ export async function executeTool(
       return executeGetPaymentStatus(args);
     case "prepare_refund_request":
       return executePrepareRefundRequest(args);
+    case "create_content_campaign":
+    case "generate_weekly_plan":
+    case "approve_content_plan":
+    case "execute_content_plan":
+    case "get_content_status":
+    case "pause_content_campaign":
+    case "get_content_performance":
+    case "check_content_duplicates":
+    case "get_connection_status":
+    case "publish_content_item":
+    case "get_content_schedule":
+    case "execute_daily_content":
+      return executeContentTool(toolName, args);
     default:
       return { error: `Unknown tool: ${toolName}` };
   }

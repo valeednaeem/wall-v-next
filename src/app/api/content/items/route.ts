@@ -4,6 +4,7 @@ import { handleApiError, requireRole } from "@/lib/api-middleware";
 import { connectToDatabase } from "@/lib/mongodb";
 import ContentItem from "@/models/content-item";
 import { createContentItem } from "@/lib/content-orchestrator";
+import { checkForDuplicates } from "@/lib/content-analytics";
 
 export async function GET(request: Request) {
   try {
@@ -67,6 +68,29 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: "Missing required fields: campaignId, title, type" },
         { status: 400 }
+      );
+    }
+
+    const duplicateCheck = await checkForDuplicates(
+      body.title,
+      body.primaryKeyword || body.title,
+      body.campaignId
+    );
+
+    if (duplicateCheck.isDuplicate && !body.forceCreate) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Potential duplicate content detected",
+          duplicateCheck: {
+            isDuplicate: true,
+            similarItems: duplicateCheck.similarItems,
+            recommendation: duplicateCheck.recommendation,
+          },
+          message:
+            "A similar content item already exists. Set forceCreate: true to create anyway, or update the existing item.",
+        },
+        { status: 409 }
       );
     }
 
