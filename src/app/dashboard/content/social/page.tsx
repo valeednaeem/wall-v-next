@@ -6,16 +6,26 @@ import {
   Loader2,
   Send,
   Circle,
+  RefreshCw,
+  Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface SocialPost {
   _id: string;
@@ -34,6 +44,29 @@ interface ConnectionInfo {
   error?: string;
 }
 
+interface ContentItem {
+  _id: string;
+  title: string;
+  type: string;
+  platform?: string;
+  status: string;
+  content?: string;
+}
+
+interface RepurposeResult {
+  sourceItem: { _id: string; title: string };
+  generatedItems: Array<{
+    _id: string;
+    title: string;
+    type: string;
+    platform?: string;
+    status: string;
+    content?: string;
+    slug?: string;
+  }>;
+  summary: string;
+}
+
 const PLATFORMS = [
   { id: "linkedin", label: "LinkedIn" },
   { id: "facebook", label: "Facebook" },
@@ -41,6 +74,17 @@ const PLATFORMS = [
   { id: "instagram", label: "Instagram" },
   { id: "tiktok", label: "TikTok" },
   { id: "youtube", label: "YouTube" },
+];
+
+const REPURPOSE_FORMATS = [
+  { id: "twitter_thread", label: "Twitter/X Thread" },
+  { id: "linkedin_post", label: "LinkedIn Post" },
+  { id: "facebook_post", label: "Facebook Post" },
+  { id: "newsletter", label: "Newsletter" },
+  { id: "video_script", label: "Video Script" },
+  { id: "infographic", label: "Infographic" },
+  { id: "email_sequence", label: "Email Sequence" },
+  { id: "podcast_script", label: "Podcast Script" },
 ];
 
 const STATUS_COLORS: Record<string, string> = {
@@ -58,6 +102,12 @@ export default function SocialPage() {
   const [loading, setLoading] = useState(true);
   const [publishing, setPublishing] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("linkedin");
+
+  const [contentItems, setContentItems] = useState<ContentItem[]>([]);
+  const [selectedItemId, setSelectedItemId] = useState<string>("");
+  const [selectedFormats, setSelectedFormats] = useState<string[]>([]);
+  const [repurposing, setRepurposing] = useState(false);
+  const [repurposeResult, setRepurposeResult] = useState<RepurposeResult | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -82,9 +132,20 @@ export default function SocialPage() {
     }
   }, []);
 
+  const fetchContentItems = useCallback(async () => {
+    try {
+      const res = await fetch("/api/content/items?status=published&status=approved&limit=50");
+      const data = await res.json();
+      setContentItems(data.data || []);
+    } catch (error) {
+      console.error("Failed to fetch content items:", error);
+    }
+  }, []);
+
   useEffect(() => {
     fetchData();
-  }, [fetchData]);
+    fetchContentItems();
+  }, [fetchData, fetchContentItems]);
 
   const handlePublish = async (itemId: string) => {
     setPublishing(itemId);
@@ -96,6 +157,38 @@ export default function SocialPage() {
     } finally {
       setPublishing(null);
     }
+  };
+
+  const handleRepurpose = async () => {
+    if (!selectedItemId || selectedFormats.length === 0) return;
+
+    setRepurposing(true);
+    setRepurposeResult(null);
+    try {
+      const res = await fetch("/api/content/repurpose", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contentItemId: selectedItemId,
+          formats: selectedFormats,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setRepurposeResult(data.data);
+        fetchContentItems();
+      }
+    } catch (error) {
+      console.error("Repurpose failed:", error);
+    } finally {
+      setRepurposing(false);
+    }
+  };
+
+  const toggleFormat = (format: string) => {
+    setSelectedFormats((prev) =>
+      prev.includes(format) ? prev.filter((f) => f !== format) : [...prev, format]
+    );
   };
 
   const getPlatformPosts = (platform: string) =>
@@ -187,7 +280,7 @@ export default function SocialPage() {
             </Card>
           )}
 
-          {/* Platform Tabs */}
+          {/* Main Tabs */}
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="flex w-full overflow-x-auto">
               {PLATFORMS.map((platform) => (
@@ -207,6 +300,10 @@ export default function SocialPage() {
                   {platform.label}
                 </TabsTrigger>
               ))}
+              <TabsTrigger value="repurpose" className="flex items-center gap-1.5 px-3">
+                <RefreshCw className="h-3 w-3" />
+                Repurpose
+              </TabsTrigger>
             </TabsList>
 
             {PLATFORMS.map((platform) => (
@@ -305,6 +402,140 @@ export default function SocialPage() {
                 </Card>
               </TabsContent>
             ))}
+
+            {/* Repurpose Tab */}
+            <TabsContent value="repurpose">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <RefreshCw className="h-4 w-4" /> Content Repurposer
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Source Content Selection */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Source Content</label>
+                    <Select value={selectedItemId} onValueChange={setSelectedItemId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a content item to repurpose" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {contentItems.map((item) => (
+                          <SelectItem key={item._id} value={item._id}>
+                            {item.title} ({item.type})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Format Selection */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Target Formats</label>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                      {REPURPOSE_FORMATS.map((format) => (
+                        <button
+                          key={format.id}
+                          onClick={() => toggleFormat(format.id)}
+                          className={cn(
+                            "flex items-center gap-2 p-2 rounded-lg border text-sm text-left transition-colors",
+                            selectedFormats.includes(format.id)
+                              ? "border-primary bg-primary/5 text-primary"
+                              : "border-border hover:border-primary/50"
+                          )}
+                        >
+                          <div
+                            className={cn(
+                              "h-4 w-4 rounded border flex items-center justify-center shrink-0",
+                              selectedFormats.includes(format.id)
+                                ? "bg-primary border-primary text-primary-foreground"
+                                : "border-border"
+                            )}
+                          >
+                            {selectedFormats.includes(format.id) && (
+                              <Check className="h-3 w-3" />
+                            )}
+                          </div>
+                          {format.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Repurpose Button */}
+                  <Button
+                    onClick={handleRepurpose}
+                    disabled={!selectedItemId || selectedFormats.length === 0 || repurposing}
+                    className="w-full"
+                  >
+                    {repurposing ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        Repurposing...
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                        Repurpose Content
+                      </>
+                    )}
+                  </Button>
+
+                  {/* Results */}
+                  {repurposeResult && (
+                    <div className="space-y-3 mt-4">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Check className="h-4 w-4 text-green-500" />
+                        {repurposeResult.summary}
+                      </div>
+
+                      <div className="space-y-2">
+                        {repurposeResult.generatedItems.map((item) => (
+                          <div
+                            key={item._id}
+                            className="flex items-center justify-between p-3 rounded-lg border"
+                          >
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium truncate">{item.title}</p>
+                              <div className="flex items-center gap-2 mt-1">
+                                <Badge variant="outline" className="text-xs">
+                                  {item.type}
+                                </Badge>
+                                {item.platform && (
+                                  <Badge variant="secondary" className="text-xs capitalize">
+                                    {item.platform}
+                                  </Badge>
+                                )}
+                                <span
+                                  className={cn(
+                                    "text-xs px-2 py-0.5 rounded-full font-medium",
+                                    STATUS_COLORS[item.status] || "bg-gray-100 text-gray-800"
+                                  )}
+                                >
+                                  {item.status}
+                                </span>
+                              </div>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() =>
+                                window.open(
+                                  `/dashboard/content/items/${item._id}`,
+                                  "_blank"
+                                )
+                              }
+                            >
+                              View
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
           </Tabs>
         </>
       )}

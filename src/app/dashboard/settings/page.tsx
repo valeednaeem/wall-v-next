@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Save, Globe, Search, Share2, Key, Eye, EyeOff, Loader2, Upload, X, Image, MapPin } from "lucide-react";
+import { Save, Globe, Search, Eye, EyeOff, Loader2, Upload, X, Image, MapPin } from "lucide-react";
 import HtmlEditor from "@/components/editor/html-editor";
 
 interface SiteSettings {
@@ -10,52 +10,13 @@ interface SiteSettings {
   siteUrl: string;
   logo: string;
   favicon: string;
-  defaultLanguage: string;
-  currency: string;
 }
 
 interface SEOSettings {
   metaTitle: string;
   metaDescription: string;
   ogImage: string;
-  googleAnalyticsId: string;
-  googleTagManagerId: string;
   googleSearchConsole: string;
-  bingWebmaster: string;
-  robotsTxt: string;
-  sitemapUrl: string;
-}
-
-interface APIKeys {
-  openaiApiKey: string;
-  anthropicApiKey: string;
-  smtpHost: string;
-  smtpPort: string;
-  smtpUser: string;
-  smtpPass: string;
-  googleClientId: string;
-  googleClientSecret: string;
-  githubClientId: string;
-  githubClientSecret: string;
-  facebookClientId: string;
-  facebookClientSecret: string;
-  linkedinClientId: string;
-  linkedinClientSecret: string;
-}
-
-interface SocialMedia {
-  facebookUrl: string;
-  facebookAppId: string;
-  facebookAppSecret: string;
-  twitterHandle: string;
-  twitterApiKey: string;
-  twitterApiSecret: string;
-  linkedinUrl: string;
-  linkedinClientId: string;
-  linkedinClientSecret: string;
-  instagramUrl: string;
-  youtubeUrl: string;
-  tiktokUrl: string;
 }
 
 interface VoiceAgentSettings {
@@ -84,7 +45,7 @@ interface LocationSettings {
 }
 
 export default function GeneralSettingsPage() {
-  const [activeTab, setActiveTab] = useState<"site" | "seo" | "api" | "social" | "voice" | "contact">("site");
+  const [activeTab, setActiveTab] = useState<"site" | "seo" | "voice" | "contact">("site");
   const [saving, setSaving] = useState(false);
   const [showSecrets, setShowSecrets] = useState<Record<string, boolean>>({});
   const [saveMessage, setSaveMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -95,52 +56,13 @@ export default function GeneralSettingsPage() {
     siteUrl: "https://wall-v.com",
     logo: "",
     favicon: "",
-    defaultLanguage: "en",
-    currency: "USD",
   });
 
   const [seo, setSeo] = useState<SEOSettings>({
     metaTitle: "Wall-V | AI-Powered Digital Agency",
     metaDescription: "Transform your business with AI-powered web development, mobile apps, ERP/CRM solutions, and cloud hosting.",
     ogImage: "",
-    googleAnalyticsId: "",
-    googleTagManagerId: "",
     googleSearchConsole: "",
-    bingWebmaster: "",
-    robotsTxt: "User-agent: *\nAllow: /\nDisallow: /dashboard\nDisallow: /api/",
-    sitemapUrl: "/sitemap.xml",
-  });
-
-  const [apiKeys, setApiKeys] = useState<APIKeys>({
-    openaiApiKey: "",
-    anthropicApiKey: "",
-    smtpHost: "smtp.gmail.com",
-    smtpPort: "587",
-    smtpUser: "",
-    smtpPass: "",
-    googleClientId: "",
-    googleClientSecret: "",
-    githubClientId: "",
-    githubClientSecret: "",
-    facebookClientId: "",
-    facebookClientSecret: "",
-    linkedinClientId: "",
-    linkedinClientSecret: "",
-  });
-
-  const [social, setSocial] = useState<SocialMedia>({
-    facebookUrl: "",
-    facebookAppId: "",
-    facebookAppSecret: "",
-    twitterHandle: "",
-    twitterApiKey: "",
-    twitterApiSecret: "",
-    linkedinUrl: "",
-    linkedinClientId: "",
-    linkedinClientSecret: "",
-    instagramUrl: "",
-    youtubeUrl: "",
-    tiktokUrl: "",
   });
 
   const [voice, setVoice] = useState<VoiceAgentSettings>({
@@ -223,8 +145,6 @@ BEHAVIOR:
         if (d?.success && d.data) {
           if (d.data.site) setSite((prev) => ({ ...prev, ...d.data.site }));
           if (d.data.seo) setSeo((prev) => ({ ...prev, ...d.data.seo }));
-          if (d.data.apiKeys) setApiKeys((prev) => ({ ...prev, ...d.data.apiKeys }));
-          if (d.data.social) setSocial((prev) => ({ ...prev, ...d.data.social }));
           if (d.data.voice) setVoice((prev) => ({ ...prev, ...d.data.voice }));
           if (d.data.contact) setLocation((prev) => ({ ...prev, ...d.data.contact }));
         }
@@ -243,7 +163,7 @@ BEHAVIOR:
       const res = await fetch("/api/settings/general", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ site, seo, apiKeys, social, voice, contact: location }),
+        body: JSON.stringify({ site, seo, voice, contact: location }),
       });
       if (res.status === 401) { window.location.href = "/login?callbackUrl=/dashboard/settings"; return; }
       const data = await res.json();
@@ -261,8 +181,6 @@ BEHAVIOR:
   const tabs = [
     { id: "site" as const, label: "Site", icon: Globe },
     { id: "seo" as const, label: "SEO", icon: Search },
-    { id: "api" as const, label: "API Keys", icon: Key },
-    { id: "social" as const, label: "Social", icon: Share2 },
     { id: "voice" as const, label: "Voice Agent", icon: Globe },
     { id: "contact" as const, label: "Contact & Map", icon: MapPin },
   ];
@@ -421,20 +339,6 @@ BEHAVIOR:
                 <HtmlEditor value={site.siteDescription} onChange={(html) => setSite({ ...site, siteDescription: html })} placeholder="About your site..." minHeight="100px" />
               </div>
             </div>
-            <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-medium">Default Language</label>
-                <select value={site.defaultLanguage} onChange={(e) => setSite({ ...site, defaultLanguage: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm">
-                  <option value="en">English</option><option value="es">Español</option><option value="fr">Français</option><option value="de">Deutsch</option><option value="ar">العربية</option><option value="zh">中文</option><option value="ja">日本語</option><option value="ko">한국어</option><option value="pt">Português</option><option value="ru">Русский</option><option value="hi">हिन्दी</option><option value="tr">Türkçe</option><option value="ur">اردو</option>
-                </select>
-              </div>
-              <div>
-                <label className="text-sm font-medium">Currency</label>
-                <select value={site.currency} onChange={(e) => setSite({ ...site, currency: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm">
-                  <option value="USD">USD ($)</option><option value="EUR">EUR (€)</option><option value="GBP">GBP (£)</option><option value="PKR">PKR (₨)</option>
-                </select>
-              </div>
-            </div>
           </div>
 
           <div className="rounded-lg border p-6 space-y-4">
@@ -484,115 +388,9 @@ BEHAVIOR:
           </div>
 
           <div className="rounded-lg border p-6 space-y-4">
-            <h3 className="font-semibold">Analytics & Verification</h3>
-            <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-medium">Google Analytics ID</label>
-                <p className="text-xs text-muted-foreground mb-1">Paste your full Google Tag code or just the ID (G-XXXXXXXXXX)</p>
-                <textarea
-                  value={seo.googleAnalyticsId}
-                  onChange={(e) => {
-                    const raw = e.target.value;
-                    const match = raw.match(/G-[A-Z0-9]+/i);
-                    setSeo({ ...seo, googleAnalyticsId: match ? match[0] : raw });
-                  }}
-                  className="mt-1 w-full rounded-lg border px-3 py-2 text-sm font-mono"
-                  rows={3}
-                  placeholder={'<!-- Paste full Google Tag code here -->\nOR just: G-XXXXXXXXXX'}
-                />
-                {seo.googleAnalyticsId && (
-                  <p className="text-xs text-green-600 mt-1">Detected: {seo.googleAnalyticsId}</p>
-                )}
-              </div>
-              <SecretInput label="Google Tag Manager ID" value={seo.googleTagManagerId} onChange={(v) => setSeo({ ...seo, googleTagManagerId: v })} placeholder="GTM-XXXXXXX" />
+            <h3 className="font-semibold">Verification</h3>
+            <div>
               <SecretInput label="Google Search Console" value={seo.googleSearchConsole} onChange={(v) => setSeo({ ...seo, googleSearchConsole: v })} placeholder="Verification code" />
-              <SecretInput label="Bing Webmaster" value={seo.bingWebmaster} onChange={(v) => setSeo({ ...seo, bingWebmaster: v })} placeholder="Verification code" />
-            </div>
-          </div>
-
-          <div className="rounded-lg border p-6 space-y-4">
-            <h3 className="font-semibold">Robots.txt</h3>
-            <textarea value={seo.robotsTxt} onChange={(e) => setSeo({ ...seo, robotsTxt: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm font-mono" rows={6} />
-          </div>
-        </div>
-      )}
-
-      {/* API Keys */}
-      {activeTab === "api" && (
-        <div className="space-y-6">
-          <div className="rounded-lg border p-6 space-y-4">
-            <h3 className="font-semibold">AI Provider Keys</h3>
-            <div className="grid md:grid-cols-2 gap-4">
-              <SecretInput label="OpenAI API Key" value={apiKeys.openaiApiKey} onChange={(v) => setApiKeys({ ...apiKeys, openaiApiKey: v })} placeholder="sk-..." />
-              <SecretInput label="Anthropic API Key" value={apiKeys.anthropicApiKey} onChange={(v) => setApiKeys({ ...apiKeys, anthropicApiKey: v })} placeholder="sk-ant-..." />
-            </div>
-          </div>
-
-          <div className="rounded-lg border p-6 space-y-4">
-            <h3 className="font-semibold">Email (SMTP)</h3>
-            <div className="grid md:grid-cols-4 gap-4">
-              <div className="md:col-span-2">
-                <label className="text-sm font-medium">SMTP Host</label>
-                <input type="text" value={apiKeys.smtpHost} onChange={(e) => setApiKeys({ ...apiKeys, smtpHost: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" />
-              </div>
-              <div>
-                <label className="text-sm font-medium">Port</label>
-                <input type="text" value={apiKeys.smtpPort} onChange={(e) => setApiKeys({ ...apiKeys, smtpPort: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" />
-              </div>
-            </div>
-            <div className="grid md:grid-cols-2 gap-4">
-              <SecretInput label="SMTP User" value={apiKeys.smtpUser} onChange={(v) => setApiKeys({ ...apiKeys, smtpUser: v })} />
-              <SecretInput label="SMTP Password" value={apiKeys.smtpPass} onChange={(v) => setApiKeys({ ...apiKeys, smtpPass: v })} />
-            </div>
-          </div>
-
-          <div className="rounded-lg border p-6 space-y-4">
-            <h3 className="font-semibold">OAuth Providers</h3>
-            <div className="grid md:grid-cols-2 gap-4">
-              <SecretInput label="Google Client ID" value={apiKeys.googleClientId} onChange={(v) => setApiKeys({ ...apiKeys, googleClientId: v })} />
-              <SecretInput label="Google Client Secret" value={apiKeys.googleClientSecret} onChange={(v) => setApiKeys({ ...apiKeys, googleClientSecret: v })} />
-              <SecretInput label="GitHub Client ID" value={apiKeys.githubClientId} onChange={(v) => setApiKeys({ ...apiKeys, githubClientId: v })} />
-              <SecretInput label="GitHub Client Secret" value={apiKeys.githubClientSecret} onChange={(v) => setApiKeys({ ...apiKeys, githubClientSecret: v })} />
-              <SecretInput label="Facebook Client ID" value={apiKeys.facebookClientId} onChange={(v) => setApiKeys({ ...apiKeys, facebookClientId: v })} />
-              <SecretInput label="Facebook Client Secret" value={apiKeys.facebookClientSecret} onChange={(v) => setApiKeys({ ...apiKeys, facebookClientSecret: v })} />
-              <SecretInput label="LinkedIn Client ID" value={apiKeys.linkedinClientId} onChange={(v) => setApiKeys({ ...apiKeys, linkedinClientId: v })} />
-              <SecretInput label="LinkedIn Client Secret" value={apiKeys.linkedinClientSecret} onChange={(v) => setApiKeys({ ...apiKeys, linkedinClientSecret: v })} />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Social Media */}
-      {activeTab === "social" && (
-        <div className="space-y-6">
-          <div className="rounded-lg border p-6 space-y-4">
-            <h3 className="font-semibold">Social Profiles</h3>
-            <div className="grid md:grid-cols-2 gap-4">
-              {[
-                { label: "Facebook URL", key: "facebookUrl" as const, placeholder: "https://facebook.com/wallv" },
-                { label: "Twitter/X Handle", key: "twitterHandle" as const, placeholder: "@wallv" },
-                { label: "LinkedIn URL", key: "linkedinUrl" as const, placeholder: "https://linkedin.com/company/wallv" },
-                { label: "Instagram URL", key: "instagramUrl" as const, placeholder: "https://instagram.com/wallv" },
-                { label: "YouTube URL", key: "youtubeUrl" as const, placeholder: "https://youtube.com/@wallv" },
-                { label: "TikTok URL", key: "tiktokUrl" as const, placeholder: "https://tiktok.com/@wallv" },
-              ].map((field) => (
-                <div key={field.key}>
-                  <label className="text-sm font-medium">{field.label}</label>
-                  <input type="url" value={social[field.key]} onChange={(e) => setSocial({ ...social, [field.key]: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" placeholder={field.placeholder} />
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="rounded-lg border p-6 space-y-4">
-            <h3 className="font-semibold">Social App Credentials</h3>
-            <div className="grid md:grid-cols-2 gap-4">
-              <SecretInput label="Facebook App ID" value={social.facebookAppId} onChange={(v) => setSocial({ ...social, facebookAppId: v })} />
-              <SecretInput label="Facebook App Secret" value={social.facebookAppSecret} onChange={(v) => setSocial({ ...social, facebookAppSecret: v })} />
-              <SecretInput label="Twitter API Key" value={social.twitterApiKey} onChange={(v) => setSocial({ ...social, twitterApiKey: v })} />
-              <SecretInput label="Twitter API Secret" value={social.twitterApiSecret} onChange={(v) => setSocial({ ...social, twitterApiSecret: v })} />
-              <SecretInput label="LinkedIn Client ID" value={social.linkedinClientId} onChange={(v) => setSocial({ ...social, linkedinClientId: v })} />
-              <SecretInput label="LinkedIn Client Secret" value={social.linkedinClientSecret} onChange={(v) => setSocial({ ...social, linkedinClientSecret: v })} />
             </div>
           </div>
         </div>

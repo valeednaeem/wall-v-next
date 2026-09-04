@@ -187,6 +187,46 @@ export const CONTENT_TOOL_DEFINITIONS: AgentToolDefinition[] = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "repurpose_content",
+      description: "Repurpose a content item into multiple formats (social threads, newsletters, video scripts)",
+      parameters: {
+        type: "object",
+        properties: {
+          contentItemId: { type: "string", description: "Content item ID to repurpose" },
+          formats: {
+            type: "array",
+            items: { type: "string" },
+            description: "Target formats: twitter_thread, linkedin_post, facebook_post, newsletter, video_script, infographic, email_sequence, podcast_script",
+          },
+          brandVoice: { type: "string", description: "Optional brand voice override" },
+          targetAudience: { type: "string", description: "Optional target audience" },
+        },
+        required: ["contentItemId", "formats"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "batch_repurpose",
+      description: "Batch repurpose all published content in a campaign into multiple formats",
+      parameters: {
+        type: "object",
+        properties: {
+          campaignId: { type: "string", description: "Campaign ID" },
+          formats: {
+            type: "array",
+            items: { type: "string" },
+            description: "Target formats: twitter_thread, linkedin_post, facebook_post, newsletter, video_script, infographic, email_sequence, podcast_script",
+          },
+        },
+        required: ["campaignId", "formats"],
+      },
+    },
+  },
 ];
 
 // ─── Content Tool Executors ──────────────────────────────────────────────────
@@ -483,6 +523,52 @@ async function executeDailyContentTrigger() {
   return result;
 }
 
+async function executeRepurposeContent(args: Record<string, unknown>) {
+  const { repurposeContent } = await import("@/lib/content-repurposer");
+  const result = await repurposeContent(
+    args.contentItemId as string,
+    args.formats as import("@/lib/content-repurposer").RepurposeFormat[],
+    {
+      brandVoice: args.brandVoice as string | undefined,
+      targetAudience: args.targetAudience as string | undefined,
+    }
+  );
+
+  return {
+    sourceItem: {
+      _id: result.sourceItem._id,
+      title: result.sourceItem.title,
+    },
+    generatedCount: result.generatedItems.length,
+    generatedItems: result.generatedItems.map((item) => ({
+      _id: item._id,
+      title: item.title,
+      type: item.type,
+      platform: item.platform,
+      status: item.status,
+    })),
+    summary: result.summary,
+  };
+}
+
+async function executeBatchRepurpose(args: Record<string, unknown>) {
+  const { batchRepurpose } = await import("@/lib/content-repurposer");
+  const results = await batchRepurpose(
+    args.campaignId as string,
+    args.formats as import("@/lib/content-repurposer").RepurposeFormat[]
+  );
+
+  return {
+    totalSources: results.length,
+    totalGenerated: results.reduce((sum, r) => sum + r.generatedItems.length, 0),
+    results: results.map((r) => ({
+      sourceTitle: r.sourceItem.title,
+      generatedCount: r.generatedItems.length,
+      summary: r.summary,
+    })),
+  };
+}
+
 // ─── Content Tool Executor ───────────────────────────────────────────────────
 
 export async function executeContentTool(
@@ -514,6 +600,10 @@ export async function executeContentTool(
       return executeGetContentSchedule(args);
     case "execute_daily_content":
       return executeDailyContentTrigger();
+    case "repurpose_content":
+      return executeRepurposeContent(args);
+    case "batch_repurpose":
+      return executeBatchRepurpose(args);
     default:
       return { error: `Unknown content tool: ${toolName}` };
   }

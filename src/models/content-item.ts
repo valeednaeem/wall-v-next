@@ -91,6 +91,12 @@ export interface IContentItem extends Document {
   approvedAt?: Date;
   rejectionReason?: string;
   relatedBlogPost?: mongoose.Types.ObjectId;
+  repurposeMetadata?: {
+    sourceItemId?: mongoose.Types.ObjectId;
+    sourceType?: "blog_post" | "social_post" | "video_script" | "email_sequence";
+    repurposedFrom?: string;
+    generatedAt?: Date;
+  };
   createdAt: Date;
   updatedAt: Date;
 }
@@ -205,6 +211,15 @@ const ContentItemSchema = new Schema<IContentItem>(
     approvedAt: Date,
     rejectionReason: String,
     relatedBlogPost: { type: Schema.Types.ObjectId, ref: "BlogPost" },
+    repurposeMetadata: {
+      sourceItemId: { type: Schema.Types.ObjectId, ref: "ContentItem" },
+      sourceType: {
+        type: String,
+        enum: ["blog_post", "social_post", "video_script", "email_sequence"],
+      },
+      repurposedFrom: String,
+      generatedAt: { type: Date, default: Date.now },
+    },
   },
   { timestamps: true }
 );

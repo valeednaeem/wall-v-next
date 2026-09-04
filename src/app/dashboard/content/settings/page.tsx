@@ -8,6 +8,8 @@ import {
   Plus,
   X,
   GripVertical,
+  Clock,
+  Play,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -70,6 +72,9 @@ export default function ContentSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
+  const [cronStatus, setCronStatus] = useState<Record<string, string>>({});
+  const [cronLoading, setCronLoading] = useState<string | null>(null);
+
   const [focusInput, setFocusInput] = useState("");
   const [excludedInput, setExcludedInput] = useState("");
   const [productInput, setProductInput] = useState("");
@@ -108,6 +113,27 @@ export default function ContentSettingsPage() {
   useEffect(() => {
     fetchSettings();
   }, [fetchSettings]);
+
+  const triggerCron = async (cronPath: string, label: string) => {
+    setCronLoading(label);
+    try {
+      const res = await fetch(`/api/cron/${cronPath}`, {
+        headers: { Authorization: `Bearer ${process.env.NEXT_PUBLIC_CRON_SECRET || ""}` },
+      });
+      const data = await res.json();
+      setCronStatus((prev) => ({
+        ...prev,
+        [label]: data.success ? "Success" : data.error || "Failed",
+      }));
+    } catch {
+      setCronStatus((prev) => ({
+        ...prev,
+        [label]: "Network error",
+      }));
+    } finally {
+      setCronLoading(null);
+    }
+  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -212,6 +238,62 @@ export default function ContentSettingsPage() {
           Save Settings
         </button>
       </div>
+
+      {/* Cron Status */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Clock className="h-4 w-4" /> Cron Automation
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground mb-4">
+            Automated content orchestration tasks. Schedule configured in vercel.json.
+          </p>
+          <div className="grid gap-3 md:grid-cols-2">
+            {[
+              { path: "daily-content", label: "Daily Content", schedule: "Daily at 6:00 AM" },
+              { path: "weekly-plan", label: "Weekly Plan", schedule: "Every Monday at 8:00 AM" },
+              { path: "content-decay", label: "Content Decay", schedule: "1st of month at 9:00 AM" },
+              { path: "analytics-digest", label: "Analytics Digest", schedule: "Every Monday at 10:00 AM" },
+            ].map((cron) => (
+              <div
+                key={cron.path}
+                className="flex items-center justify-between p-3 rounded-lg border bg-muted/30"
+              >
+                <div>
+                  <p className="text-sm font-medium">{cron.label}</p>
+                  <p className="text-xs text-muted-foreground">{cron.schedule}</p>
+                  {cronStatus[cron.label] && (
+                    <p
+                      className={cn(
+                        "text-xs mt-1",
+                        cronStatus[cron.label] === "Success"
+                          ? "text-green-600"
+                          : "text-red-600"
+                      )}
+                    >
+                      Last run: {cronStatus[cron.label]}
+                    </p>
+                  )}
+                </div>
+                <button
+                  onClick={() => triggerCron(cron.path, cron.label)}
+                  disabled={cronLoading !== null}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium bg-primary/10 text-primary hover:bg-primary/20 transition-colors disabled:opacity-50"
+                >
+                  {cronLoading === cron.label ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <Play className="h-3 w-3" />
+                  )}
+                  Run
+                </button>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Publishing Mode */}
       <Card>

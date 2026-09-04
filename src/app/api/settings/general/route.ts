@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import SiteSettings from "@/models/site-settings";
-import GoogleServiceConfig from "@/models/google-services";
 import { auth } from "@/lib/auth";
 import { clearSettingsCache } from "@/lib/site-settings";
 
@@ -60,21 +59,6 @@ export async function PUT(request: Request) {
     }
     await Promise.all(updates);
     clearSettingsCache();
-
-    if (body.seo?.googleAnalyticsId !== undefined) {
-      const measurementId = body.seo.googleAnalyticsId as string;
-      await GoogleServiceConfig.findOneAndUpdate(
-        { serviceId: "analytics" },
-        {
-          $set: {
-            config: { measurementId },
-            enabled: !!measurementId,
-            status: measurementId ? "connected" : "not_configured",
-          },
-        },
-        { upsert: true }
-      );
-    }
 
     return NextResponse.json({ success: true });
   } catch (error) {
