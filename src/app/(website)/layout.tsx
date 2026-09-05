@@ -8,6 +8,7 @@ import { DynamicFavicon } from "@/components/dynamic-favicon";
 import { GoogleAnalytics } from "@/components/analytics/GoogleAnalytics";
 import { GoogleTagManager } from "@/components/analytics/GoogleTagManager";
 import { Suspense } from "react";
+import AdSenseScript from "@/components/adsense/AdSenseScript";
 
 export default async function WebsiteLayout({
   children,
@@ -21,6 +22,7 @@ export default async function WebsiteLayout({
       <Suspense fallback={null}>
         <GoogleAnalytics />
       </Suspense>
+      <AdSenseScript />
       <CartProvider>
         <Navbar />
         <main className="flex-1">

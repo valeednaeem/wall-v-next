@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Save, Globe, Search, Eye, EyeOff, Loader2, Upload, X, Image, MapPin } from "lucide-react";
+import { Save, Globe, Search, Eye, EyeOff, Loader2, Upload, X, Image, MapPin, DollarSign } from "lucide-react";
+import Link from "next/link";
 import HtmlEditor from "@/components/editor/html-editor";
 
 interface SiteSettings {
@@ -289,10 +290,19 @@ BEHAVIOR:
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">General Settings</h2>
-        <button onClick={handleSave} disabled={saving} className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-50">
-          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-          {saving ? "Saving..." : "Save Changes"}
-        </button>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/dashboard/monetization"
+            className="inline-flex items-center gap-2 border px-4 py-2 rounded-lg text-sm font-medium hover:bg-accent transition-colors"
+          >
+            <DollarSign className="h-4 w-4" />
+            Monetization
+          </Link>
+          <button onClick={handleSave} disabled={saving} className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-50">
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            {saving ? "Saving..." : "Save Changes"}
+          </button>
+        </div>
       </div>
 
       {/* Tabs */}

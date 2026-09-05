@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import {
-  BarChart3, Search, ShoppingBag, Megaphone,
+  BarChart3, Search, ShoppingBag,
   SearchCheck, Target, Share2, LineChart, AlertCircle,
   CheckCircle2, Loader2, Settings, RefreshCw,
   Link2, Unlink, ChevronRight, Activity,
@@ -12,7 +12,7 @@ import {
 import { cn } from "@/lib/utils";
 
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
-  BarChart3, Search, ShoppingBag, Megaphone,
+  BarChart3, Search, ShoppingBag,
 };
 
 interface GoogleService {
@@ -391,7 +391,6 @@ export default function MarketingPage() {
             { id: "tracking", label: "Events & Conversions", description: "Analytics events, conversion tracking, attribution", icon: Target, color: "text-violet-500", bg: "bg-violet-50", href: "/dashboard/marketing/tracking" },
             { id: "social", label: "Social Sharing", description: "Open Graph, Twitter/X cards, social previews", icon: Share2, color: "text-sky-500", bg: "bg-sky-50", href: "/dashboard/marketing/social" },
             { id: "diagnostics", label: "Diagnostics", description: "API errors, OAuth issues, sync failures", icon: AlertCircle, color: "text-rose-500", bg: "bg-rose-50", href: "/dashboard/marketing/diagnostics" },
-            { id: "google-ads", label: "Google Ads", description: "Campaigns, conversion tracking, attribution", icon: Megaphone, color: "text-amber-500", bg: "bg-amber-50", href: "/dashboard/marketing/google/ads" },
           ].map((card) => (
             <a key={card.id} href={card.href} className="rounded-xl border p-5 hover:shadow-md transition-all group">
               <div className="flex items-start gap-4">

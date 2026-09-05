@@ -88,6 +88,7 @@ const sidebarItems: SidebarItem[] = [
     { label: "All Users", href: "/dashboard/users", permission: "users:view" },
     { label: "Roles", href: "/dashboard/users/roles", permission: "roles:view" },
   ]},
+  { label: "Monetization", href: "/dashboard/monetization", icon: <DollarSign className="h-4 w-4" />, permission: "settings:manage" },
   { label: "Settings", href: "/dashboard/settings", icon: <Settings className="h-4 w-4" />, children: [
     { label: "General", href: "/dashboard/settings", permission: "settings:manage" },
     { label: "Pricing", href: "/dashboard/settings/pricing", permission: "settings:manage" },

@@ -28,13 +28,9 @@ export async function GET() {
     await connectToDatabase();
 
     // Check platform connections
-    const [gaConfig, adsConfig] = await Promise.all([
-      GoogleServiceConfig.findOne({ serviceId: "analytics" }).lean(),
-      GoogleServiceConfig.findOne({ serviceId: "ads" }).lean(),
-    ]);
+    const gaConfig = await GoogleServiceConfig.findOne({ serviceId: "analytics" }).lean();
 
     const ga4Connected = gaConfig?.status === "connected";
-    const adsConnected = adsConfig?.status === "connected";
     const metaPixelConnected = gaConfig?.metaPixelId ? true : false;
 
     // Get events count
@@ -108,7 +104,6 @@ export async function GET() {
         topEvents,
         topConversions,
         ga4Connected,
-        adsConnected,
         metaPixelConnected,
         lastUpdated: new Date().toISOString(),
       },

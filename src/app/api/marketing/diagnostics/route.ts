@@ -591,7 +591,6 @@ async function runTrackingChecks(): Promise<DiagnosticCheck[]> {
   const conversionEvents = await TrackingEvent.countDocuments({
     category: "conversion",
     $or: [
-      { googleAdsConversionId: { $exists: true, $ne: "" } },
       { metaPixelId: { $exists: true, $ne: "" } },
     ],
   });
@@ -602,7 +601,7 @@ async function runTrackingChecks(): Promise<DiagnosticCheck[]> {
       name: "Conversion Event Mapping",
       category: "tracking",
       status: "warning",
-      message: "No conversion events mapped to Ads/Pixel",
+      message: "No conversion events mapped to Meta Pixel",
       details: "Map key events (purchase, lead, sign_up) to Meta Pixel for conversion tracking.",
       fixUrl: "/dashboard/marketing/tracking/events",
       fixLabel: "Map Conversions",
@@ -614,7 +613,7 @@ async function runTrackingChecks(): Promise<DiagnosticCheck[]> {
       name: "Conversion Event Mapping",
       category: "tracking",
       status: "pass",
-      message: `${conversionEvents} conversion events mapped to ad platforms`,
+      message: `${conversionEvents} conversion events mapped to Meta Pixel`,
       lastChecked: now,
     });
   }

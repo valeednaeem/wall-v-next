@@ -23,12 +23,12 @@ const securityHeaders = [
     key: "Content-Security-Policy",
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://checkout.stripe.com https://apis.google.com https://accounts.google.com https://dograh.vercel.app https://app.dograh.com https://www.googletagmanager.com https://www.google-analytics.com",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://checkout.stripe.com https://apis.google.com https://accounts.google.com https://dograh.vercel.app https://app.dograh.com https://www.googletagmanager.com https://www.google-analytics.com https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://adservice.google.com",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "img-src 'self' data: blob: https: http: https://www.google-analytics.com https://stats.g.doubleclick.net",
       "font-src 'self' https://fonts.gstatic.com",
       `connect-src 'self' https://api.openai.com https://api.anthropic.com https://dograh.vercel.app https://app.dograh.com https://api.dograh.com wss://api.dograh.com https://www.google-analytics.com https://region1.google-analytics.com https://analytics.google.com https://stats.g.doubleclick.net${devConnectSrc}`,
-      "frame-src 'self' https://js.stripe.com https://checkout.stripe.com https://www.youtube.com https://storage.googleapis.com https://maps.google.com https://www.google.com",
+      "frame-src 'self' https://js.stripe.com https://checkout.stripe.com https://www.youtube.com https://storage.googleapis.com https://maps.google.com https://www.google.com https://pagead2.googlesyndication.com https://tpc.googlesyndication.com",
     ].join("; "),
   },
 ];

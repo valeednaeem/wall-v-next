@@ -12,6 +12,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ShareButtons } from "@/components/share-buttons";
+import { AdSenseBlogAds } from "@/components/adsense/AdSenseBlogAds";
 
 interface BlogPost {
   _id: string;
@@ -155,7 +156,11 @@ export function BlogPostContent() {
           </div>
         )}
 
+        <AdSenseBlogAds position="top" />
+
         <div className="prose prose-lg max-w-none" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.content) }} />
+
+        <AdSenseBlogAds position="middle" />
 
         {/* Tags */}
         {post.tags && post.tags.length > 0 && (
@@ -171,6 +176,8 @@ export function BlogPostContent() {
           </div>
         )}
       </article>
+
+      <AdSenseBlogAds position="bottom" />
 
       {/* Related Posts */}
       {post.relatedPosts && post.relatedPosts.length > 0 && (

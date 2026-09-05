@@ -10,6 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AdSenseBlogAds } from "@/components/adsense/AdSenseBlogAds";
 
 interface BlogPost {
   _id: string;
@@ -258,6 +259,9 @@ export function BlogListContent() {
               </form>
             </CardContent>
           </Card>
+
+          {/* Sidebar Ad */}
+          <AdSenseBlogAds position="sidebar" />
         </div>
       </aside>
     </div>
