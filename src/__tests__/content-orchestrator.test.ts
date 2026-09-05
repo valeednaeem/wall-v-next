@@ -18,6 +18,91 @@ jest.mock("@/models/content-plan", () => {
   return { __esModule: true, default: mock };
 });
 
+jest.mock("@/models/content-item", () => ({
+  __esModule: true,
+  default: {
+    find: jest.fn().mockReturnValue({ sort: jest.fn().mockReturnValue({ limit: jest.fn().mockResolvedValue([]) }) }),
+    findById: jest.fn().mockReturnValue({ lean: jest.fn().mockResolvedValue(null) }),
+    findByIdAndUpdate: jest.fn().mockResolvedValue({}),
+    create: jest.fn().mockResolvedValue({ _id: "item123" }),
+    countDocuments: jest.fn().mockResolvedValue(0),
+  },
+}));
+
+jest.mock("@/models/content-distribution", () => ({
+  __esModule: true,
+  default: {
+    create: jest.fn().mockResolvedValue({ _id: "dist123" }),
+  },
+}));
+
+jest.mock("@/models/content-settings", () => ({
+  __esModule: true,
+  default: {
+    findOne: jest.fn().mockResolvedValue(null),
+  },
+}));
+
+jest.mock("@/models/content-topic", () => ({
+  __esModule: true,
+  default: {
+    find: jest.fn().mockReturnValue({ lean: jest.fn().mockResolvedValue([]) }),
+    findById: jest.fn().mockReturnValue({ lean: jest.fn().mockResolvedValue(null) }),
+    findByIdAndUpdate: jest.fn().mockResolvedValue({}),
+    create: jest.fn().mockResolvedValue({ _id: "topic123" }),
+    countDocuments: jest.fn().mockResolvedValue(0),
+  },
+}));
+
+jest.mock("@/models/blog-post", () => ({
+  __esModule: true,
+  default: {
+    find: jest.fn().mockReturnValue({ lean: jest.fn().mockResolvedValue([]) }),
+    findById: jest.fn().mockReturnValue({ lean: jest.fn().mockResolvedValue(null) }),
+    findOne: jest.fn().mockReturnValue({ lean: jest.fn().mockResolvedValue(null) }),
+    create: jest.fn().mockResolvedValue({ _id: "blog123", slug: "test-article" }),
+    countDocuments: jest.fn().mockResolvedValue(0),
+  },
+}));
+
+jest.mock("@/models/blog-category", () => ({
+  __esModule: true,
+  default: {
+    findOne: jest.fn().mockReturnValue({ lean: jest.fn().mockResolvedValue(null) }),
+    create: jest.fn().mockResolvedValue({ _id: "cat123", name: "AI Insights" }),
+  },
+}));
+
+jest.mock("@/models/blog-tag", () => ({
+  __esModule: true,
+  default: {
+    findOne: jest.fn().mockReturnValue({ lean: jest.fn().mockResolvedValue(null) }),
+    create: jest.fn().mockResolvedValue({ _id: "tag123" }),
+    find: jest.fn().mockReturnValue({ lean: jest.fn().mockResolvedValue([]) }),
+  },
+}));
+
+jest.mock("@/models/user", () => ({
+  __esModule: true,
+  default: {
+    findOne: jest.fn().mockReturnValue({ lean: jest.fn().mockResolvedValue({ _id: "admin1", name: "Admin" }) }),
+  },
+}));
+
+jest.mock("@/models/content-asset", () => ({
+  __esModule: true,
+  default: {
+    create: jest.fn().mockResolvedValue({}),
+  },
+}));
+
+jest.mock("@/models/content-metric", () => ({
+  __esModule: true,
+  default: {
+    create: jest.fn().mockResolvedValue({}),
+  },
+}));
+
 jest.mock("@/models/content-campaign", () => ({
   __esModule: true,
   default: {

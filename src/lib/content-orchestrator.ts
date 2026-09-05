@@ -4,11 +4,17 @@ import ContentPlan from "@/models/content-plan";
 import ContentTopic from "@/models/content-topic";
 import ContentItem from "@/models/content-item";
 import ContentSettings from "@/models/content-settings";
+import ContentDistribution from "@/models/content-distribution";
+import BlogPost from "@/models/blog-post";
+import BlogCategory from "@/models/blog-category";
+import BlogTag from "@/models/blog-tag";
+import User from "@/models/user";
 import type { IContentCampaign } from "@/models/content-campaign";
 import type { IContentPlan } from "@/models/content-plan";
 import type { IContentTopic } from "@/models/content-topic";
 import type { IContentItem } from "@/models/content-item";
 import { generateSlug } from "@/lib/generate-slug";
+import { slugify } from "@/lib/utils";
 import { discoverTopics, scoreTopics, selectBestTopics } from "@/lib/topic-discovery";
 import {
   generateArticle,
@@ -18,6 +24,7 @@ import {
 import { runQualityPipeline } from "@/lib/content-quality";
 import { findInternalLinks } from "@/lib/content-linking";
 import { checkForDuplicates } from "@/lib/content-analytics";
+import { getAdapter } from "@/lib/social-adapters";
 
 // ─── Campaign Management ─────────────────────────────────────────────────────
 
@@ -510,6 +517,116 @@ export async function executePlan(
         status: newStatus,
       });
 
+      // ─── Bridge: Create BlogPost from ContentItem ──────────────────────────
+      let blogPostId: string | null = null;
+      try {
+        // Find or create default category
+        let category = await BlogCategory.findOne({ slug: "ai-insights" }).lean();
+        if (!category) {
+          category = await BlogCategory.create({
+            name: "AI Insights",
+            slug: "ai-insights",
+            description: "Articles about AI, technology, and digital innovation",
+            postCount: 0,
+            sortOrder: 0,
+            isActive: true,
+          });
+        }
+
+        // Find or create tags from keywords
+        const tagNames: string[] = [];
+        if (topic.primaryKeyword) tagNames.push(topic.primaryKeyword);
+        if (topic.secondaryKeywords?.length) {
+          tagNames.push(...topic.secondaryKeywords.slice(0, 5));
+        }
+        if (tagNames.length === 0) {
+          tagNames.push(topic.title.split(" ").slice(0, 3).join(" "));
+        }
+
+        const tagIds: string[] = [];
+        for (const tagName of tagNames) {
+          const tagSlug = slugify(tagName);
+          let tag = await BlogTag.findOne({ slug: tagSlug }).lean();
+          if (!tag) {
+            tag = await BlogTag.create({
+              name: tagName,
+              slug: tagSlug,
+              postCount: 0,
+            });
+          }
+          tagIds.push(tag._id.toString());
+        }
+
+        // Find a default author (admin or first user)
+        const adminUser = await User.findOne({ role: { $in: ["super-admin", "admin"] } })
+          .select("_id")
+          .lean();
+        const authorId = adminUser?._id || campaign.createdBy || "000000000000000000000000";
+
+        // Read the updated content item to get final content
+        const finalItem = await ContentItem.findById(articleItem._id).lean() as unknown as IContentItem;
+
+        const blogSlug = generateSlug(finalItem.title);
+
+        // Check for existing blog post with same slug
+        const existingPost = await BlogPost.findOne({ slug: blogSlug }).lean();
+        if (!existingPost) {
+          const blogPost = await BlogPost.create({
+            title: finalItem.title,
+            slug: blogSlug,
+            content: finalItem.content || "",
+            excerpt: finalItem.excerpt || finalItem.content?.substring(0, 200) || "",
+            category: category._id,
+            tags: tagIds,
+            author: authorId,
+            status: "published",
+            featuredImage: finalItem.featuredImage || "",
+            seo: {
+              metaTitle: finalItem.seo?.metaTitle || finalItem.title,
+              metaDescription: finalItem.seo?.metaDescription || finalItem.excerpt || "",
+              keywords: finalItem.seo?.keywords || tagNames,
+            },
+            publishedAt: new Date(),
+            readTime: Math.max(1, Math.ceil((finalItem.content?.split(/\s+/).length || 0) / 200)),
+            createdBy: authorId,
+          });
+
+          blogPostId = blogPost._id.toString();
+
+          // Update ContentItem with the related blog post reference
+          await ContentItem.findByIdAndUpdate(articleItem._id, {
+            relatedBlogPost: blogPost._id,
+          });
+
+          // Update category post count
+          await BlogCategory.findByIdAndUpdate(category._id, {
+            $inc: { postCount: 1 },
+          });
+
+          // Update tag post counts
+          for (const tid of tagIds) {
+            await BlogTag.findByIdAndUpdate(tid, { $inc: { postCount: 1 } });
+          }
+        }
+      } catch (blogErr) {
+        const msg = blogErr instanceof Error ? blogErr.message : "BlogPost creation failed";
+        console.error(`[ContentOrchestrator] BlogPost bridge failed: ${msg}`);
+      }
+
+      // Record in audit trail
+      if (blogPostId) {
+        await ContentItem.findByIdAndUpdate(articleItem._id, {
+          $push: {
+            revisions: {
+              content: articleData.content || "",
+              revisedAt: new Date(),
+              revisedBy: "000000000000000000000000",
+              reason: `BlogPost created: ${blogPostId}`,
+            },
+          },
+        });
+      }
+
       const socials = await generateSocialVariants(
         { ...articleItem.toObject(), ...articleData } as IContentItem,
         ["linkedin", "facebook", "instagram", "x"]
@@ -539,6 +656,45 @@ export async function executePlan(
       await ContentItem.findByIdAndUpdate(articleItem._id, {
         featuredImage: heroPrompt,
       });
+
+      // ─── Social Adapter Invocation ──────────────────────────────────────────
+      for (const socialItem of socialItems) {
+        try {
+          const platform = socialItem.platform || "linkedin";
+          const adapter = getAdapter(platform);
+
+          const isConnected = await adapter.isConnected();
+          if (isConnected) {
+            const publishResult = await adapter.publish({
+              content: socialItem.content || "",
+              title: socialItem.title,
+              hashtags: [],
+            });
+
+            await ContentDistribution.create({
+              contentItem: socialItem._id,
+              platform,
+              status: publishResult.success ? "published" : "failed",
+              platformPostId: publishResult.platformPostId,
+              platformUrl: publishResult.platformUrl,
+              publishedAt: publishResult.publishedAt,
+              error: publishResult.error,
+              response: publishResult as unknown as Record<string, unknown>,
+            });
+
+            if (publishResult.success) {
+              await ContentItem.findByIdAndUpdate(socialItem._id, {
+                status: "published",
+                publishedAt: new Date(),
+              });
+            }
+          }
+          // If not connected, leave in draft for manual publishing later
+        } catch (socialErr) {
+          const msg = socialErr instanceof Error ? socialErr.message : "Social publish failed";
+          console.error(`[ContentOrchestrator] Social adapter failed for ${socialItem.platform}: ${msg}`);
+        }
+      }
 
       itemsCreated += 1 + socialItems.length;
     } catch (err) {

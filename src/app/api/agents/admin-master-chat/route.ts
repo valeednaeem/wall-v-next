@@ -8,6 +8,7 @@ import User from "@/models/user";
 import connectToDatabase from "@/lib/mongodb";
 import { executeAIRequest } from "@/lib/ai-execution-engine";
 import { requireAuthFromCookie, ADMIN_ROLES } from "@/lib/api-middleware";
+import { executeContentTool } from "@/lib/content-agent-tools";
 
 const MASTER_AGENT_SLUG = "project-manager";
 
@@ -215,6 +216,24 @@ async function executeInternalTool(toolName: string, args: Record<string, unknow
     case "get_system_health": return handleGetSystemHealth();
     case "get_task_list": return handleGetTaskList(args.status as string, args.projectId as string, args.limit as number);
     case "generate_report": return handleGenerateReport(args.type as string, args.dateRange as string);
+    // Content Orchestrator tools
+    case "create_content_campaign":
+    case "generate_weekly_plan":
+    case "approve_content_plan":
+    case "execute_content_plan":
+    case "get_content_status":
+    case "pause_content_campaign":
+    case "get_content_performance":
+    case "check_content_duplicates":
+    case "get_connection_status":
+    case "publish_content_item":
+    case "get_content_schedule":
+    case "execute_daily_content":
+    case "repurpose_content":
+    case "batch_repurpose":
+    case "find_content_duplicates":
+    case "merge_content_duplicates":
+      return await executeContentTool(toolName, args);
     default: return { error: `Unknown tool: ${toolName}` };
   }
 }
@@ -294,6 +313,23 @@ Available internal tools:
 - get_system_health: Check system health
 - get_task_list: List internal tasks
 - generate_report: Generate operational reports
+
+You also have access to Content Orchestrator tools:
+- create_content_campaign: Create a new content campaign
+- generate_weekly_plan: Generate a weekly content plan for a campaign
+- approve_content_plan: Approve a pending content plan
+- execute_content_plan: Execute an approved content plan
+- get_content_status: Get current content status
+- pause_content_campaign: Pause a campaign
+- get_content_performance: Get content analytics
+- check_content_duplicates: Check for duplicate content
+- get_connection_status: Check social media connections
+- publish_content_item: Publish content to platforms
+- get_content_schedule: View upcoming schedule
+- execute_daily_content: Trigger daily content execution
+- repurpose_content: Repurpose content into other formats
+- find_content_duplicates: Scan for duplicates
+- merge_content_duplicates: Merge duplicate content
 
 When a tool is needed, respond with a JSON block:
 \`\`\`json

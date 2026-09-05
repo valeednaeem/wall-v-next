@@ -107,11 +107,11 @@ export class XAdapter implements PlatformAdapter {
     }
   }
 
-  getAuthUrl(): string {
+  async getAuthUrl(): Promise<string> {
     if (!X_CLIENT_ID || !X_REDIRECT_URI) return "";
 
     const codeVerifier = generateCodeVerifier();
-    const codeChallenge = base64UrlEncode(sha256(codeVerifier));
+    const codeChallenge = await generateCodeChallenge(codeVerifier);
 
     const params = new URLSearchParams({
       response_type: "code",
@@ -289,15 +289,26 @@ function generateCodeVerifier(): string {
   return base64UrlEncode(array);
 }
 
-function sha256(plain: string): Uint8Array {
+async function sha256(plain: string): Promise<ArrayBuffer> {
   const encoder = new TextEncoder();
   const data = encoder.encode(plain);
-  return new Uint8Array(data);
+  return await crypto.subtle.digest("SHA-256", data);
 }
 
-function base64UrlEncode(data: Uint8Array | string): string {
-  const bytes =
-    typeof data === "string" ? new TextEncoder().encode(data) : data;
+async function generateCodeChallenge(verifier: string): Promise<string> {
+  const digest = await sha256(verifier);
+  return base64UrlEncode(new Uint8Array(digest));
+}
+
+function base64UrlEncode(data: Uint8Array | ArrayBuffer | string): string {
+  let bytes: Uint8Array;
+  if (typeof data === "string") {
+    bytes = new TextEncoder().encode(data);
+  } else if (data instanceof ArrayBuffer) {
+    bytes = new Uint8Array(data);
+  } else {
+    bytes = data;
+  }
   let binary = "";
   for (const byte of bytes) {
     binary += String.fromCharCode(byte);

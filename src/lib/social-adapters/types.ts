@@ -22,6 +22,6 @@ export interface PlatformAdapter {
   name: string;
   isConnected(): Promise<boolean>;
   publish(post: SocialPost): Promise<PublishResult>;
-  getAuthUrl?(): string;
+  getAuthUrl?(): string | Promise<string>;
   refreshToken?(): Promise<boolean>;
 }

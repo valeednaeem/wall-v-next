@@ -2,6 +2,7 @@ import { connectToDatabase } from "@/lib/mongodb";
 import ContentCampaign from "@/models/content-campaign";
 import Product from "@/models/product";
 import { getProviderAdapter } from "@/lib/ai-provider-adapter";
+import { analyzePerformanceTrends } from "@/lib/content-analytics";
 
 export interface DiscoveredTopic {
   title: string;
@@ -129,6 +130,40 @@ Generate ${count} diverse content topics that align with Wall-V's services, have
 export async function scoreTopics(
   topics: DiscoveredTopic[]
 ): Promise<DiscoveredTopic[]> {
+  // Fetch performance trends for analytics feedback loop
+  let trends: Awaited<ReturnType<typeof analyzePerformanceTrends>> | null = null;
+  try {
+    trends = await analyzePerformanceTrends({ days: 30 });
+  } catch {
+    // Trends are optional — if unavailable, score without them
+  }
+
+  // Build lookup maps from trends
+  const contentTypePerformance: Record<string, number> = {};
+  if (trends?.bestContentTypes?.length) {
+    const maxViews = Math.max(...trends.bestContentTypes.map((ct) => ct.avgViews), 1);
+    for (const ct of trends.bestContentTypes) {
+      // Normalize to 0-1 range
+      contentTypePerformance[ct.type] = ct.avgViews / maxViews;
+    }
+  }
+
+  const topicPerformance: Record<string, number> = {};
+  if (trends?.bestTopics?.length) {
+    const maxViews = Math.max(...trends.bestTopics.map((t) => t.avgViews), 1);
+    for (const t of trends.bestTopics) {
+      topicPerformance[t.topic.toLowerCase()] = t.avgViews / maxViews;
+    }
+  }
+
+  const platformPerformance: Record<string, number> = {};
+  if (trends?.bestPlatforms?.length) {
+    const maxViews = Math.max(...trends.bestPlatforms.map((p) => p.totalViews), 1);
+    for (const p of trends.bestPlatforms) {
+      platformPerformance[p.platform] = p.totalViews / maxViews;
+    }
+  }
+
   return topics.map((topic) => {
     const contentDifferentiation = 7;
     const factualUncertainty = 3;
@@ -148,7 +183,49 @@ export async function scoreTopics(
       factualUncertainty * 0.05 +
       saturation * 0.05;
 
-    const overallScore = Math.round((weightedScore - penalties) * 10) / 10;
+    let overallScore = Math.round((weightedScore - penalties) * 10) / 10;
+
+    // ─── Analytics Feedback Loop ──────────────────────────────────────────
+    if (trends) {
+      let analyticsAdjustment = 0;
+
+      // Boost/reduce based on content type performance
+      const contentTypeKey = topic.contentType?.toLowerCase() || "";
+      if (contentTypePerformance[contentTypeKey] !== undefined) {
+        const perf = contentTypePerformance[contentTypeKey];
+        if (perf > 0.6) {
+          analyticsAdjustment += 0.5; // Boost high-performing content types
+        } else if (perf < 0.3) {
+          analyticsAdjustment -= 0.3; // Reduce low-performing content types
+        }
+      }
+
+      // Boost/reduce based on topic keyword match
+      const topicKey = topic.primaryKeyword?.toLowerCase() || "";
+      for (const [trendTopic, perf] of Object.entries(topicPerformance)) {
+        if (topicKey.includes(trendTopic) || trendTopic.includes(topicKey.split(" ")[0] || "")) {
+          if (perf > 0.6) {
+            analyticsAdjustment += 0.4;
+          } else if (perf < 0.2) {
+            analyticsAdjustment -= 0.2;
+          }
+          break;
+        }
+      }
+
+      // Small boost for social-heavy topics if social platforms perform well
+      if (topic.socialPotential >= 7) {
+        const socialPerf = (platformPerformance["linkedin"] || 0) + (platformPerformance["x"] || 0);
+        if (socialPerf > 1) {
+          analyticsAdjustment += 0.2;
+        }
+      }
+
+      // Apply adjustment capped at ±10% of base score
+      const maxAdjustment = Math.abs(overallScore) * 0.1;
+      analyticsAdjustment = Math.max(-maxAdjustment, Math.min(maxAdjustment, analyticsAdjustment));
+      overallScore += analyticsAdjustment;
+    }
 
     return {
       ...topic,

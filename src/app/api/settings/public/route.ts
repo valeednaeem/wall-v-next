@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import SiteSettings from "@/models/site-settings";
+import AdSenseSettings from "@/models/adsense-settings";
 
 export async function GET() {
   try {
@@ -12,6 +13,30 @@ export async function GET() {
       const shortKey = s.key.replace(`${s.category}.`, "");
       grouped[s.category][shortKey] = s.value;
     });
+
+    // Fetch AdSense settings (safe for frontend - only expose enabled, publisherId, autoAdsEnabled, adUnits)
+    let adsense = { enabled: false, publisherId: "", autoAdsEnabled: false, adUnits: [] as Array<{ id: string; name: string; format: string; slot: string; size: string | { width: number; height: number }; placement: string; enabled: boolean }> };
+    try {
+      const adsenseDoc = await AdSenseSettings.findOne({ key: "adsense" }).lean();
+      if (adsenseDoc) {
+        adsense = {
+          enabled: adsenseDoc.enabled,
+          publisherId: adsenseDoc.publisherId,
+          autoAdsEnabled: adsenseDoc.autoAdsEnabled,
+          adUnits: adsenseDoc.adUnits.map((u: { id: string; name: string; format: string; slot: string; size: string | { width: number; height: number }; placement: string; enabled: boolean }) => ({
+            id: u.id,
+            name: u.name,
+            format: u.format,
+            slot: u.slot,
+            size: u.size,
+            placement: u.placement,
+            enabled: u.enabled,
+          })),
+        };
+      }
+    } catch {
+      // AdSense settings fetch failed - use defaults
+    }
 
     // Build structured address from contact settings (single source of truth)
     const contact = grouped.contact || {};
@@ -73,6 +98,7 @@ export async function GET() {
           latitude: contact.latitude || 32.1878,
           longitude: contact.longitude || 74.1945,
         },
+        adsense,
       },
     });
   } catch (error) {

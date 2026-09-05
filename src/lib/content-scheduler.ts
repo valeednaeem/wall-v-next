@@ -3,6 +3,7 @@ import ContentCampaign from "@/models/content-campaign";
 import ContentPlan from "@/models/content-plan";
 import ContentItem from "@/models/content-item";
 import ContentTopic from "@/models/content-topic";
+import ContentSettings from "@/models/content-settings";
 import type { IContentCampaign } from "@/models/content-campaign";
 import type { IContentPlan } from "@/models/content-plan";
 import type { IContentItem } from "@/models/content-item";
@@ -114,6 +115,10 @@ export async function executeDailyContent(): Promise<DailyExecutionResult> {
     .populate("campaign")
     .lean();
 
+  // Read publishingMode from ContentSettings
+  const contentSettings = await ContentSettings.findOne({ key: "content" }).lean();
+  const publishingMode = (contentSettings?.value as Record<string, unknown>)?.publishingMode as string || "review";
+
   for (const plan of approvedPlans) {
     const campaign = plan.campaign as unknown as IContentCampaign | null;
     if (!campaign) continue;
@@ -144,14 +149,19 @@ export async function executeDailyContent(): Promise<DailyExecutionResult> {
         try {
           const contentItem = item as unknown as IContentItem;
 
+          // Determine status based on publishingMode
+          const targetStatus = publishingMode === "auto" ? "approved" : "review";
+
           await ContentItem.findByIdAndUpdate(item._id, {
-            status: "review",
+            status: targetStatus,
             $push: {
               revisions: {
                 content: contentItem.content || "",
                 revisedAt: new Date(),
                 revisedBy: "000000000000000000000000",
-                reason: "Automated daily execution — moved to review",
+                reason: publishingMode === "auto"
+                  ? "Automated daily execution — auto-publish mode"
+                  : "Automated daily execution — moved to review",
               },
             },
           });
@@ -159,7 +169,8 @@ export async function executeDailyContent(): Promise<DailyExecutionResult> {
           detail.itemsProcessed++;
           result.executed++;
 
-          if (!contentItem.approvalRequired) {
+          if (publishingMode === "auto") {
+            // Auto mode: approve and schedule immediately
             await ContentItem.findByIdAndUpdate(item._id, {
               status: "approved",
               approvedAt: new Date(),
@@ -173,7 +184,27 @@ export async function executeDailyContent(): Promise<DailyExecutionResult> {
 
             detail.itemsPublished++;
             result.published++;
+          } else if (publishingMode === "hybrid") {
+            // Hybrid mode: auto-approve if no approval required, otherwise review
+            if (!contentItem.approvalRequired) {
+              await ContentItem.findByIdAndUpdate(item._id, {
+                status: "approved",
+                approvedAt: new Date(),
+                approvedBy: "000000000000000000000000",
+              });
+
+              await ContentItem.findByIdAndUpdate(item._id, {
+                status: "scheduled",
+                scheduledAt: today,
+              });
+
+              detail.itemsPublished++;
+              result.published++;
+            } else {
+              result.pendingApproval++;
+            }
           } else {
+            // Review mode (default): always require human review
             result.pendingApproval++;
           }
         } catch (err) {

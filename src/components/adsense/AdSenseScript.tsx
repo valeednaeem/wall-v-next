@@ -16,6 +16,7 @@ let scriptLoaded = false;
 export default function AdSenseScript() {
   const [publisherId, setPublisherId] = useState("");
   const [enabled, setEnabled] = useState(false);
+  const [autoAdsEnabled, setAutoAdsEnabled] = useState(false);
   const pathname = usePathname();
 
   useEffect(() => {
@@ -28,6 +29,7 @@ export default function AdSenseScript() {
           if (adsense?.enabled && adsense?.publisherId) {
             setEnabled(true);
             setPublisherId(adsense.publisherId);
+            setAutoAdsEnabled(adsense.autoAdsEnabled ?? false);
           }
         }
       } catch {
@@ -42,6 +44,19 @@ export default function AdSenseScript() {
       window.adsbygoogle = window.adsbygoogle || [];
     }
   }, [enabled, publisherId]);
+
+  useEffect(() => {
+    if (enabled && publisherId && autoAdsEnabled) {
+      try {
+        (window.adsbygoogle as unknown[]).push({
+          google_ad_client: publisherId,
+          enable_page_level_ads: true,
+        });
+      } catch {
+        // AdSense not ready yet
+      }
+    }
+  }, [enabled, publisherId, autoAdsEnabled]);
 
   if (!enabled || !publisherId) return null;
   if (!shouldLoadAdSense(pathname)) return null;
