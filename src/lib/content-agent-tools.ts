@@ -227,6 +227,40 @@ export const CONTENT_TOOL_DEFINITIONS: AgentToolDefinition[] = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "find_content_duplicates",
+      description: "Scan the content library for duplicate or near-duplicate content across ContentItems and BlogPosts",
+      parameters: {
+        type: "object",
+        properties: {
+          campaignId: { type: "string", description: "Optional campaign ID to scope the scan" },
+          threshold: { type: "number", description: "Similarity threshold 0-1 (default 0.6)" },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "merge_content_duplicates",
+      description: "Auto-merge two duplicate content items into one superior piece",
+      parameters: {
+        type: "object",
+        properties: {
+          primaryId: { type: "string", description: "ID of the primary (higher quality) content item" },
+          duplicateId: { type: "string", description: "ID of the duplicate content item to merge" },
+          strategy: {
+            type: "string",
+            enum: ["best_quality", "combine_strengths", "ai_synthesize"],
+            description: "Merge strategy (default: ai_synthesize)",
+          },
+        },
+        required: ["primaryId", "duplicateId"],
+      },
+    },
+  },
 ];
 
 // ─── Content Tool Executors ──────────────────────────────────────────────────
@@ -569,6 +603,45 @@ async function executeBatchRepurpose(args: Record<string, unknown>) {
   };
 }
 
+async function executeFindContentDuplicates(args: Record<string, unknown>) {
+  const { findAllDuplicates } = await import("@/lib/content-deduplication");
+  const groups = await findAllDuplicates({
+    campaignId: args.campaignId as string | undefined,
+    threshold: args.threshold as number | undefined,
+  });
+
+  return {
+    totalGroups: groups.length,
+    groups: groups.map((g) => ({
+      primary: { id: g.primary.id, title: g.primary.title },
+      duplicates: g.duplicates.map((d) => ({ id: d.id, title: d.title })),
+      similarityScore: g.similarityScore,
+      recommendedAction: g.recommendedAction,
+    })),
+    mergeable: groups.filter((g) => g.recommendedAction === "merge").length,
+  };
+}
+
+async function executeMergeContentDuplicates(args: Record<string, unknown>) {
+  const { autoMerge } = await import("@/lib/content-deduplication");
+  const merged = await autoMerge(
+    args.primaryId as string,
+    args.duplicateId as string,
+    {
+      strategy: (args.strategy as "best_quality" | "combine_strengths" | "ai_synthesize") || "ai_synthesize",
+    }
+  );
+
+  return {
+    title: merged.title,
+    contentLength: merged.content.length,
+    primaryKeyword: merged.primaryKeyword,
+    qualityScore: merged.qualityScore,
+    internalLinksCount: merged.internalLinks.length,
+    message: `Successfully merged content into "${merged.title}"`,
+  };
+}
+
 // ─── Content Tool Executor ───────────────────────────────────────────────────
 
 export async function executeContentTool(
@@ -604,6 +677,10 @@ export async function executeContentTool(
       return executeRepurposeContent(args);
     case "batch_repurpose":
       return executeBatchRepurpose(args);
+    case "find_content_duplicates":
+      return executeFindContentDuplicates(args);
+    case "merge_content_duplicates":
+      return executeMergeContentDuplicates(args);
     default:
       return { error: `Unknown content tool: ${toolName}` };
   }

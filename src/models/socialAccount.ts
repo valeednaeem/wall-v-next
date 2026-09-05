@@ -2,7 +2,7 @@ import mongoose, { Schema, Document } from "mongoose";
 
 export interface ISocialAccount extends Document {
   user: mongoose.Types.ObjectId;
-  provider: "google" | "github" | "facebook" | "twitter" | "linkedin";
+  provider: "google" | "github" | "facebook" | "twitter" | "linkedin" | "x" | "instagram" | "tiktok" | "youtube";
   providerId: string;
   email?: string;
   name?: string;
@@ -19,7 +19,7 @@ const SocialAccountSchema = new Schema<ISocialAccount>(
     user: { type: Schema.Types.ObjectId, ref: "User", required: true },
     provider: {
       type: String,
-      enum: ["google", "github", "facebook", "twitter", "linkedin"],
+      enum: ["google", "github", "facebook", "twitter", "linkedin", "x", "instagram", "tiktok", "youtube"],
       required: true,
     },
     providerId: { type: String, required: true },

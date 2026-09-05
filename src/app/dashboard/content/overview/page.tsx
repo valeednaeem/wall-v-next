@@ -15,6 +15,8 @@ import {
   Play,
   Zap,
   Loader2,
+  Activity,
+  Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -44,12 +46,21 @@ interface ConnectionStatus {
   error?: string;
 }
 
+interface GA4Status {
+  configured: boolean;
+  realtime?: {
+    activeUsers: number;
+    pageViews: number;
+  };
+}
+
 interface OverviewData {
   campaigns: Campaign[];
   todayItems: ContentItem[];
   upcomingItems: ContentItem[];
   recentPublished: ContentItem[];
   connections: Record<string, ConnectionStatus>;
+  ga4Status: GA4Status;
   metrics: {
     totalArticles: number;
     published: number;
@@ -92,11 +103,12 @@ export default function ContentOverviewPage() {
   const fetchOverview = useCallback(async () => {
     setLoading(true);
     try {
-      const [campaignsRes, itemsRes, connectionsRes, scheduleRes] = await Promise.allSettled([
+      const [campaignsRes, itemsRes, connectionsRes, scheduleRes, ga4Res] = await Promise.allSettled([
         fetch("/api/content/campaigns"),
         fetch("/api/content/items?limit=50"),
         fetch("/api/content/connections"),
         fetch("/api/content/schedule?days=7"),
+        fetch("/api/content/analytics/ga4-status"),
       ]);
 
       const campaigns =
@@ -107,6 +119,8 @@ export default function ContentOverviewPage() {
         connectionsRes.status === "fulfilled" ? await connectionsRes.value.json() : { connections: {} };
       const schedule =
         scheduleRes.status === "fulfilled" ? await scheduleRes.value.json() : { data: [] };
+      const ga4 =
+        ga4Res.status === "fulfilled" ? await ga4Res.value.json() : { configured: false };
 
       const allItems: ContentItem[] = items.data || [];
       const now = new Date();
@@ -165,6 +179,7 @@ export default function ContentOverviewPage() {
         upcomingItems,
         recentPublished,
         connections: connections.connections || {},
+        ga4Status: ga4,
         metrics,
         nextScheduled,
         lastExecution,
@@ -306,7 +321,7 @@ export default function ContentOverviewPage() {
 
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Active Campaign */}
-        <Card className="lg:col-span-2">
+        <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <Megaphone className="h-4 w-4" /> Active Campaign
@@ -390,6 +405,55 @@ export default function ContentOverviewPage() {
             <p className="text-xs text-muted-foreground mt-3">
               {connectedPlatforms} of 6 connected
             </p>
+          </CardContent>
+        </Card>
+
+        {/* GA4 Analytics Status */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Activity className="h-4 w-4" /> GA4 Analytics
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {data.ga4Status?.configured ? (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 p-2 rounded-lg bg-green-50">
+                  <Circle className="h-2.5 w-2.5 fill-current text-green-500" />
+                  <span className="text-xs font-medium text-green-800">
+                    GA4 Connected — Real-time analytics active
+                  </span>
+                </div>
+                {data.ga4Status.realtime && (
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="p-2 rounded-lg bg-muted/30 text-center">
+                      <p className="text-lg font-bold">
+                        {data.ga4Status.realtime.activeUsers}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Active Users</p>
+                    </div>
+                    <div className="p-2 rounded-lg bg-muted/30 text-center">
+                      <p className="text-lg font-bold">
+                        {data.ga4Status.realtime.pageViews}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Page Views</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-center py-4">
+                <p className="text-sm text-muted-foreground mb-3">
+                  Configure GA4 for real-time analytics
+                </p>
+                <Link
+                  href="/dashboard/settings/analytics"
+                  className="inline-flex items-center gap-2 text-sm bg-primary text-primary-foreground rounded-lg px-4 py-2 hover:bg-primary/90 transition-colors"
+                >
+                  <Settings className="h-4 w-4" /> Configure GA4
+                </Link>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

@@ -6,6 +6,9 @@ import {
   AlertCircle,
   ExternalLink,
   RefreshCw,
+  CheckCircle,
+  Clock,
+  XCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,6 +18,8 @@ interface ConnectionData {
   connected: boolean;
   lastPublish?: string;
   error?: string;
+  envConfigured?: boolean;
+  tokenValid?: boolean;
   accountInfo?: {
     email?: string;
     name?: string;
@@ -73,6 +78,50 @@ const PLATFORMS = [
     instructions: "Requires YouTube Data API v3 via Google Cloud Console. Enable YouTube Data API.",
   },
 ];
+
+function getStatusBadge(conn: ConnectionData | undefined): {
+  variant: "success" | "warning" | "destructive" | "outline";
+  label: string;
+  icon: React.ReactNode;
+} {
+  if (!conn) {
+    return {
+      variant: "outline",
+      label: "Unknown",
+      icon: <AlertCircle className="h-3 w-3" />,
+    };
+  }
+
+  if (conn.connected && conn.tokenValid) {
+    return {
+      variant: "success",
+      label: "Connected",
+      icon: <CheckCircle className="h-3 w-3" />,
+    };
+  }
+
+  if (conn.connected && !conn.tokenValid) {
+    return {
+      variant: "warning",
+      label: "Expiring Soon",
+      icon: <Clock className="h-3 w-3" />,
+    };
+  }
+
+  if (conn.envConfigured === false) {
+    return {
+      variant: "outline",
+      label: "Missing API Keys",
+      icon: <AlertCircle className="h-3 w-3" />,
+    };
+  }
+
+  return {
+    variant: "destructive",
+    label: "Not Connected",
+    icon: <XCircle className="h-3 w-3" />,
+  };
+}
 
 export default function ConnectionsPage() {
   const [connections, setConnections] = useState<Record<string, ConnectionData>>({});
@@ -155,6 +204,7 @@ export default function ConnectionsPage() {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {PLATFORMS.map((platform) => {
             const conn = connections[platform.id];
+            const status = getStatusBadge(conn);
             const connected = conn?.connected || false;
 
             return (
@@ -178,11 +228,10 @@ export default function ConnectionsPage() {
                       </div>
                       {platform.name}
                     </div>
-                    {connected ? (
-                      <Badge variant="success">Connected</Badge>
-                    ) : (
-                      <Badge variant="outline">Not Connected</Badge>
-                    )}
+                    <Badge variant={status.variant} className="flex items-center gap-1">
+                      {status.icon}
+                      {status.label}
+                    </Badge>
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
@@ -222,6 +271,19 @@ export default function ConnectionsPage() {
                           <span className="font-medium">{conn.accountInfo.email}</span>
                         </div>
                       )}
+                      {conn.accountInfo.expiresAt && (
+                        <div className="flex justify-between text-xs">
+                          <span className="text-muted-foreground">Expires:</span>
+                          <span className={cn(
+                            "font-medium",
+                            new Date(conn.accountInfo.expiresAt) < new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+                              ? "text-yellow-600"
+                              : "text-green-600"
+                          )}>
+                            {new Date(conn.accountInfo.expiresAt).toLocaleDateString()}
+                          </span>
+                        </div>
+                      )}
                       {conn.lastPublish && (
                         <div className="flex justify-between text-xs">
                           <span className="text-muted-foreground">Last Publish:</span>
@@ -235,10 +297,10 @@ export default function ConnectionsPage() {
 
                   {/* Error */}
                   {conn?.error && (
-                    <div className="p-2.5 rounded-lg bg-red-50 border border-red-200">
+                    <div className="p-2.5 rounded-lg bg-yellow-50 border border-yellow-200">
                       <div className="flex items-start gap-2">
-                        <AlertCircle className="h-3.5 w-3.5 text-red-500 mt-0.5 shrink-0" />
-                        <p className="text-xs text-red-700">{conn.error}</p>
+                        <AlertCircle className="h-3.5 w-3.5 text-yellow-500 mt-0.5 shrink-0" />
+                        <p className="text-xs text-yellow-700">{conn.error}</p>
                       </div>
                     </div>
                   )}

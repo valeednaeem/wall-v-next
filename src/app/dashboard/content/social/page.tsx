@@ -8,6 +8,9 @@ import {
   Circle,
   RefreshCw,
   Check,
+  Copy,
+  Trash2,
+  AlertTriangle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -94,7 +97,34 @@ const STATUS_COLORS: Record<string, string> = {
   review: "bg-yellow-100 text-yellow-800",
   draft: "bg-gray-100 text-gray-800",
   pending: "bg-yellow-100 text-yellow-800",
+  archived: "bg-red-100 text-red-800",
 };
+
+interface DuplicateCandidate {
+  id: string;
+  title: string;
+  type: "content_item" | "blog_post";
+  contentType?: string;
+  primaryKeyword?: string;
+  publishedAt?: string;
+  qualityScore?: number;
+  status: string;
+}
+
+interface DuplicateGroup {
+  primary: DuplicateCandidate;
+  duplicates: DuplicateCandidate[];
+  similarityScore: number;
+  recommendedAction: "merge" | "keep_both" | "archive";
+}
+
+interface DedupStats {
+  totalGroups: number;
+  totalItems: number;
+  mergeable: number;
+  keepBoth: number;
+  archive: number;
+}
 
 export default function SocialPage() {
   const [posts, setPosts] = useState<SocialPost[]>([]);
@@ -108,6 +138,13 @@ export default function SocialPage() {
   const [selectedFormats, setSelectedFormats] = useState<string[]>([]);
   const [repurposing, setRepurposing] = useState(false);
   const [repurposeResult, setRepurposeResult] = useState<RepurposeResult | null>(null);
+
+  const [dedupGroups, setDedupGroups] = useState<DuplicateGroup[]>([]);
+  const [dedupStats, setDedupStats] = useState<DedupStats | null>(null);
+  const [dedupLoading, setDedupLoading] = useState(false);
+  const [mergingId, setMergingId] = useState<string | null>(null);
+  const [mergeStrategy, setMergeStrategy] = useState<string>("ai_synthesize");
+  const [batchMerging, setBatchMerging] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -189,6 +226,58 @@ export default function SocialPage() {
     setSelectedFormats((prev) =>
       prev.includes(format) ? prev.filter((f) => f !== format) : [...prev, format]
     );
+  };
+
+  const handleScanDuplicates = async () => {
+    setDedupLoading(true);
+    try {
+      const res = await fetch("/api/content/dedup");
+      const data = await res.json();
+      if (data.success) {
+        setDedupGroups(data.data.groups);
+        setDedupStats(data.data.stats);
+      }
+    } catch (error) {
+      console.error("Failed to scan duplicates:", error);
+    } finally {
+      setDedupLoading(false);
+    }
+  };
+
+  const handleMerge = async (primaryId: string, duplicateId: string) => {
+    setMergingId(duplicateId);
+    try {
+      await fetch("/api/content/dedup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          primaryId,
+          duplicateId,
+          strategy: mergeStrategy,
+        }),
+      });
+      handleScanDuplicates();
+    } catch (error) {
+      console.error("Merge failed:", error);
+    } finally {
+      setMergingId(null);
+    }
+  };
+
+  const handleBatchMerge = async () => {
+    setBatchMerging(true);
+    try {
+      await fetch("/api/content/dedup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "batch" }),
+      });
+      handleScanDuplicates();
+    } catch (error) {
+      console.error("Batch merge failed:", error);
+    } finally {
+      setBatchMerging(false);
+    }
   };
 
   const getPlatformPosts = (platform: string) =>
@@ -304,6 +393,10 @@ export default function SocialPage() {
                 <RefreshCw className="h-3 w-3" />
                 Repurpose
               </TabsTrigger>
+              <TabsTrigger value="dedup" className="flex items-center gap-1.5 px-3">
+                <Copy className="h-3 w-3" />
+                Deduplication
+              </TabsTrigger>
             </TabsList>
 
             {PLATFORMS.map((platform) => (
@@ -412,7 +505,6 @@ export default function SocialPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {/* Source Content Selection */}
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Source Content</label>
                     <Select value={selectedItemId} onValueChange={setSelectedItemId}>
@@ -429,7 +521,6 @@ export default function SocialPage() {
                     </Select>
                   </div>
 
-                  {/* Format Selection */}
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Target Formats</label>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
@@ -462,7 +553,6 @@ export default function SocialPage() {
                     </div>
                   </div>
 
-                  {/* Repurpose Button */}
                   <Button
                     onClick={handleRepurpose}
                     disabled={!selectedItemId || selectedFormats.length === 0 || repurposing}
@@ -481,14 +571,12 @@ export default function SocialPage() {
                     )}
                   </Button>
 
-                  {/* Results */}
                   {repurposeResult && (
                     <div className="space-y-3 mt-4">
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Check className="h-4 w-4 text-green-500" />
                         {repurposeResult.summary}
                       </div>
-
                       <div className="space-y-2">
                         {repurposeResult.generatedItems.map((item) => (
                           <div
@@ -531,6 +619,189 @@ export default function SocialPage() {
                           </div>
                         ))}
                       </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Deduplication Tab */}
+            <TabsContent value="dedup">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center justify-between">
+                    <span className="flex items-center gap-2">
+                      <Copy className="h-4 w-4" /> Content Deduplication
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <Select value={mergeStrategy} onValueChange={setMergeStrategy}>
+                        <SelectTrigger className="w-[180px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="ai_synthesize">AI Synthesize</SelectItem>
+                          <SelectItem value="best_quality">Best Quality</SelectItem>
+                          <SelectItem value="combine_strengths">Combine Strengths</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        onClick={handleScanDuplicates}
+                        disabled={dedupLoading}
+                        variant="outline"
+                        size="sm"
+                      >
+                        {dedupLoading ? (
+                          <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                        ) : (
+                          <RefreshCw className="h-4 w-4 mr-1" />
+                        )}
+                        Scan for Duplicates
+                      </Button>
+                      {dedupStats && dedupStats.mergeable > 0 && (
+                        <Button
+                          onClick={handleBatchMerge}
+                          disabled={batchMerging}
+                          size="sm"
+                        >
+                          {batchMerging ? (
+                            <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                          ) : (
+                            <Trash2 className="h-4 w-4 mr-1" />
+                          )}
+                          Batch Merge ({dedupStats.mergeable})
+                        </Button>
+                      )}
+                    </div>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {dedupStats && (
+                    <div className="grid gap-3 grid-cols-2 md:grid-cols-5 mb-4">
+                      <div className="rounded-xl border p-3 text-center">
+                        <p className="text-2xl font-bold">{dedupStats.totalGroups}</p>
+                        <p className="text-xs text-muted-foreground">Duplicate Groups</p>
+                      </div>
+                      <div className="rounded-xl border p-3 text-center">
+                        <p className="text-2xl font-bold">{dedupStats.totalItems}</p>
+                        <p className="text-xs text-muted-foreground">Total Items</p>
+                      </div>
+                      <div className="rounded-xl border border-red-200 bg-red-50/30 p-3 text-center">
+                        <p className="text-2xl font-bold text-red-700">{dedupStats.mergeable}</p>
+                        <p className="text-xs text-red-600">Mergeable</p>
+                      </div>
+                      <div className="rounded-xl border border-yellow-200 bg-yellow-50/30 p-3 text-center">
+                        <p className="text-2xl font-bold text-yellow-700">{dedupStats.keepBoth}</p>
+                        <p className="text-xs text-yellow-600">Keep Both</p>
+                      </div>
+                      <div className="rounded-xl border border-gray-200 bg-gray-50/30 p-3 text-center">
+                        <p className="text-2xl font-bold text-gray-700">{dedupStats.archive}</p>
+                        <p className="text-xs text-gray-600">Archive</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {dedupGroups.length === 0 ? (
+                    <div className="text-center py-8">
+                      {dedupLoading ? (
+                        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground mx-auto mb-3" />
+                      ) : (
+                        <Copy className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
+                      )}
+                      <p className="text-sm text-muted-foreground">
+                        {dedupLoading
+                          ? "Scanning for duplicates..."
+                          : 'Click "Scan for Duplicates" to find duplicate content.'}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {dedupGroups.map((group, idx) => (
+                        <div
+                          key={`${group.primary.id}-${idx}`}
+                          className="rounded-lg border p-4"
+                        >
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex items-center gap-2">
+                              <Badge
+                                variant={
+                                  group.recommendedAction === "merge"
+                                    ? "destructive"
+                                    : group.recommendedAction === "archive"
+                                    ? "secondary"
+                                    : "outline"
+                                }
+                              >
+                                {Math.round(group.similarityScore * 100)}% match
+                              </Badge>
+                              <Badge variant="outline">
+                                {group.recommendedAction === "merge"
+                                  ? "Merge"
+                                  : group.recommendedAction === "archive"
+                                  ? "Archive"
+                                  : "Keep Both"}
+                              </Badge>
+                            </div>
+                            {group.recommendedAction === "merge" && (
+                              <Button
+                                onClick={() =>
+                                  handleMerge(group.primary.id, group.duplicates[0].id)
+                                }
+                                disabled={mergingId === group.duplicates[0].id}
+                                size="sm"
+                              >
+                                {mergingId === group.duplicates[0].id ? (
+                                  <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                                ) : (
+                                  <RefreshCw className="h-3 w-3 mr-1" />
+                                )}
+                                Merge
+                              </Button>
+                            )}
+                          </div>
+
+                          <div className="p-3 rounded-lg bg-green-50/50 border border-green-200 mb-2">
+                            <div className="flex items-center gap-2 mb-1">
+                              <Badge variant="success" className="text-[10px]">PRIMARY</Badge>
+                              <span className="text-xs text-muted-foreground capitalize">
+                                {group.primary.type}
+                              </span>
+                              {group.primary.qualityScore != null && (
+                                <span className="text-xs text-muted-foreground">
+                                  Score: {group.primary.qualityScore}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-sm font-medium">{group.primary.title}</p>
+                          </div>
+
+                          {group.duplicates.map((dup) => (
+                            <div
+                              key={dup.id}
+                              className="p-3 rounded-lg bg-red-50/50 border border-red-200 mb-2"
+                            >
+                              <div className="flex items-center gap-2 mb-1">
+                                <Badge variant="destructive" className="text-[10px]">DUPLICATE</Badge>
+                                <span className="text-xs text-muted-foreground capitalize">
+                                  {dup.type}
+                                </span>
+                                {dup.qualityScore != null && (
+                                  <span className="text-xs text-muted-foreground">
+                                    Score: {dup.qualityScore}
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-sm font-medium">{dup.title}</p>
+                            </div>
+                          ))}
+
+                          {group.recommendedAction === "archive" && (
+                            <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
+                              <AlertTriangle className="h-3 w-3" />
+                              Content may be outdated — review before archiving
+                            </div>
+                          )}
+                        </div>
+                      ))}
                     </div>
                   )}
                 </CardContent>

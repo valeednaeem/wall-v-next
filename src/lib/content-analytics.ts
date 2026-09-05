@@ -67,9 +67,98 @@ export interface InternalLinkSuggestion {
   position: "intro" | "body" | "conclusion";
 }
 
+// ─── GA4 Configuration ────────────────────────────────────────────────────────
+
+function getGA4Config() {
+  return {
+    measurementId: process.env.GA4_MEASUREMENT_ID || "",
+    apiSecret: process.env.GA4_API_SECRET || "",
+    propertyId: process.env.GA4_PROPERTY_ID || "",
+  };
+}
+
+function isGA4Configured(): boolean {
+  const config = getGA4Config();
+  return !!(config.propertyId && config.apiSecret);
+}
+
+export interface PagePerformance {
+  pageViews: number;
+  uniquePageviews: number;
+  avgSessionDuration: number;
+  bounceRate: number;
+  sessionSource: string;
+  conversions: number;
+}
+
 // ─── GA4 Metrics ──────────────────────────────────────────────────────────────
 
 export async function fetchGA4Metrics(options: {
+  startDate: string;
+  endDate: string;
+  dimensions?: string[];
+}): Promise<GA4MetricRow[]> {
+  if (!isGA4Configured()) {
+    return fetchGA4MetricsProxy(options);
+  }
+
+  const config = getGA4Config();
+  const resolvedStart = options.startDate === "7daysAgo"
+    ? formatGA4Date(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000))
+    : options.startDate;
+  const resolvedEnd = options.endDate === "today"
+    ? formatGA4Date(new Date())
+    : options.endDate;
+
+  const dimensions = (options.dimensions || ["pagePath"]).map((d) => ({
+    name: d,
+  }));
+  const metrics = [
+    { name: "screenPageViews" },
+    { name: "sessions" },
+    { name: "bounceRate" },
+    { name: "averageSessionDuration" },
+  ];
+
+  try {
+    const response = await fetch(
+      `https://analyticsdata.googleapis.com/v1beta/properties/${config.propertyId}:runReport`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${await getGA4AccessToken()}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          dateRanges: [{ startDate: resolvedStart, endDate: resolvedEnd }],
+          dimensions,
+          metrics,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      console.error("[GA4] Data API error:", response.status);
+      return fetchGA4MetricsProxy(options);
+    }
+
+    const data = await response.json() as GA4RunReportResponse;
+    return (data.rows || []).map((row) => ({
+      pagePath: row.dimensionValues?.[0]?.value || "/",
+      views: Number(row.metricValues?.[0]?.value) || 0,
+      clicks: 0,
+      impressions: Number(row.metricValues?.[1]?.value) || 0,
+      ctr: 0,
+      avgTimeOnPage: Number(row.metricValues?.[3]?.value) || 0,
+      bounceRate: Number(row.metricValues?.[2]?.value) || 0,
+    }));
+  } catch (error) {
+    console.error("[GA4] fetchGA4Metrics failed, falling back to proxy:", error);
+    return fetchGA4MetricsProxy(options);
+  }
+}
+
+async function fetchGA4MetricsProxy(options: {
   startDate: string;
   endDate: string;
   dimensions?: string[];
@@ -97,6 +186,188 @@ export async function fetchGA4Metrics(options: {
     avgTimeOnPage: 0,
     bounceRate: 0,
   }));
+}
+
+// ─── GA4 Measurement Protocol ────────────────────────────────────────────────
+
+export async function trackServerEvent(
+  eventName: string,
+  params: Record<string, string | number>
+): Promise<void> {
+  const config = getGA4Config();
+  if (!config.measurementId || !config.apiSecret) {
+    return;
+  }
+
+  try {
+    await fetch(
+      `https://www.google-analytics.com/mp/collect?measurement_id=${config.measurementId}&api_secret=${config.apiSecret}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          client_id: `server-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+          events: [{ name: eventName, params }],
+        }),
+      }
+    );
+  } catch (error) {
+    console.error("[GA4] trackServerEvent failed:", error);
+  }
+}
+
+// ─── Content Page Performance ────────────────────────────────────────────────
+
+export async function getContentPagePerformance(
+  pagePath: string,
+  days = 30
+): Promise<PagePerformance> {
+  if (!isGA4Configured()) {
+    return getContentPagePerformanceProxy(pagePath, days);
+  }
+
+  const config = getGA4Config();
+  const startDate = formatGA4Date(new Date(Date.now() - days * 24 * 60 * 60 * 1000));
+  const endDate = formatGA4Date(new Date());
+
+  try {
+    const response = await fetch(
+      `https://analyticsdata.googleapis.com/v1beta/properties/${config.propertyId}:runReport`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${await getGA4AccessToken()}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          dateRanges: [{ startDate, endDate }],
+          dimensions: [{ name: "pagePath" }, { name: "sessionSource" }],
+          metrics: [
+            { name: "screenPageViews" },
+            { name: "totalUsers" },
+            { name: "averageSessionDuration" },
+            { name: "bounceRate" },
+          ],
+          dimensionFilter: {
+            filter: {
+              fieldName: "pagePath",
+              stringFilter: { matchType: "EXACT", value: pagePath },
+            },
+          },
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      return getContentPagePerformanceProxy(pagePath, days);
+    }
+
+    const data = await response.json() as GA4RunReportResponse;
+    const row = data.rows?.[0];
+
+    return {
+      pageViews: Number(row?.metricValues?.[0]?.value) || 0,
+      uniquePageviews: Number(row?.metricValues?.[1]?.value) || 0,
+      avgSessionDuration: Number(row?.metricValues?.[2]?.value) || 0,
+      bounceRate: Number(row?.metricValues?.[3]?.value) || 0,
+      sessionSource: row?.dimensionValues?.[1]?.value || "direct",
+      conversions: 0,
+    };
+  } catch (error) {
+    console.error("[GA4] getContentPagePerformance failed, falling back:", error);
+    return getContentPagePerformanceProxy(pagePath, days);
+  }
+}
+
+async function getContentPagePerformanceProxy(
+  pagePath: string,
+  _days: number
+): Promise<PagePerformance> {
+  await connectToDatabase();
+
+  const slug = pagePath.replace(/^\/blog\//, "");
+  const post = await BlogPost.findOne({ slug })
+    .select("viewCount likeCount commentCount")
+    .lean();
+
+  if (!post) {
+    return {
+      pageViews: 0,
+      uniquePageviews: 0,
+      avgSessionDuration: 0,
+      bounceRate: 0,
+      sessionSource: "direct",
+      conversions: 0,
+    };
+  }
+
+  const bp = post as IBlogPost;
+  return {
+    pageViews: bp.viewCount || 0,
+    uniquePageviews: Math.round((bp.viewCount || 0) * 0.7),
+    avgSessionDuration: 0,
+    bounceRate: 0,
+    sessionSource: "direct",
+    conversions: 0,
+  };
+}
+
+// ─── GA4 Helpers ─────────────────────────────────────────────────────────────
+
+function formatGA4Date(date: Date): string {
+  return date.toISOString().split("T")[0];
+}
+
+async function getGA4AccessToken(): Promise<string> {
+  const config = getGA4Config();
+  const keyFile = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
+  if (!keyFile) return "";
+
+  try {
+    const credentials = JSON.parse(keyFile) as {
+      client_email: string;
+      private_key: string;
+    };
+    const now = Math.floor(Date.now() / 1000);
+    const header = Buffer.from(JSON.stringify({ alg: "RS256", typ: "JWT" })).toString("base64url");
+    const payload = Buffer.from(JSON.stringify({
+      iss: credentials.client_email,
+      scope: "https://www.googleapis.com/auth/analytics.readonly",
+      aud: "https://oauth2.googleapis.com/token",
+      exp: now + 3600,
+      iat: now,
+    })).toString("base64url");
+
+    // Use crypto for signing in production
+    const crypto = await import("crypto");
+    const sign = crypto.createSign("RSA-SHA256");
+    sign.update(`${header}.${payload}`);
+    const signature = sign.sign(credentials.private_key, "base64url");
+
+    const jwt = `${header}.${payload}.${signature}`;
+
+    const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
+        assertion: jwt,
+      }),
+    });
+
+    if (!tokenRes.ok) return "";
+    const tokenData = await tokenRes.json() as { access_token?: string };
+    return tokenData.access_token || "";
+  } catch {
+    return "";
+  }
+}
+
+interface GA4RunReportResponse {
+  rows?: Array<{
+    dimensionValues?: Array<{ value: string }>;
+    metricValues?: Array<{ value: string }>;
+  }>;
 }
 
 // ─── Record Metrics ───────────────────────────────────────────────────────────
