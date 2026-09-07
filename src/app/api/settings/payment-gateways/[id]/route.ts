@@ -18,7 +18,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     if (!gateway) return NextResponse.json({ error: "Gateway not found" }, { status: 404 });
 
     if (!gateway.config.merchantCode || !gateway.config.buyLinkSecret) {
-      return NextResponse.json({ error: "Gateway not configured - missing credentials" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Gateway requires Merchant Code and Buy Link Secret for checkout testing" },
+        { status: 400 }
+      );
     }
 
     gateway.status = "testing";

@@ -77,10 +77,12 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    const isMasked = (v: string | undefined) => !!v && v.includes("••••");
+
     gateway.config.merchantCode = merchantCode || gateway.config.merchantCode;
-    gateway.config.secretKey = secretKey || gateway.config.secretKey;
-    gateway.config.buyLinkSecret = buyLinkSecret || gateway.config.buyLinkSecret;
-    gateway.config.ipnSecret = ipnSecret || gateway.config.ipnSecret;
+    if (secretKey && !isMasked(secretKey)) gateway.config.secretKey = secretKey;
+    if (buyLinkSecret && !isMasked(buyLinkSecret)) gateway.config.buyLinkSecret = buyLinkSecret;
+    if (ipnSecret && !isMasked(ipnSecret)) gateway.config.ipnSecret = ipnSecret;
     gateway.config.hashAlgorithm = hashAlgorithm || gateway.config.hashAlgorithm;
     gateway.config.currency = currency || gateway.config.currency;
     gateway.config.checkoutType = checkoutType || gateway.config.checkoutType;
