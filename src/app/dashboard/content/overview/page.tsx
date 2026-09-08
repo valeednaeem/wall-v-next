@@ -697,6 +697,27 @@ export default function ContentOverviewPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Operations Link */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Activity className="h-5 w-5 text-gray-500" />
+              <div>
+                <p className="font-medium text-gray-900">Content Operations</p>
+                <p className="text-sm text-gray-500">View real-time execution tracking, timeline, and agent activity</p>
+              </div>
+            </div>
+            <Link
+              href="/dashboard/content/operations"
+              className="px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors"
+            >
+              View Operations
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

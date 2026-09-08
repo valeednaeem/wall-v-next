@@ -5,6 +5,7 @@ import ContentTopic from "@/models/content-topic";
 import ContentItem from "@/models/content-item";
 import ContentSettings from "@/models/content-settings";
 import ContentDistribution from "@/models/content-distribution";
+import ContentExecution from "@/models/content-execution";
 import BlogPost from "@/models/blog-post";
 import BlogCategory from "@/models/blog-category";
 import BlogTag from "@/models/blog-tag";
@@ -26,6 +27,66 @@ import { findInternalLinks } from "@/lib/content-linking";
 import { checkForDuplicates } from "@/lib/content-analytics";
 import { getAdapter } from "@/lib/social-adapters";
 import { marked } from "marked";
+
+// ─── Execution Tracking Helpers ──────────────────────────────────────────────
+
+async function createExecutionRecord(data: {
+  campaign: string;
+  plan: string;
+  planVersion: number;
+  type: string;
+  stage: string;
+  agent?: string;
+  input?: Record<string, unknown>;
+  contentItem?: string;
+  topic?: string;
+}) {
+  return ContentExecution.create({
+    campaign: data.campaign,
+    plan: data.plan,
+    planVersion: data.planVersion,
+    type: data.type,
+    stage: data.stage,
+    agent: data.agent || "content-orchestrator",
+    status: "running",
+    startedAt: new Date(),
+    input: data.input || {},
+    contentItem: data.contentItem || undefined,
+    topic: data.topic || undefined,
+    auditTrail: [{
+      stage: data.stage,
+      status: "running",
+      timestamp: new Date(),
+    }],
+  });
+}
+
+async function updateExecutionStage(
+  executionId: string,
+  stage: string,
+  status: string,
+  message?: string,
+  extra?: Record<string, unknown>
+) {
+  const update: Record<string, unknown> = {
+    stage,
+    $push: {
+      auditTrail: { stage, status, timestamp: new Date(), message },
+    },
+  };
+  if (status === "completed" || status === "failed") {
+    update.completedAt = new Date();
+    update.status = status;
+  }
+  if (extra) {
+    Object.assign(update, extra);
+  }
+  const doc = await ContentExecution.findByIdAndUpdate(executionId, update, { new: true });
+  if (doc && status === "completed" && doc.startedAt) {
+    const duration = Date.now() - new Date(doc.startedAt).getTime();
+    await ContentExecution.findByIdAndUpdate(executionId, { duration });
+  }
+}
 
 // ─── Campaign Management ─────────────────────────────────────────────────────
 
@@ -417,6 +478,17 @@ export async function executePlan(
 
   console.log(`[ContentOrchestrator] CONTENT_EXECUTION_STARTED planId=${planId} topicCount=${plan.topics.length}`);
 
+  // Create plan-level execution record
+  const planExecution = await createExecutionRecord({
+    campaign: plan.campaign.toString(),
+    plan: planId,
+    planVersion: plan.version,
+    type: "plan_execution",
+    stage: "starting",
+    agent: "content-orchestrator",
+    input: { topicCount: plan.topics.length },
+  });
+
   await ContentPlan.findByIdAndUpdate(planId, {
     status: "executing",
     $push: {
@@ -475,8 +547,26 @@ export async function executePlan(
       });
 
       console.log(`[ContentOrchestrator] ARTICLE_GENERATION_STARTED topicId=${topicId} title="${topic.title}"`);
+
+      // Create article generation execution record
+      const articleExec = await createExecutionRecord({
+        campaign: plan.campaign.toString(),
+        plan: planId,
+        planVersion: plan.version,
+        type: "article_generation",
+        stage: "generating_article",
+        agent: "content-generator",
+        input: { title: topic.title, keyword: topic.primaryKeyword },
+        topic: topicId.toString(),
+      });
+
       const articleData = await generateArticle(articleItem, topic, campaign);
       console.log(`[ContentOrchestrator] ARTICLE_GENERATION_COMPLETED topicId=${topicId} contentLength=${(articleData.content || "").length}`);
+
+      await updateExecutionStage(articleExec._id.toString(), "article_generated", "completed", `Generated ${(articleData.content || "").length} chars`, {
+        contentItem: articleItem._id.toString(),
+        output: { contentLength: (articleData.content || "").length, excerptLength: (articleData.excerpt || "").length },
+      });
 
       // Update with generated content before quality check
       await ContentItem.findByIdAndUpdate(articleItem._id, {
@@ -488,13 +578,29 @@ export async function executePlan(
 
       // Run quality pipeline
       let qualityResults;
+      const qualityExec = await createExecutionRecord({
+        campaign: plan.campaign.toString(),
+        plan: planId,
+        planVersion: plan.version,
+        type: "quality_check",
+        stage: "running_quality_checks",
+        agent: "content-quality",
+        input: { itemId: articleItem._id.toString() },
+        topic: topicId.toString(),
+        contentItem: articleItem._id.toString(),
+      });
+
       try {
         qualityResults = await runQualityPipeline(
           articleItem._id.toString(),
           ["factCheck", "seoReview", "brandReview", "conversionReview"]
         );
+        await updateExecutionStage(qualityExec._id.toString(), "quality_completed", "completed", `Score: ${qualityResults.overallScore}`, {
+          output: { overallScore: qualityResults.overallScore },
+        });
       } catch {
         qualityResults = null;
+        await updateExecutionStage(qualityExec._id.toString(), "quality_failed", "failed", "Quality pipeline error");
       }
 
       // Find enhanced internal links after quality check
@@ -531,6 +637,8 @@ export async function executePlan(
 
       // ─── Bridge: Create BlogPost from ContentItem ──────────────────────────
       let blogPostId: string | null = null;
+      let blogExec: { _id: { toString(): string } } | null = null;
+
       try {
         // Find or create default category
         let category = await BlogCategory.findOne({ slug: "ai-insights" }).lean();
@@ -578,6 +686,19 @@ export async function executePlan(
         // Read the updated content item to get final content
         const finalItem = await ContentItem.findById(articleItem._id).lean() as unknown as IContentItem;
 
+        // Create blog execution record (after finalItem is available)
+        blogExec = await createExecutionRecord({
+          campaign: plan.campaign.toString(),
+          plan: planId,
+          planVersion: plan.version,
+          type: "blog_creation",
+          stage: "creating_blog_post",
+          agent: "content-orchestrator",
+          input: { title: finalItem.title },
+          topic: topicId.toString(),
+          contentItem: articleItem._id.toString(),
+        });
+
         const blogSlug = generateSlug(finalItem.title);
 
         // Check for existing blog post with same slug
@@ -609,6 +730,12 @@ export async function executePlan(
 
           blogPostId = blogPost._id.toString();
           console.log(`[ContentOrchestrator] BLOG_CREATE_COMPLETED blogPostId=${blogPostId} slug="${blogSlug}"`);
+          if (blogExec) {
+            await updateExecutionStage(blogExec._id.toString(), "blog_created", "completed", `Blog post created: ${blogSlug}`, {
+              blogPost: blogPostId,
+              output: { slug: blogSlug, status: "published" },
+            });
+          }
 
           // Update ContentItem with the related blog post reference
           await ContentItem.findByIdAndUpdate(articleItem._id, {
@@ -628,6 +755,9 @@ export async function executePlan(
       } catch (blogErr) {
         const msg = blogErr instanceof Error ? blogErr.message : "BlogPost creation failed";
         console.error(`[ContentOrchestrator] BlogPost bridge failed: ${msg}`);
+        if (blogExec) {
+          await updateExecutionStage(blogExec._id.toString(), "blog_failed", "failed", msg);
+        }
       }
 
       // Record in audit trail
@@ -648,6 +778,18 @@ export async function executePlan(
         { ...articleItem.toObject(), ...articleData } as IContentItem,
         ["linkedin", "facebook", "instagram", "x"]
       );
+
+      const socialExec = await createExecutionRecord({
+        campaign: plan.campaign.toString(),
+        plan: planId,
+        planVersion: plan.version,
+        type: "social_generation",
+        stage: "generating_social_content",
+        agent: "content-generator",
+        input: { platforms: ["linkedin", "facebook", "instagram", "x"] },
+        topic: topicId.toString(),
+        contentItem: articleItem._id.toString(),
+      });
 
       const socialItems = await Promise.all(
         socials.map(async (s) => {
@@ -674,11 +816,28 @@ export async function executePlan(
         featuredImage: heroPrompt,
       });
 
+      await updateExecutionStage(socialExec._id.toString(), "social_generated", "completed", `Generated ${socials.length} social variants`, {
+        output: { platformCount: socials.length, platforms: socials.map((s) => s.platform) },
+      });
+
       // ─── Social Adapter Invocation ──────────────────────────────────────────
       for (const socialItem of socialItems) {
+        let socialPublishExec: Awaited<ReturnType<typeof createExecutionRecord>> | null = null;
         try {
           const platform = socialItem.platform || "linkedin";
           const adapter = getAdapter(platform);
+
+          socialPublishExec = await createExecutionRecord({
+            campaign: plan.campaign.toString(),
+            plan: planId,
+            planVersion: plan.version,
+            type: "social_publish",
+            stage: `publishing_to_${platform}`,
+            agent: "social-adapter",
+            input: { platform, contentLength: (socialItem.content || "").length },
+            topic: topicId.toString(),
+            contentItem: socialItem._id.toString(),
+          });
 
           const isConnected = await adapter.isConnected();
           if (isConnected) {
@@ -689,6 +848,10 @@ export async function executePlan(
             });
 
             console.log(`[ContentOrchestrator] SOCIAL_PUBLISH_${publishResult.success ? "COMPLETED" : "FAILED"} platform=${platform} postId=${socialItem._id}`);
+
+            await updateExecutionStage(socialPublishExec._id.toString(), publishResult.success ? "published" : "publish_failed", publishResult.success ? "completed" : "failed", publishResult.error || "Published", {
+              output: { platformPostId: publishResult.platformPostId, platformUrl: publishResult.platformUrl },
+            });
 
             await ContentDistribution.create({
               contentItem: socialItem._id,
@@ -712,6 +875,9 @@ export async function executePlan(
         } catch (socialErr) {
           const msg = socialErr instanceof Error ? socialErr.message : "Social publish failed";
           console.error(`[ContentOrchestrator] Social adapter failed for ${socialItem.platform}: ${msg}`);
+          if (socialPublishExec) {
+            await updateExecutionStage(socialPublishExec._id.toString(), "publish_error", "failed", msg);
+          }
         }
       }
 
@@ -724,6 +890,11 @@ export async function executePlan(
 
   const finalStatus = errors.length === 0 ? "completed" : "partially_completed";
   console.log(`[ContentOrchestrator] CONTENT_EXECUTION_COMPLETED planId=${planId} status=${finalStatus} itemsCreated=${itemsCreated} errors=${errors.length}`);
+
+  // Update plan-level execution record
+  await updateExecutionStage(planExecution._id.toString(), "plan_completed", finalStatus === "completed" ? "completed" : "failed", `${itemsCreated} items, ${errors.length} errors`, {
+    output: { itemsCreated, errorCount: errors.length, errors: errors.slice(0, 10) },
+  });
 
   await ContentPlan.findByIdAndUpdate(planId, {
     status: finalStatus,
