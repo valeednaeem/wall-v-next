@@ -25,6 +25,7 @@ import { runQualityPipeline } from "@/lib/content-quality";
 import { findInternalLinks } from "@/lib/content-linking";
 import { checkForDuplicates } from "@/lib/content-analytics";
 import { getAdapter } from "@/lib/social-adapters";
+import { marked } from "marked";
 
 // ─── Campaign Management ─────────────────────────────────────────────────────
 
@@ -407,6 +408,15 @@ export async function executePlan(
     throw new Error(`Plan must be approved before execution. Current status: "${plan.status}".`);
   }
 
+  // Idempotency check: skip if plan already has content items
+  const existingItemCount = await ContentItem.countDocuments({ plan: planId });
+  if (existingItemCount > 0) {
+    console.log(`[ContentOrchestrator] PLAN_ALREADY_EXECUTED planId=${planId} existingItems=${existingItemCount}`);
+    return { itemsCreated: 0, errors: [`Plan already executed with ${existingItemCount} items`] };
+  }
+
+  console.log(`[ContentOrchestrator] CONTENT_EXECUTION_STARTED planId=${planId} topicCount=${plan.topics.length}`);
+
   await ContentPlan.findByIdAndUpdate(planId, {
     status: "executing",
     $push: {
@@ -464,7 +474,9 @@ export async function executePlan(
         approvalRequired: true,
       });
 
+      console.log(`[ContentOrchestrator] ARTICLE_GENERATION_STARTED topicId=${topicId} title="${topic.title}"`);
       const articleData = await generateArticle(articleItem, topic, campaign);
+      console.log(`[ContentOrchestrator] ARTICLE_GENERATION_COMPLETED topicId=${topicId} contentLength=${(articleData.content || "").length}`);
 
       // Update with generated content before quality check
       await ContentItem.findByIdAndUpdate(articleItem._id, {
@@ -571,10 +583,14 @@ export async function executePlan(
         // Check for existing blog post with same slug
         const existingPost = await BlogPost.findOne({ slug: blogSlug }).lean();
         if (!existingPost) {
+          // Convert markdown content to HTML for blog rendering
+          const markdownContent = finalItem.content || "";
+          const htmlContent = await marked.parse(markdownContent) as string;
+
           const blogPost = await BlogPost.create({
             title: finalItem.title,
             slug: blogSlug,
-            content: finalItem.content || "",
+            content: htmlContent,
             excerpt: finalItem.excerpt || finalItem.content?.substring(0, 200) || "",
             category: category._id,
             tags: tagIds,
@@ -592,6 +608,7 @@ export async function executePlan(
           });
 
           blogPostId = blogPost._id.toString();
+          console.log(`[ContentOrchestrator] BLOG_CREATE_COMPLETED blogPostId=${blogPostId} slug="${blogSlug}"`);
 
           // Update ContentItem with the related blog post reference
           await ContentItem.findByIdAndUpdate(articleItem._id, {
@@ -671,6 +688,8 @@ export async function executePlan(
               hashtags: [],
             });
 
+            console.log(`[ContentOrchestrator] SOCIAL_PUBLISH_${publishResult.success ? "COMPLETED" : "FAILED"} platform=${platform} postId=${socialItem._id}`);
+
             await ContentDistribution.create({
               contentItem: socialItem._id,
               platform,
@@ -704,6 +723,8 @@ export async function executePlan(
   }
 
   const finalStatus = errors.length === 0 ? "completed" : "partially_completed";
+  console.log(`[ContentOrchestrator] CONTENT_EXECUTION_COMPLETED planId=${planId} status=${finalStatus} itemsCreated=${itemsCreated} errors=${errors.length}`);
+
   await ContentPlan.findByIdAndUpdate(planId, {
     status: finalStatus,
     $push: {

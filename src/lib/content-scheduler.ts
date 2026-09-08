@@ -4,6 +4,7 @@ import ContentPlan from "@/models/content-plan";
 import ContentItem from "@/models/content-item";
 import ContentTopic from "@/models/content-topic";
 import ContentSettings from "@/models/content-settings";
+import { executePlan } from "@/lib/content-orchestrator";
 import type { IContentCampaign } from "@/models/content-campaign";
 import type { IContentPlan } from "@/models/content-plan";
 import type { IContentItem } from "@/models/content-item";
@@ -111,15 +112,68 @@ export async function executeDailyContent(): Promise<DailyExecutionResult> {
     details: [],
   };
 
+  // ─── Phase 1: Trigger executePlan() for approved plans that need content generation ──
   const approvedPlans = await ContentPlan.find({ status: "approved" })
     .populate("campaign")
     .lean();
 
-  // Read publishingMode from ContentSettings
+  for (const plan of approvedPlans) {
+    const campaign = plan.campaign as unknown as IContentCampaign | null;
+    if (!campaign) continue;
+
+    const activeStatuses = ["approved", "executing", "partially_completed"];
+    if (!activeStatuses.includes(campaign.status)) continue;
+
+    // Check if plan has topics but no content items yet (needs execution)
+    const existingItemCount = await ContentItem.countDocuments({ plan: plan._id });
+    const hasTopics = plan.topics && plan.topics.length > 0;
+
+    if (hasTopics && existingItemCount === 0) {
+      // Plan is approved but has never been executed — trigger execution
+      console.log(`[ContentScheduler] CONTENT_EXECUTION_STARTED planId=${plan._id.toString()} campaignId=${campaign._id.toString()} campaignName="${campaign.name}"`);
+      try {
+        const execResult = await executePlan(plan._id.toString());
+        console.log(`[ContentScheduler] CONTENT_EXECUTION_COMPLETED planId=${plan._id.toString()} itemsCreated=${execResult.itemsCreated} errors=${execResult.errors.length}`);
+
+        if (execResult.errors.length > 0) {
+          for (const err of execResult.errors) {
+            result.errors.push(`${campaign.name}: ${err}`);
+          }
+        }
+
+        result.executed += execResult.itemsCreated;
+        result.details.push({
+          planId: plan._id.toString(),
+          campaignName: campaign.name,
+          itemsProcessed: execResult.itemsCreated,
+          itemsPublished: 0,
+          errors: execResult.errors,
+        });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "Unknown error";
+        console.error(`[ContentScheduler] CONTENT_EXECUTION_FAILED planId=${plan._id.toString()} error="${msg}"`);
+        result.errors.push(`${campaign.name}: Execution failed — ${msg}`);
+        result.details.push({
+          planId: plan._id.toString(),
+          campaignName: campaign.name,
+          itemsProcessed: 0,
+          itemsPublished: 0,
+          errors: [msg],
+        });
+      }
+    }
+  }
+
+  // ─── Phase 2: Process existing draft items (status transitions for already-generated content) ──
   const contentSettings = await ContentSettings.findOne({ key: "content" }).lean();
   const publishingMode = (contentSettings?.value as Record<string, unknown>)?.publishingMode as string || "review";
 
-  for (const plan of approvedPlans) {
+  // Re-fetch plans after execution
+  const plansWithDrafts = await ContentPlan.find({ status: { $in: ["approved", "executing"] } })
+    .populate("campaign")
+    .lean();
+
+  for (const plan of plansWithDrafts) {
     const campaign = plan.campaign as unknown as IContentCampaign | null;
     if (!campaign) continue;
 
@@ -132,18 +186,12 @@ export async function executeDailyContent(): Promise<DailyExecutionResult> {
     };
 
     try {
-      const preconditions = await validateExecutionPreconditions(plan._id.toString());
-      if (!preconditions.valid) {
-        detail.errors.push(`Preconditions failed: ${preconditions.reasons.join(", ")}`);
-        result.errors.push(`${campaign.name}: ${preconditions.reasons.join(", ")}`);
-        result.details.push(detail);
-        continue;
-      }
-
       const draftItems = await ContentItem.find({
         plan: plan._id,
         status: "draft",
       }).lean();
+
+      if (draftItems.length === 0) continue;
 
       for (const item of draftItems) {
         try {
@@ -170,7 +218,6 @@ export async function executeDailyContent(): Promise<DailyExecutionResult> {
           result.executed++;
 
           if (publishingMode === "auto") {
-            // Auto mode: approve and schedule immediately
             await ContentItem.findByIdAndUpdate(item._id, {
               status: "approved",
               approvedAt: new Date(),
@@ -185,7 +232,6 @@ export async function executeDailyContent(): Promise<DailyExecutionResult> {
             detail.itemsPublished++;
             result.published++;
           } else if (publishingMode === "hybrid") {
-            // Hybrid mode: auto-approve if no approval required, otherwise review
             if (!contentItem.approvalRequired) {
               await ContentItem.findByIdAndUpdate(item._id, {
                 status: "approved",
@@ -204,7 +250,6 @@ export async function executeDailyContent(): Promise<DailyExecutionResult> {
               result.pendingApproval++;
             }
           } else {
-            // Review mode (default): always require human review
             result.pendingApproval++;
           }
         } catch (err) {
@@ -236,7 +281,9 @@ export async function executeDailyContent(): Promise<DailyExecutionResult> {
       result.errors.push(`${campaign.name}: ${msg}`);
     }
 
-    result.details.push(detail);
+    if (detail.itemsProcessed > 0 || detail.errors.length > 0) {
+      result.details.push(detail);
+    }
   }
 
   return result;

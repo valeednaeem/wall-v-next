@@ -17,6 +17,7 @@ import {
   ChevronDown,
   ChevronUp,
   Eye,
+  Play,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -345,6 +346,25 @@ export default function CampaignDetailPage() {
                               )}
                             </button>
                           </>
+                        )}
+                        {plan.status === "approved" && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handlePlanAction(plan._id, "execute");
+                            }}
+                            disabled={
+                              actionLoading === `plan-${plan._id}-execute`
+                            }
+                            className="text-xs bg-blue-600 text-white rounded px-2.5 py-1 hover:bg-blue-700 transition-colors disabled:opacity-50 inline-flex items-center gap-1"
+                          >
+                            {actionLoading === `plan-${plan._id}-execute` ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <Play className="h-3 w-3" />
+                            )}
+                            Execute
+                          </button>
                         )}
                         {expandedPlan === plan._id ? (
                           <ChevronUp className="h-4 w-4 text-muted-foreground" />
