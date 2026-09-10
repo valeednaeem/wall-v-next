@@ -3,7 +3,7 @@
 import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { CheckCircle, Package, Search, ArrowRight, Home, Mail } from "lucide-react";
+import { CheckCircle, Package, Search, ArrowRight, Home, Mail, Download, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,11 +11,25 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 
+interface ProductFileRef {
+  id: string;
+  name: string;
+  originalName: string;
+  mimeType: string;
+  size: number;
+}
+
 interface OrderItem {
   name: string;
   price: number;
   quantity: number;
   variant?: string;
+  product?: {
+    name: string;
+    slug: string;
+    type: string;
+    files?: ProductFileRef[];
+  } | null;
 }
 
 interface Order {
@@ -164,16 +178,43 @@ function CheckoutSuccessContent() {
                 </div>
 
                 <div className="divide-y">
-                  {order.items.map((item, i) => (
-                    <div key={i} className="flex justify-between py-3 first:pt-0 last:pb-0">
-                      <div>
-                        <p className="font-medium text-sm">{item.name}</p>
-                        {item.variant && <p className="text-xs text-muted-foreground">{item.variant}</p>}
-                        <p className="text-xs text-muted-foreground">Qty: {item.quantity}</p>
+                  {order.items.map((item, i) => {
+                    const product = item.product as OrderItem["product"];
+                    const hasDownloads = product?.type === "digital" && product.files && product.files.length > 0;
+                    return (
+                      <div key={i} className="py-3 first:pt-0 last:pb-0">
+                        <div className="flex justify-between">
+                          <div>
+                            <p className="font-medium text-sm">{item.name}</p>
+                            {item.variant && <p className="text-xs text-muted-foreground">{item.variant}</p>}
+                            <p className="text-xs text-muted-foreground">Qty: {item.quantity}</p>
+                          </div>
+                          <span className="text-sm font-medium">${(item.price * item.quantity).toFixed(2)}</span>
+                        </div>
+                        {hasDownloads && (
+                          <div className="mt-3 space-y-1.5">
+                            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Downloadable Files:</p>
+                            {product.files!.map((file) => (
+                              <a
+                                key={file.id}
+                                href={`/api/products/${product.slug}/download/${file.id}`}
+                                download
+                                className="flex items-center gap-2 text-sm text-primary hover:underline"
+                              >
+                                {file.mimeType.includes("zip") || file.mimeType.includes("rar") || file.mimeType.includes("7z") ? (
+                                  <FileText className="h-4 w-4 shrink-0" />
+                                ) : (
+                                  <Download className="h-4 w-4 shrink-0" />
+                                )}
+                                <span>{file.name || file.originalName}</span>
+                                <span className="text-xs text-muted-foreground">({(file.size / (1024 * 1024)).toFixed(1)} MB)</span>
+                              </a>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                      <span className="text-sm font-medium">${(item.price * item.quantity).toFixed(2)}</span>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 <Separator className="my-4" />
@@ -220,8 +261,17 @@ function CheckoutSuccessContent() {
                   </li>
                   <li className="flex items-start gap-2">
                     <Package className="h-4 w-4 mt-0.5 shrink-0" />
-                    Digital products are delivered instantly. Physical products ship within 2-3 business days.
+                    Physical products ship within 2-3 business days.
                   </li>
+                  {order.items.some((item) => {
+                    const p = item.product as OrderItem["product"];
+                    return p?.type === "digital" && p.files && p.files.length > 0;
+                  }) && (
+                    <li className="flex items-start gap-2">
+                      <Download className="h-4 w-4 mt-0.5 shrink-0" />
+                      Digital files are available for download above and in your <a href="/client/downloads" className="underline font-medium">Client Portal</a>.
+                    </li>
+                  )}
                 </ul>
               </CardContent>
             </Card>

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import ImageUpload from "@/components/media/image-upload";
 import GalleryUpload from "@/components/media/gallery-upload";
+import ProductFileUpload, { type ProductFileData } from "@/components/media/product-file-upload";
 import HtmlEditor from "@/components/editor/html-editor";
 
 interface Category {
@@ -34,6 +35,10 @@ export default function ProductForm({ product, onSave }: ProductFormProps) {
     category: product?.category?._id || "",
     featuredImage: product?.featuredImage || "",
     gallery: product?.gallery || [],
+    files: (product?.files || []).map((f: ProductFileData, i: number) => ({
+      ...f,
+      sortOrder: f.sortOrder ?? i,
+    })) as ProductFileData[],
     badges: product?.badges?.join(", ") || "",
     features: product?.features?.join("\n") || "",
     status: product?.status || "draft",
@@ -146,6 +151,21 @@ export default function ProductForm({ product, onSave }: ProductFormProps) {
         <ImageUpload value={form.featuredImage} onChange={(url) => setForm({ ...form, featuredImage: url })} />
         <GalleryUpload value={form.gallery} onChange={(gallery) => setForm({ ...form, gallery })} />
       </div>
+
+      {form.type === "digital" && (
+        <div className="rounded-xl border p-6 space-y-4">
+          <div>
+            <h3 className="font-semibold">Downloadable Files</h3>
+            <p className="text-sm text-muted-foreground mt-1">
+              Upload the files customers will receive after purchase.
+            </p>
+          </div>
+          <ProductFileUpload
+            value={form.files}
+            onChange={(files) => setForm({ ...form, files })}
+          />
+        </div>
+      )}
 
       <div className="rounded-xl border p-6 space-y-4">
         <h3 className="font-semibold">Pricing</h3>

@@ -219,6 +219,12 @@ const ALLOWED_MIME_TYPES = new Set([
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   "text/plain",
   "text/csv",
+  "application/zip",
+  "application/x-rar-compressed",
+  "application/vnd.rar",
+  "application/x-7z-compressed",
+  "application/gzip",
+  "application/x-tar",
 ]);
 
 // Magic bytes for file type validation (first few bytes of file)
@@ -229,6 +235,10 @@ const FILE_SIGNATURES: Record<string, number[][]> = {
   "image/webp": [[0x52, 0x49, 0x46, 0x46]], // RIFF header
   "application/pdf": [[0x25, 0x50, 0x44, 0x46]],
   "application/zip": [[0x50, 0x4b, 0x03, 0x04]], // Also covers .docx, .xlsx
+  "application/x-rar-compressed": [[0x52, 0x61, 0x72, 0x21, 0x1a, 0x07]], // RAR signature
+  "application/vnd.rar": [[0x52, 0x61, 0x72, 0x21, 0x1a, 0x07]], // RAR v5
+  "application/x-7z-compressed": [[0x37, 0x7a, 0xbc, 0xaf, 0x27, 0x1c]], // 7Z signature
+  "application/gzip": [[0x1f, 0x8b]], // GZIP header
 };
 
 export function validateFileType(mimeType: string, fileBytes?: Uint8Array): { valid: boolean; reason?: string } {

@@ -1,19 +1,33 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
 import { getAuthUser } from "@/lib/auth";
 import { checkRateLimit, validateFileType, sanitizeFilename, logSecurityEvent } from "@/lib/security";
 
-const ALLOWED_TYPES = [
+const IMAGE_TYPES = [
   "image/jpeg", "image/png", "image/gif", "image/webp",
+];
+
+const DOCUMENT_TYPES = [
   "application/pdf",
   "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   "application/vnd.ms-excel", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   "text/plain", "text/csv",
 ];
-// SVG removed from allowed types — poses stored XSS risk when rendered by consumers
-const MAX_SIZE = 10 * 1024 * 1024; // 10MB
 
-export async function POST(request: Request) {
+const ARCHIVE_TYPES = [
+  "application/zip",
+  "application/x-rar-compressed", "application/vnd.rar",
+  "application/x-7z-compressed",
+  "application/gzip", "application/x-tar",
+];
+
+const ALL_ALLOWED_TYPES = [...IMAGE_TYPES, ...DOCUMENT_TYPES, ...ARCHIVE_TYPES];
+// SVG removed from allowed types — poses stored XSS risk when rendered by consumers
+
+const MAX_SIZE_IMAGES = 10 * 1024 * 1024;       // 10MB for images
+const MAX_SIZE_PRODUCT_FILES = 50 * 1024 * 1024;  // 50MB for downloadable product files
+
+export async function POST(request: NextRequest) {
   try {
     const user = await getAuthUser();
     if (!user) {
@@ -42,13 +56,18 @@ export async function POST(request: Request) {
 
     const formData = await request.formData();
     const file = formData.get("file") as File;
+    const purpose = (request.nextUrl.searchParams.get("purpose") || "image") as "image" | "product-file";
 
     if (!file) {
       return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
     }
 
+    // Determine allowed types and max size based on purpose
+    const allowedTypes = purpose === "product-file" ? ALL_ALLOWED_TYPES : IMAGE_TYPES;
+    const maxSize = purpose === "product-file" ? MAX_SIZE_PRODUCT_FILES : MAX_SIZE_IMAGES;
+
     // Validate MIME type against allowlist
-    if (!ALLOWED_TYPES.includes(file.type)) {
+    if (!allowedTypes.includes(file.type)) {
       await logSecurityEvent({
         type: "file_upload_blocked",
         severity: "medium",
@@ -56,14 +75,15 @@ export async function POST(request: Request) {
         ip: request.headers.get("x-forwarded-for")?.split(",")[0] || "unknown",
         path: "/api/upload",
         method: "POST",
-        details: { reason: "Disallowed MIME type", mimeType: file.type, filename: file.name },
+        details: { reason: "Disallowed MIME type", mimeType: file.type, filename: file.name, purpose },
         blocked: true,
       });
       return NextResponse.json({ error: "File type not allowed" }, { status: 400 });
     }
 
-    if (file.size > MAX_SIZE) {
-      return NextResponse.json({ error: "File too large (max 10MB)" }, { status: 400 });
+    if (file.size > maxSize) {
+      const maxMB = Math.round(maxSize / (1024 * 1024));
+      return NextResponse.json({ error: `File too large (max ${maxMB}MB)` }, { status: 400 });
     }
 
     // Read file bytes for magic-byte validation

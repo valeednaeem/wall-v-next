@@ -1,5 +1,17 @@
 import mongoose, { Schema, Document } from "mongoose";
 
+export interface IProductFile {
+  id: string;
+  name: string;
+  originalName: string;
+  url: string;
+  mimeType: string;
+  size: number;
+  description?: string;
+  sortOrder: number;
+  createdAt: Date;
+}
+
 export interface IProduct extends Document {
   name: string;
   slug: string;
@@ -17,6 +29,7 @@ export interface IProduct extends Document {
   badges: string[];
   features: string[];
   specifications?: Record<string, string>;
+  files: IProductFile[];
   status: "draft" | "published" | "archived";
   isFeatured: boolean;
   isPromotional: boolean;
@@ -67,6 +80,19 @@ const ProductSchema = new Schema<IProduct>(
     badges: [String],
     features: [String],
     specifications: { type: Map, of: String },
+    files: [
+      {
+        id: { type: String, required: true },
+        name: { type: String, required: true },
+        originalName: { type: String, required: true },
+        url: { type: String, required: true },
+        mimeType: { type: String, required: true },
+        size: { type: Number, required: true },
+        description: String,
+        sortOrder: { type: Number, default: 0 },
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
     status: { type: String, enum: ["draft", "published", "archived"], default: "draft" },
     isFeatured: { type: Boolean, default: false },
     isPromotional: { type: Boolean, default: false },

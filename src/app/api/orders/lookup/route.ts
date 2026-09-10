@@ -21,6 +21,7 @@ export async function POST(request: Request) {
       ],
     })
       .select("orderNumber items subtotal tax taxRate discount total currency status paymentStatus paymentMethod billingAddress createdAt updatedAt")
+      .populate("items.product", "name slug type files.id files.name files.originalName files.mimeType files.size files.sortOrder")
       .lean();
 
     if (!order) {
