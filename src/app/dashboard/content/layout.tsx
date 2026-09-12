@@ -13,11 +13,13 @@ import {
   Share2,
   Link2,
   Settings,
+  Activity,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const TABS = [
   { label: "Overview", href: "/dashboard/content", icon: LayoutDashboard },
+  { label: "Operations", href: "/dashboard/content/operations", icon: Activity },
   { label: "Campaigns", href: "/dashboard/content/campaigns", icon: Megaphone },
   { label: "Calendar", href: "/dashboard/content/calendar", icon: CalendarDays },
   { label: "Articles", href: "/dashboard/content/articles", icon: FileText },
