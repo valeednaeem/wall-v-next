@@ -73,6 +73,14 @@ providers.push(Credentials({
       return null;
     }
 
+    // Bootstrap: if no super-admin exists, promote this user
+    const superAdminCount = await User.countDocuments({ role: "super-admin" });
+    if (superAdminCount === 0 && user.role !== "super-admin") {
+      await User.findByIdAndUpdate(user._id, { role: "super-admin" });
+      user.role = "super-admin";
+      console.info("[Auth] Bootstrap: promoted user to super-admin", { email });
+    }
+
     console.info("[Auth] Credentials sign-in succeeded", { email, userId: user._id.toString() });
 
     // Look up role slug from Role collection
