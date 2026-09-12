@@ -176,13 +176,17 @@ export async function POST(request: Request) {
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-|-$/g, "");
 
+    // First user to sign up gets super-admin (bootstrap)
+    const userCount = await User.countDocuments();
+    const assignedRole = userCount === 0 ? "super-admin" : "customer";
+
     const user = await User.create({
       name: sanitizedName,
       email: sanitizedEmail,
       password: hashedPassword,
       slug: `${slug}-${Date.now()}`,
-      role: "customer", // ALWAYS customer for public registration
-      isEmailVerified: false,
+      role: assignedRole,
+      isEmailVerified: userCount === 0,
       isActive: true,
     });
 
@@ -205,7 +209,7 @@ export async function POST(request: Request) {
     const token = signToken({
       userId: user._id.toString(),
       email: user.email,
-      role: "customer",
+      role: assignedRole,
     });
 
     const cookieStore = await cookies();
@@ -224,7 +228,7 @@ export async function POST(request: Request) {
           id: user._id,
           name: user.name,
           email: user.email,
-          role: "customer",
+          role: assignedRole,
         },
         token,
       },
