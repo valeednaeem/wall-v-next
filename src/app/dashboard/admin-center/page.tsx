@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import {
   LayoutDashboard, RefreshCw, Activity, Users, Bot, FolderKanban,
   CheckSquare, AlertTriangle, DollarSign, Puzzle, GitBranch, Clock,
@@ -86,89 +87,101 @@ export default function AdminCenterPage() {
       ) : data && (
         <>
           {/* System Health */}
-          <Card className={cn(data.health.overall === "unhealthy" && "border-red-200", data.health.overall === "degraded" && "border-amber-200")}>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Activity className="h-6 w-6 text-blue-600" />
-                  <div>
-                    <p className="text-lg font-bold capitalize">{data.health.overall}</p>
-                    <p className="text-xs text-muted-foreground">System Health: {data.health.score}%</p>
+          <Link href="/dashboard/monitoring">
+            <Card className={cn("hover:shadow-md transition-shadow cursor-pointer", data.health.overall === "unhealthy" && "border-red-200", data.health.overall === "degraded" && "border-amber-200")}>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Activity className="h-6 w-6 text-blue-600" />
+                    <div>
+                      <p className="text-lg font-bold capitalize">{data.health.overall}</p>
+                      <p className="text-xs text-muted-foreground">System Health: {data.health.score}%</p>
+                    </div>
                   </div>
+                  <Badge className={cn("text-xs", HEALTH_COLORS[data.health.overall])}>{data.health.overall}</Badge>
                 </div>
-                <Badge className={cn("text-xs", HEALTH_COLORS[data.health.overall])}>{data.health.overall}</Badge>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </Link>
 
           {/* Overview Cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {[
-              { label: "Projects", value: data.overview.totalProjects, sub: `${data.overview.activeProjects} active`, icon: <FolderKanban className="h-4 w-4 text-blue-600" /> },
-              { label: "Tasks", value: data.overview.totalTasks, sub: `${data.overview.activeTasks} active`, icon: <CheckSquare className="h-4 w-4 text-emerald-600" /> },
-              { label: "Agents", value: data.overview.totalAgents, sub: `${data.overview.activeAgents} active`, icon: <Bot className="h-4 w-4 text-purple-600" /> },
-              { label: "Users", value: data.overview.totalUsers, sub: "staff members", icon: <Users className="h-4 w-4 text-orange-600" /> },
+              { label: "Projects", value: data.overview.totalProjects, sub: `${data.overview.activeProjects} active`, icon: <FolderKanban className="h-4 w-4 text-blue-600" />, href: "/dashboard/projects" },
+              { label: "Tasks", value: data.overview.totalTasks, sub: `${data.overview.activeTasks} active`, icon: <CheckSquare className="h-4 w-4 text-emerald-600" />, href: "/dashboard/tasks" },
+              { label: "Agents", value: data.overview.totalAgents, sub: `${data.overview.activeAgents} active`, icon: <Bot className="h-4 w-4 text-purple-600" />, href: "/dashboard/agents" },
+              { label: "Users", value: data.overview.totalUsers, sub: "staff members", icon: <Users className="h-4 w-4 text-orange-600" />, href: "/dashboard/users" },
             ].map((s) => (
-              <Card key={s.label}>
-                <CardContent className="p-3">
-                  <div className="flex items-center gap-2">
-                    {s.icon}
-                    <div>
-                      <p className="text-xl font-bold">{s.value}</p>
-                      <p className="text-[10px] text-muted-foreground">{s.label} — {s.sub}</p>
+              <Link key={s.label} href={s.href}>
+                <Card className="hover:shadow-md transition-shadow cursor-pointer">
+                  <CardContent className="p-3">
+                    <div className="flex items-center gap-2">
+                      {s.icon}
+                      <div>
+                        <p className="text-xl font-bold">{s.value}</p>
+                        <p className="text-[10px] text-muted-foreground">{s.label} — {s.sub}</p>
+                      </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              </Link>
             ))}
           </div>
 
           {/* Secondary Metrics */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <Card>
-              <CardContent className="p-3">
-                <div className="flex items-center gap-2">
-                  <DollarSign className="h-4 w-4 text-emerald-600" />
-                  <div>
-                    <p className="text-lg font-bold">{formatCurrency(data.financial.revenue)}</p>
-                    <p className="text-[10px] text-muted-foreground">Revenue</p>
+            <Link href="/dashboard/financials">
+              <Card className="hover:shadow-md transition-shadow cursor-pointer">
+                <CardContent className="p-3">
+                  <div className="flex items-center gap-2">
+                    <DollarSign className="h-4 w-4 text-emerald-600" />
+                    <div>
+                      <p className="text-lg font-bold">{formatCurrency(data.financial.revenue)}</p>
+                      <p className="text-[10px] text-muted-foreground">Revenue</p>
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-3">
-                <div className="flex items-center gap-2">
-                  <AlertTriangle className="h-4 w-4 text-red-600" />
-                  <div>
-                    <p className="text-lg font-bold">{data.alerts.total}</p>
-                    <p className="text-[10px] text-muted-foreground">Alerts ({data.alerts.critical} critical)</p>
+                </CardContent>
+              </Card>
+            </Link>
+            <Link href="/dashboard/monitoring">
+              <Card className="hover:shadow-md transition-shadow cursor-pointer">
+                <CardContent className="p-3">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 text-red-600" />
+                    <div>
+                      <p className="text-lg font-bold">{data.alerts.total}</p>
+                      <p className="text-[10px] text-muted-foreground">Alerts ({data.alerts.critical} critical)</p>
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-3">
-                <div className="flex items-center gap-2">
-                  <Shield className="h-4 w-4 text-amber-600" />
-                  <div>
-                    <p className="text-lg font-bold">{data.risks.total}</p>
-                    <p className="text-[10px] text-muted-foreground">Risks ({data.risks.critical} critical)</p>
+                </CardContent>
+              </Card>
+            </Link>
+            <Link href="/dashboard/monitoring">
+              <Card className="hover:shadow-md transition-shadow cursor-pointer">
+                <CardContent className="p-3">
+                  <div className="flex items-center gap-2">
+                    <Shield className="h-4 w-4 text-amber-600" />
+                    <div>
+                      <p className="text-lg font-bold">{data.risks.total}</p>
+                      <p className="text-[10px] text-muted-foreground">Risks ({data.risks.critical} critical)</p>
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-3">
-                <div className="flex items-center gap-2">
-                  <Puzzle className="h-4 w-4 text-cyan-600" />
-                  <div>
-                    <p className="text-lg font-bold">{data.integrations.active}/{data.integrations.total}</p>
-                    <p className="text-[10px] text-muted-foreground">Integrations Active</p>
+                </CardContent>
+              </Card>
+            </Link>
+            <Link href="/dashboard/integrations">
+              <Card className="hover:shadow-md transition-shadow cursor-pointer">
+                <CardContent className="p-3">
+                  <div className="flex items-center gap-2">
+                    <Puzzle className="h-4 w-4 text-cyan-600" />
+                    <div>
+                      <p className="text-lg font-bold">{data.integrations.active}/{data.integrations.total}</p>
+                      <p className="text-[10px] text-muted-foreground">Integrations Active</p>
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </Link>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

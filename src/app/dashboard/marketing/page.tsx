@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { useSession } from "next-auth/react";
 import {
   BarChart3, Search, ShoppingBag,
@@ -198,10 +199,10 @@ export default function MarketingPage() {
   if (!session) return null;
 
   const metricCards = overviewStats ? [
-    { label: "Visitors", value: formatNumber(overviewStats.visitors.current), change: overviewStats.visitors.change, icon: Users, bg: "bg-blue-50", color: "text-blue-500" },
-    { label: "Leads", value: formatNumber(overviewStats.leads.current), change: overviewStats.leads.change, icon: Target, bg: "bg-green-50", color: "text-green-500" },
-    { label: "AI Conversations", value: formatNumber(overviewStats.aiConversations.current), change: overviewStats.aiConversations.change, icon: MessageSquare, bg: "bg-orange-50", color: "text-orange-500" },
-    { label: "Revenue", value: formatCurrency(overviewStats.revenue.current), change: overviewStats.revenue.change, icon: DollarSign, bg: "bg-yellow-50", color: "text-yellow-500" },
+    { label: "Visitors", value: formatNumber(overviewStats.visitors.current), change: overviewStats.visitors.change, icon: Users, bg: "bg-blue-50", color: "text-blue-500", href: "/dashboard/marketing/google/analytics" },
+    { label: "Leads", value: formatNumber(overviewStats.leads.current), change: overviewStats.leads.change, icon: Target, bg: "bg-green-50", color: "text-green-500", href: "/dashboard/crm/leads" },
+    { label: "AI Conversations", value: formatNumber(overviewStats.aiConversations.current), change: overviewStats.aiConversations.change, icon: MessageSquare, bg: "bg-orange-50", color: "text-orange-500", href: "/dashboard/agents/conversations" },
+    { label: "Revenue", value: formatCurrency(overviewStats.revenue.current), change: overviewStats.revenue.change, icon: DollarSign, bg: "bg-yellow-50", color: "text-yellow-500", href: "/dashboard/financials" },
   ] : [];
 
   return (
@@ -269,23 +270,25 @@ export default function MarketingPage() {
           </h2>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             {metricCards.map((card) => (
-              <div key={card.label} className="rounded-lg border p-5">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">{card.label}</p>
-                    <p className="mt-1 text-3xl font-bold">{card.value}</p>
+              <Link key={card.label} href={card.href}>
+                <div className="rounded-lg border p-5 hover:shadow-md transition-shadow cursor-pointer">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground">{card.label}</p>
+                      <p className="mt-1 text-3xl font-bold">{card.value}</p>
+                    </div>
+                    <div className={cn("h-10 w-10 rounded-lg flex items-center justify-center", card.bg)}>
+                      <card.icon className={cn("h-5 w-5", card.color)} />
+                    </div>
                   </div>
-                  <div className={cn("h-10 w-10 rounded-lg flex items-center justify-center", card.bg)}>
-                    <card.icon className={cn("h-5 w-5", card.color)} />
+                  <div className="mt-3 text-sm">
+                    <span className={cn("font-medium", getChangeColor(card.change))}>
+                      {getChangeIcon(card.change)}{card.change >= 0 ? "+" : ""}{card.change.toFixed(1)}%
+                    </span>
+                    <span className="text-muted-foreground ml-1">vs last period</span>
                   </div>
                 </div>
-                <div className="mt-3 text-sm">
-                  <span className={cn("font-medium", getChangeColor(card.change))}>
-                    {getChangeIcon(card.change)}{card.change >= 0 ? "+" : ""}{card.change.toFixed(1)}%
-                  </span>
-                  <span className="text-muted-foreground ml-1">vs last period</span>
-                </div>
-              </div>
+              </Link>
             ))}
           </div>
         </div>

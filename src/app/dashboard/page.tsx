@@ -113,20 +113,22 @@ export default function DashboardPage() {
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {[
-            { label: "My Projects", value: data?.totalProjects || 0, icon: FolderKanban, color: "text-blue-500" },
-            { label: "Active", value: data?.activeProjects || 0, icon: TrendingUp, color: "text-green-500" },
-            { label: "Completed", value: data?.completedProjects || 0, icon: CheckCircle2, color: "text-emerald-500" },
-            { label: "Inquiries", value: data?.totalInquiries || 0, icon: Mail, color: "text-amber-500" },
+            { label: "My Projects", value: data?.totalProjects || 0, icon: FolderKanban, color: "text-blue-500", href: "/dashboard/projects" },
+            { label: "Active", value: data?.activeProjects || 0, icon: TrendingUp, color: "text-green-500", href: "/dashboard/projects" },
+            { label: "Completed", value: data?.completedProjects || 0, icon: CheckCircle2, color: "text-emerald-500", href: "/dashboard/projects" },
+            { label: "Inquiries", value: data?.totalInquiries || 0, icon: Mail, color: "text-amber-500", href: "/dashboard/crm/inquiries" },
           ].map((stat) => (
-            <Card key={stat.label}>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm text-muted-foreground">{stat.label}</p>
-                  <stat.icon className={`h-5 w-5 ${stat.color}`} />
-                </div>
-                <p className="mt-2 text-3xl font-bold">{stat.value}</p>
-              </CardContent>
-            </Card>
+            <Link key={stat.label} href={stat.href}>
+              <Card className="hover:shadow-md transition-shadow cursor-pointer">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm text-muted-foreground">{stat.label}</p>
+                    <stat.icon className={`h-5 w-5 ${stat.color}`} />
+                  </div>
+                  <p className="mt-2 text-3xl font-bold">{stat.value}</p>
+                </CardContent>
+              </Card>
+            </Link>
           ))}
         </div>
 
@@ -226,59 +228,65 @@ export default function DashboardPage() {
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {[
-          { label: "Total Projects", value: data?.totalProjects || 0, icon: FolderKanban, color: "text-blue-500" },
-          { label: "Active Projects", value: data?.activeProjects || 0, icon: TrendingUp, color: "text-green-500" },
-          { label: "Total Clients", value: data?.totalClients || 0, icon: Users, color: "text-purple-500" },
-          { label: "Total Revenue", value: `$${(data?.totalRevenue || 0).toLocaleString()}`, icon: DollarSign, color: "text-orange-500" },
+          { label: "Total Projects", value: data?.totalProjects || 0, icon: FolderKanban, color: "text-blue-500", href: "/dashboard/projects" },
+          { label: "Active Projects", value: data?.activeProjects || 0, icon: TrendingUp, color: "text-green-500", href: "/dashboard/projects" },
+          { label: "Total Clients", value: data?.totalClients || 0, icon: Users, color: "text-purple-500", href: "/dashboard/crm/clients" },
+          { label: "Total Revenue", value: `$${(data?.totalRevenue || 0).toLocaleString()}`, icon: DollarSign, color: "text-orange-500", href: "/dashboard/financials" },
         ].map((stat) => (
-          <Card key={stat.label}>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-muted-foreground">{stat.label}</p>
-                <stat.icon className={`h-5 w-5 ${stat.color}`} />
-              </div>
-              <p className="mt-2 text-3xl font-bold">{stat.value}</p>
-            </CardContent>
-          </Card>
+          <Link key={stat.label} href={stat.href}>
+            <Card className="hover:shadow-md transition-shadow cursor-pointer">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-muted-foreground">{stat.label}</p>
+                  <stat.icon className={`h-5 w-5 ${stat.color}`} />
+                </div>
+                <p className="mt-2 text-3xl font-bold">{stat.value}</p>
+              </CardContent>
+            </Card>
+          </Link>
         ))}
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {[
-          { label: "AI Agents", value: data?.totalAgents || 0, icon: Bot, color: "text-violet-500", sub: `${data?.activeAgents || 0} active` },
-          { label: "Conversations", value: data?.totalAgentConversations || 0, icon: MessageSquare, color: "text-blue-500" },
-          { label: "Project Requests", value: data?.totalProjectRequests || 0, icon: ClipboardList, color: "text-amber-500", sub: `${data?.pendingProjectRequests || 0} pending` },
-          { label: "Qualified Leads", value: data?.qualifiedLeads || 0, icon: Target, color: "text-emerald-500" },
+          { label: "AI Agents", value: data?.totalAgents || 0, icon: Bot, color: "text-violet-500", sub: `${data?.activeAgents || 0} active`, href: "/dashboard/agents" },
+          { label: "Conversations", value: data?.totalAgentConversations || 0, icon: MessageSquare, color: "text-blue-500", href: "/dashboard/agents/conversations" },
+          { label: "Project Requests", value: data?.totalProjectRequests || 0, icon: ClipboardList, color: "text-amber-500", sub: `${data?.pendingProjectRequests || 0} pending`, href: "/dashboard/agents/project-requests" },
+          { label: "Qualified Leads", value: data?.qualifiedLeads || 0, icon: Target, color: "text-emerald-500", href: "/dashboard/crm/leads" },
         ].map((stat) => (
-          <Card key={stat.label}>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-muted-foreground">{stat.label}</p>
-                <stat.icon className={`h-5 w-5 ${stat.color}`} />
-              </div>
-              <p className="mt-2 text-3xl font-bold">{stat.value}</p>
-              {stat.sub && <p className="text-xs text-muted-foreground mt-1">{stat.sub}</p>}
-            </CardContent>
-          </Card>
+          <Link key={stat.label} href={stat.href}>
+            <Card className="hover:shadow-md transition-shadow cursor-pointer">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-muted-foreground">{stat.label}</p>
+                  <stat.icon className={`h-5 w-5 ${stat.color}`} />
+                </div>
+                <p className="mt-2 text-3xl font-bold">{stat.value}</p>
+                {stat.sub && <p className="text-xs text-muted-foreground mt-1">{stat.sub}</p>}
+              </CardContent>
+            </Card>
+          </Link>
         ))}
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {[
-          { label: "Total Users", value: data?.totalUsers || 0, icon: Users, color: "text-blue-500" },
-          { label: "Total Products", value: data?.totalProducts || 0, icon: Package, color: "text-green-500" },
-          { label: "Blog Posts", value: data?.totalPosts || 0, icon: FileText, color: "text-purple-500" },
-          { label: "Inquiries", value: data?.totalInquiries || 0, icon: Mail, color: "text-orange-500" },
+          { label: "Total Users", value: data?.totalUsers || 0, icon: Users, color: "text-blue-500", href: "/dashboard/users" },
+          { label: "Total Products", value: data?.totalProducts || 0, icon: Package, color: "text-green-500", href: "/dashboard/ecommerce/products" },
+          { label: "Blog Posts", value: data?.totalPosts || 0, icon: FileText, color: "text-purple-500", href: "/dashboard/blog" },
+          { label: "Inquiries", value: data?.totalInquiries || 0, icon: Mail, color: "text-orange-500", href: "/dashboard/crm/inquiries" },
         ].map((stat) => (
-          <Card key={stat.label}>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-muted-foreground">{stat.label}</p>
-                <stat.icon className={`h-5 w-5 ${stat.color}`} />
-              </div>
-              <p className="mt-2 text-3xl font-bold">{stat.value}</p>
-            </CardContent>
-          </Card>
+          <Link key={stat.label} href={stat.href}>
+            <Card className="hover:shadow-md transition-shadow cursor-pointer">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-muted-foreground">{stat.label}</p>
+                  <stat.icon className={`h-5 w-5 ${stat.color}`} />
+                </div>
+                <p className="mt-2 text-3xl font-bold">{stat.value}</p>
+              </CardContent>
+            </Card>
+          </Link>
         ))}
       </div>
 

@@ -277,6 +277,7 @@ export default function ContentOverviewPage() {
             icon: FileText,
             bg: "bg-blue-50",
             color: "text-blue-500",
+            href: "/dashboard/content/articles",
           },
           {
             label: "Published",
@@ -284,6 +285,7 @@ export default function ContentOverviewPage() {
             icon: CheckCircle2,
             bg: "bg-green-50",
             color: "text-green-500",
+            href: "/dashboard/content/articles?status=published",
           },
           {
             label: "Pending Approval",
@@ -291,6 +293,7 @@ export default function ContentOverviewPage() {
             icon: Clock,
             bg: "bg-yellow-50",
             color: "text-yellow-500",
+            href: "/dashboard/content/articles?status=review",
           },
           {
             label: "Social Posts",
@@ -298,36 +301,40 @@ export default function ContentOverviewPage() {
             icon: Share2,
             bg: "bg-purple-50",
             color: "text-purple-500",
+            href: "/dashboard/content/social",
           },
         ].map((card) => (
-          <div key={card.label} className="rounded-xl border p-5">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">{card.label}</p>
-                <p className="mt-1 text-3xl font-bold">{card.value}</p>
-              </div>
-              <div
-                className={cn(
-                  "h-10 w-10 rounded-lg flex items-center justify-center",
-                  card.bg
-                )}
-              >
-                <card.icon className={cn("h-5 w-5", card.color)} />
+          <Link key={card.label} href={card.href}>
+            <div className="rounded-xl border p-5 hover:shadow-md transition-shadow cursor-pointer">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">{card.label}</p>
+                  <p className="mt-1 text-3xl font-bold">{card.value}</p>
+                </div>
+                <div
+                  className={cn(
+                    "h-10 w-10 rounded-lg flex items-center justify-center",
+                    card.bg
+                  )}
+                >
+                  <card.icon className={cn("h-5 w-5", card.color)} />
+                </div>
               </div>
             </div>
-          </div>
+          </Link>
         ))}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Active Campaign */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Megaphone className="h-4 w-4" /> Active Campaign
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
+        <Link href={activeCampaign ? `/dashboard/content/campaigns/${activeCampaign._id}` : "/dashboard/content/campaigns"}>
+          <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Megaphone className="h-4 w-4" /> Active Campaign
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
             {activeCampaign ? (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
@@ -368,6 +375,7 @@ export default function ContentOverviewPage() {
             )}
           </CardContent>
         </Card>
+        </Link>
 
         {/* Connection Status */}
         <Card>
@@ -475,9 +483,10 @@ export default function ContentOverviewPage() {
             ) : (
               <div className="space-y-2">
                 {data.todayItems.slice(0, 5).map((item) => (
-                  <div
+                  <Link
                     key={item._id}
-                    className="flex items-center justify-between p-2 rounded-lg bg-muted/30"
+                    href={`/dashboard/content/articles/${item._id}`}
+                    className="flex items-center justify-between p-2 rounded-lg bg-muted/30 hover:bg-muted/60 transition-colors"
                   >
                     <div className="min-w-0">
                       <p className="text-sm font-medium truncate">{item.title}</p>
@@ -493,7 +502,7 @@ export default function ContentOverviewPage() {
                     >
                       {item.status}
                     </span>
-                  </div>
+                  </Link>
                 ))}
               </div>
             )}
@@ -515,9 +524,10 @@ export default function ContentOverviewPage() {
             ) : (
               <div className="space-y-2">
                 {data.upcomingItems.slice(0, 5).map((item) => (
-                  <div
+                  <Link
                     key={item._id}
-                    className="flex items-center justify-between p-2 rounded-lg bg-muted/30"
+                    href={`/dashboard/content/articles/${item._id}`}
+                    className="flex items-center justify-between p-2 rounded-lg bg-muted/30 hover:bg-muted/60 transition-colors"
                   >
                     <div className="min-w-0">
                       <p className="text-sm font-medium truncate">{item.title}</p>
@@ -533,7 +543,7 @@ export default function ContentOverviewPage() {
                     >
                       {item.status}
                     </span>
-                  </div>
+                  </Link>
                 ))}
               </div>
             )}
@@ -555,9 +565,10 @@ export default function ContentOverviewPage() {
             ) : (
               <div className="space-y-2">
                 {data.recentPublished.map((item) => (
-                  <div
+                  <Link
                     key={item._id}
-                    className="flex items-center justify-between p-2 rounded-lg bg-muted/30"
+                    href={`/dashboard/content/articles/${item._id}`}
+                    className="flex items-center justify-between p-2 rounded-lg bg-muted/30 hover:bg-muted/60 transition-colors"
                   >
                     <div className="min-w-0">
                       <p className="text-sm font-medium truncate">{item.title}</p>
@@ -570,7 +581,7 @@ export default function ContentOverviewPage() {
                         item.publishedAt || item.createdAt
                       ).toLocaleDateString()}
                     </span>
-                  </div>
+                  </Link>
                 ))}
               </div>
             )}

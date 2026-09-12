@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import {
   DollarSign, TrendingUp, TrendingDown, AlertTriangle, CheckCircle2,
   RefreshCw, Loader2, BarChart3, CreditCard, Clock, ArrowUpRight,
@@ -93,50 +94,58 @@ export default function FinancialsPage() {
         </div>
       ) : summary && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <Card>
-            <CardContent className="p-3">
-              <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-emerald-50"><TrendingUp className="h-4 w-4 text-emerald-600" /></div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Revenue</p>
-                  <p className="text-xl font-bold">{formatCurrency(summary.totalPaid)}</p>
+          <Link href="/dashboard/projects">
+            <Card className="hover:shadow-md transition-shadow cursor-pointer">
+              <CardContent className="p-3">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-lg bg-emerald-50"><TrendingUp className="h-4 w-4 text-emerald-600" /></div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Revenue</p>
+                    <p className="text-xl font-bold">{formatCurrency(summary.totalPaid)}</p>
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-3">
-              <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-amber-50"><Clock className="h-4 w-4 text-amber-600" /></div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Pending</p>
-                  <p className="text-xl font-bold">{formatCurrency(summary.totalPending)}</p>
+              </CardContent>
+            </Card>
+          </Link>
+          <Link href="/dashboard/invoices">
+            <Card className="hover:shadow-md transition-shadow cursor-pointer">
+              <CardContent className="p-3">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-lg bg-amber-50"><Clock className="h-4 w-4 text-amber-600" /></div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Pending</p>
+                    <p className="text-xl font-bold">{formatCurrency(summary.totalPending)}</p>
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-3">
-              <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-red-50"><AlertTriangle className="h-4 w-4 text-red-600" /></div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Overdue</p>
-                  <p className="text-xl font-bold">{formatCurrency(summary.totalOverdue)}</p>
+              </CardContent>
+            </Card>
+          </Link>
+          <Link href="/dashboard/invoices">
+            <Card className="hover:shadow-md transition-shadow cursor-pointer">
+              <CardContent className="p-3">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-lg bg-red-50"><AlertTriangle className="h-4 w-4 text-red-600" /></div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Overdue</p>
+                    <p className="text-xl font-bold">{formatCurrency(summary.totalOverdue)}</p>
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-3">
-              <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-blue-50"><Wallet className="h-4 w-4 text-blue-600" /></div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Avg Invoice</p>
-                  <p className="text-xl font-bold">{formatCurrency(summary.averageInvoiceValue)}</p>
+              </CardContent>
+            </Card>
+          </Link>
+          <Link href="/dashboard/invoices">
+            <Card className="hover:shadow-md transition-shadow cursor-pointer">
+              <CardContent className="p-3">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-lg bg-blue-50"><Wallet className="h-4 w-4 text-blue-600" /></div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Avg Invoice</p>
+                    <p className="text-xl font-bold">{formatCurrency(summary.averageInvoiceValue)}</p>
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </Link>
         </div>
       )}
 
