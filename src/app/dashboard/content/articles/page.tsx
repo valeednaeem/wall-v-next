@@ -9,6 +9,8 @@ import {
   Loader2,
   ChevronRight,
   Trash2,
+  CheckCircle2,
+  XCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -78,6 +80,7 @@ export default function ArticlesPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   const fetchItems = useCallback(async () => {
     setLoading(true);
@@ -139,6 +142,34 @@ export default function ArticlesPage() {
     }
     setSelected(new Set());
     fetchItems();
+  };
+
+  const handleApprove = async (id: string) => {
+    setActionLoading(id);
+    try {
+      await fetch(`/api/content/items/${id}/approve`, { method: "POST" });
+      fetchItems();
+    } catch (error) {
+      console.error("Approve failed:", error);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleReject = async (id: string) => {
+    setActionLoading(id);
+    try {
+      await fetch(`/api/content/items/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "draft" }),
+      });
+      fetchItems();
+    } catch (error) {
+      console.error("Reject failed:", error);
+    } finally {
+      setActionLoading(null);
+    }
   };
 
   return (
@@ -301,12 +332,38 @@ export default function ArticlesPage() {
                     {new Date(item.scheduledAt || item.createdAt).toLocaleDateString()}
                   </td>
                   <td className="p-3">
-                    <Link
-                      href={`/dashboard/content/articles/${item._id}`}
-                      className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
-                    >
-                      Edit <ChevronRight className="h-3.5 w-3.5" />
-                    </Link>
+                    <div className="flex gap-2 items-center">
+                      {item.status === "review" && (
+                        <>
+                          <button
+                            onClick={() => handleApprove(item._id)}
+                            disabled={actionLoading === item._id}
+                            className="inline-flex items-center gap-1 text-sm text-green-600 hover:text-green-700 disabled:opacity-50"
+                          >
+                            {actionLoading === item._id ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <CheckCircle2 className="h-3.5 w-3.5" />
+                            )}
+                            Approve
+                          </button>
+                          <button
+                            onClick={() => handleReject(item._id)}
+                            disabled={actionLoading === item._id}
+                            className="inline-flex items-center gap-1 text-sm text-red-600 hover:text-red-700 disabled:opacity-50"
+                          >
+                            <XCircle className="h-3.5 w-3.5" />
+                            Reject
+                          </button>
+                        </>
+                      )}
+                      <Link
+                        href={`/dashboard/content/articles/${item._id}`}
+                        className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+                      >
+                        Edit <ChevronRight className="h-3.5 w-3.5" />
+                      </Link>
+                    </div>
                   </td>
                 </tr>
               ))

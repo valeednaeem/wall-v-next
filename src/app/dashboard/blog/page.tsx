@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { Search, Plus } from "lucide-react";
+import { Search, Plus, CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface BlogPost {
@@ -18,7 +18,15 @@ interface BlogPost {
   featuredImage?: string;
 }
 
-const STATUS_FILTERS = ["all", "draft", "published", "archived"];
+const STATUS_FILTERS = ["all", "draft", "review", "published", "archived"];
+
+const STATUS_COLORS: Record<string, string> = {
+  published: "bg-green-100 text-green-800",
+  review: "bg-yellow-100 text-yellow-800",
+  draft: "bg-gray-100 text-gray-800",
+  scheduled: "bg-blue-100 text-blue-800",
+  archived: "bg-gray-100 text-gray-600",
+};
 
 export default function BlogDashboardPage() {
   const [posts, setPosts] = useState<BlogPost[]>([]);
@@ -28,8 +36,9 @@ export default function BlogDashboardPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
-  const fetchPosts = () => {
+  const fetchPosts = useCallback(() => {
     setLoading(true);
     const params = new URLSearchParams({ allStatuses: "true", limit: "20", page: String(page) });
     if (statusFilter !== "all") params.set("status", statusFilter);
@@ -46,9 +55,9 @@ export default function BlogDashboardPage() {
       })
       .catch(console.error)
       .finally(() => setLoading(false));
-  };
+  }, [page, statusFilter, search]);
 
-  useEffect(() => { fetchPosts(); }, [page, statusFilter]);
+  useEffect(() => { fetchPosts(); }, [fetchPosts]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,6 +69,35 @@ export default function BlogDashboardPage() {
     if (!confirm("Are you sure you want to delete this post?")) return;
     const res = await fetch(`/api/blog/posts/${slug}`, { method: "DELETE" });
     if (res.ok) setPosts(posts.filter((p) => p.slug !== slug));
+  };
+
+  const handleApprove = async (slug: string) => {
+    setActionLoading(slug);
+    try {
+      const res = await fetch(`/api/blog/posts/${slug}/approve`, { method: "POST" });
+      if (res.ok) fetchPosts();
+    } catch (error) {
+      console.error("Approve failed:", error);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleReject = async (slug: string) => {
+    const reason = prompt("Rejection reason (optional):");
+    setActionLoading(slug);
+    try {
+      const res = await fetch(`/api/blog/posts/${slug}/reject`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: reason || undefined }),
+      });
+      if (res.ok) fetchPosts();
+    } catch (error) {
+      console.error("Reject failed:", error);
+    } finally {
+      setActionLoading(null);
+    }
   };
 
   return (
@@ -125,17 +163,39 @@ export default function BlogDashboardPage() {
                   <td className="p-3 text-sm">{post.category?.name || "-"}</td>
                   <td className="p-3 text-sm">{post.author?.name || "-"}</td>
                   <td className="p-3">
-                    <span className={cn("text-xs px-2 py-1 rounded-full",
-                      post.status === "published" ? "bg-green-100 text-green-800" :
-                      post.status === "draft" ? "bg-yellow-100 text-yellow-800" :
-                      "bg-gray-100 text-gray-800"
+                    <span className={cn("text-xs px-2 py-1 rounded-full font-medium",
+                      STATUS_COLORS[post.status] || "bg-gray-100 text-gray-800"
                     )}>
                       {post.status}
                     </span>
                   </td>
                   <td className="p-3 text-sm">{post.viewCount}</td>
                   <td className="p-3">
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 items-center">
+                      {post.status === "review" && (
+                        <>
+                          <button
+                            onClick={() => handleApprove(post.slug)}
+                            disabled={actionLoading === post.slug}
+                            className="inline-flex items-center gap-1 text-sm text-green-600 hover:text-green-700 disabled:opacity-50"
+                          >
+                            {actionLoading === post.slug ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <CheckCircle2 className="h-3.5 w-3.5" />
+                            )}
+                            Approve
+                          </button>
+                          <button
+                            onClick={() => handleReject(post.slug)}
+                            disabled={actionLoading === post.slug}
+                            className="inline-flex items-center gap-1 text-sm text-red-600 hover:text-red-700 disabled:opacity-50"
+                          >
+                            <XCircle className="h-3.5 w-3.5" />
+                            Reject
+                          </button>
+                        </>
+                      )}
                       <Link href={`/dashboard/blog/edit/${post.slug}`} className="text-sm text-primary hover:underline">Edit</Link>
                       <Link href={`/blog/${post.slug}`} target="_blank" className="text-sm text-muted-foreground hover:underline">View</Link>
                       <button onClick={() => deletePost(post.slug)} className="text-sm text-destructive hover:underline">Delete</button>

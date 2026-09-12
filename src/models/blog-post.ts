@@ -10,9 +10,11 @@ export interface IBlogPost extends Document {
   author: mongoose.Types.ObjectId;
   category: mongoose.Types.ObjectId;
   tags: mongoose.Types.ObjectId[];
-  status: "draft" | "published" | "scheduled" | "archived";
+  status: "draft" | "review" | "published" | "scheduled" | "archived";
   publishedAt?: Date;
   scheduledAt?: Date;
+  approvedBy?: mongoose.Types.ObjectId;
+  approvedAt?: Date;
   isFeatured: boolean;
   viewCount: number;
   likeCount: number;
@@ -51,11 +53,13 @@ const BlogPostSchema = new Schema<IBlogPost>(
     tags: [{ type: Schema.Types.ObjectId, ref: "BlogTag" }],
     status: {
       type: String,
-      enum: ["draft", "published", "scheduled", "archived"],
+      enum: ["draft", "review", "published", "scheduled", "archived"],
       default: "draft",
     },
     publishedAt: Date,
     scheduledAt: Date,
+    approvedBy: { type: Schema.Types.ObjectId, ref: "User" },
+    approvedAt: Date,
     isFeatured: { type: Boolean, default: false },
     viewCount: { type: Number, default: 0 },
     likeCount: { type: Number, default: 0 },
