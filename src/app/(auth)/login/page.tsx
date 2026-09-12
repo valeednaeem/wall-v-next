@@ -9,8 +9,16 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
   const [availableProviders, setAvailableProviders] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("signup") === "success") {
+      setSuccess("Account created successfully! Please sign in.");
+    }
+  }, []);
 
   useEffect(() => {
     fetch("/api/auth/providers")
@@ -134,6 +142,11 @@ export default function LoginPage() {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
+        {success && (
+          <div className="rounded-lg bg-green-50 border border-green-200 p-3 text-sm text-green-700">
+            {success}
+          </div>
+        )}
         {error && (
           <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
             {error}

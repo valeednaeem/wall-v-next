@@ -154,7 +154,6 @@ export async function POST(request: Request) {
     // ─── Duplicate Check ───────────────────────────────────────────────
     const existingUser = await User.findOne({ email: sanitizedEmail });
     if (existingUser) {
-      // Don't reveal whether email exists — return success-like response
       await logSecurityEvent({
         type: "signup_attempt",
         severity: "low",
@@ -164,10 +163,10 @@ export async function POST(request: Request) {
         method: "POST",
         details: { email: sanitizedEmail, result: "duplicate" },
       });
-      return NextResponse.json({
-        success: true,
-        data: { message: "If this email is not already registered, you will receive a verification link." },
-      });
+      return NextResponse.json(
+        { error: "An account with this email already exists. Please sign in instead." },
+        { status: 409 }
+      );
     }
 
     // ─── Create Account ────────────────────────────────────────────────

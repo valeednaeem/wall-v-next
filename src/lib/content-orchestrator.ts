@@ -26,6 +26,7 @@ import { runQualityPipeline } from "@/lib/content-quality";
 import { findInternalLinks } from "@/lib/content-linking";
 import { checkForDuplicates } from "@/lib/content-analytics";
 import { getAdapter } from "@/lib/social-adapters";
+import { insertInternalLinks, runSEOAudit, enhanceSEOMetadata, generateArticleSchema, addFreshnessSignal, generateSEOStrategy } from "@/lib/seo-content-engine";
 import { marked } from "marked";
 
 // ─── Execution Tracking Helpers ──────────────────────────────────────────────
@@ -198,15 +199,50 @@ export async function generateWeeklyPlan(
   const scoredTopics = await scoreTopics(topics);
   const selectedTopics = await selectBestTopics(scoredTopics, 7);
 
+  // ─── SEO Strategy Generation (before plan creation) ────────────────────
+  // Generate SEO strategy for each topic so article generation is SEO-informed
+  const topicsWithSEO = await Promise.all(
+    selectedTopics.map(async (t) => {
+      try {
+        const strategy = await generateSEOStrategy({
+          topic: t.title,
+          primaryKeyword: t.primaryKeyword || t.title,
+          secondaryKeywords: t.secondaryKeywords,
+          campaignGoal: campaign.contentPillars?.[0]?.description || "Drive organic traffic",
+        });
+        return {
+          ...t,
+          seoStrategy: {
+            optimizedKeyword: strategy.primaryKeyword,
+            secondaryKeywords: strategy.secondaryKeywords,
+            longTailKeywords: strategy.longTailKeywords,
+            searchIntent: strategy.searchIntent,
+            competitorGaps: strategy.competitorGap,
+            suggestedHeadings: strategy.contentStructure.suggestedHeadings,
+            wordCountTarget: strategy.contentStructure.wordCountTarget,
+            schemaType: strategy.schemaType,
+            internalLinkTargets: strategy.internalLinkTargets,
+          },
+        };
+      } catch {
+        // Fallback: use original topic data without SEO enhancement
+        return {
+          ...t,
+          seoStrategy: undefined,
+        };
+      }
+    })
+  );
+
   const topicDocs = await ContentTopic.insertMany(
-    selectedTopics.map((t) => ({
+    topicsWithSEO.map((t) => ({
       campaign: campaignId,
       title: t.title,
       slug: generateSlug(t.title),
       description: t.description,
-      primaryKeyword: t.primaryKeyword,
-      secondaryKeywords: t.secondaryKeywords,
-      searchIntent: t.searchIntent,
+      primaryKeyword: t.seoStrategy?.optimizedKeyword || t.primaryKeyword,
+      secondaryKeywords: t.seoStrategy?.secondaryKeywords || t.secondaryKeywords,
+      searchIntent: (t.seoStrategy?.searchIntent || t.searchIntent) as IContentTopic["searchIntent"],
       contentType: t.contentType as IContentTopic["contentType"],
       businessRelevance: t.businessRelevance,
       trendMomentum: t.trendMomentum,
@@ -221,9 +257,10 @@ export async function generateWeeklyPlan(
       overallScore: t.overallScore || 0,
       sources: t.sources,
       status: "planned",
-      assignedDayOfWeek: selectedTopics.indexOf(t),
+      assignedDayOfWeek: topicsWithSEO.indexOf(t),
       plannedChannels: ["blog", "linkedin"],
       plannedMedia: { image: true, video: false, social: true },
+      seoStrategy: t.seoStrategy,
     }))
   );
 
@@ -465,15 +502,22 @@ export async function executePlan(
     throw new Error("Plan not found");
   }
 
-  if (plan.status !== "approved") {
-    throw new Error(`Plan must be approved before execution. Current status: "${plan.status}".`);
+  // Allow execution for approved plans OR resume partially failed executing plans
+  const executableStatuses = ["approved", "executing"];
+  if (!executableStatuses.includes(plan.status)) {
+    throw new Error(`Plan cannot be executed. Current status: "${plan.status}".`);
   }
 
-  // Idempotency check: skip if plan already has content items
-  const existingItemCount = await ContentItem.countDocuments({ plan: planId });
-  if (existingItemCount > 0) {
-    console.log(`[ContentOrchestrator] PLAN_ALREADY_EXECUTED planId=${planId} existingItems=${existingItemCount}`);
-    return { itemsCreated: 0, errors: [`Plan already executed with ${existingItemCount} items`] };
+  // Find which topics already have content items (skip them for resume support)
+  const existingItems = await ContentItem.find({ plan: planId }).select("topic").lean();
+  const existingTopicIds = new Set(existingItems.map((item) => item.topic?.toString()));
+  const topicsToProcess = (plan.topics || []).filter(
+    (tid) => !existingTopicIds.has(tid.toString())
+  );
+
+  if (topicsToProcess.length === 0 && existingItems.length > 0) {
+    console.log(`[ContentOrchestrator] PLAN_ALREADY_EXECUTED planId=${planId} existingItems=${existingItems.length}`);
+    return { itemsCreated: 0, errors: [`Plan already executed with ${existingItems.length} items — all topics covered`] };
   }
 
   console.log(`[ContentOrchestrator] CONTENT_EXECUTION_STARTED planId=${planId} topicCount=${plan.topics.length}`);
@@ -486,7 +530,7 @@ export async function executePlan(
     type: "plan_execution",
     stage: "starting",
     agent: "content-orchestrator",
-    input: { topicCount: plan.topics.length },
+    input: { topicCount: topicsToProcess.length, skipped: existingTopicIds.size },
   });
 
   await ContentPlan.findByIdAndUpdate(planId, {
@@ -508,7 +552,7 @@ export async function executePlan(
   let itemsCreated = 0;
   const errors: string[] = [];
 
-  for (const topicId of plan.topics) {
+  for (const topicId of topicsToProcess) {
     try {
       const topic = await ContentTopic.findById(topicId).lean() as unknown as IContentTopic | null;
       if (!topic) {
@@ -623,15 +667,44 @@ export async function executePlan(
         }
       }
 
-      // Update item with merged links and quality-driven status
-      const newStatus = qualityResults && qualityResults.overallScore >= 7
+      // ─── SEO: Insert internal links into content ────────────────────────
+      const contentWithLinks = insertInternalLinks(
+        articleData.content || "",
+        mergedLinks,
+        5
+      );
+
+      // ─── SEO: Run audit and enhance metadata ────────────────────────────
+      await ContentItem.findByIdAndUpdate(articleItem._id, {
+        content: contentWithLinks,
+        internalLinks: mergedLinks,
+      });
+
+      try {
+        await enhanceSEOMetadata(articleItem._id.toString());
+      } catch {
+        // SEO enhancement is best-effort
+      }
+
+      let seoAuditResult: { score: number } | null = null;
+      try {
+        seoAuditResult = await runSEOAudit(articleItem._id.toString());
+      } catch {
+        // SEO audit is best-effort
+      }
+
+      // Update status based on quality + SEO scores
+      const qualityScore = qualityResults?.overallScore || 0;
+      const seoScore = seoAuditResult?.score || 50;
+      const combinedScore = qualityScore * 0.7 + (seoScore / 10) * 0.3;
+
+      const newStatus = combinedScore >= 7
         ? "approved"
-        : qualityResults && qualityResults.overallScore >= 4
+        : combinedScore >= 4
           ? "review"
           : "fact_check";
 
       await ContentItem.findByIdAndUpdate(articleItem._id, {
-        internalLinks: mergedLinks,
         status: newStatus,
       });
 
@@ -706,7 +779,12 @@ export async function executePlan(
         if (!existingPost) {
           // Convert markdown content to HTML for blog rendering
           const markdownContent = finalItem.content || "";
-          const htmlContent = await marked.parse(markdownContent) as string;
+          const contentWithFreshness = addFreshnessSignal(markdownContent, new Date());
+          const htmlContent = await marked.parse(contentWithFreshness) as string;
+
+          // Generate JSON-LD schema for the article
+          const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.wall-v.com";
+          const articleSchema = generateArticleSchema(finalItem, baseUrl);
 
           const blogPost = await BlogPost.create({
             title: finalItem.title,
@@ -722,6 +800,7 @@ export async function executePlan(
               metaTitle: finalItem.seo?.metaTitle || finalItem.title,
               metaDescription: finalItem.seo?.metaDescription || finalItem.excerpt || "",
               keywords: finalItem.seo?.keywords || tagNames,
+              schema: articleSchema,
             },
             publishedAt: new Date(),
             readTime: Math.max(1, Math.ceil((finalItem.content?.split(/\s+/).length || 0) / 200)),

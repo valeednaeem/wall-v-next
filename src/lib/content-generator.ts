@@ -18,14 +18,33 @@ export async function generateArticle(
   const model = process.env.AI_CONTENT_MODEL || process.env.OPENAI_MODEL || "gpt-4o";
   const adapter = getProviderAdapter(model);
 
+  // Use SEO strategy from topic if available (pre-researched before approval)
+  const seo = (topic as unknown as { seoStrategy?: {
+    optimizedKeyword?: string;
+    secondaryKeywords?: string[];
+    longTailKeywords?: string[];
+    searchIntent?: string;
+    competitorGaps?: string[];
+    suggestedHeadings?: string[];
+    wordCountTarget?: number;
+    schemaType?: string;
+  }}).seoStrategy;
+
+  const primaryKeyword = seo?.optimizedKeyword || topic.primaryKeyword || topic.title;
+  const secondaryKeywords = seo?.secondaryKeywords || topic.secondaryKeywords || [];
+  const longTailKeywords = seo?.longTailKeywords || [];
+  const suggestedHeadings = seo?.suggestedHeadings || [];
+  const competitorGaps = seo?.competitorGaps || [];
+  const wordCountTarget = seo?.wordCountTarget || 2000;
+
   const systemPrompt = `You are an expert content writer for Wall-V, a software agency. Write authoritative, SEO-optimized articles. Return ONLY a JSON object with this structure:
 {
   "content": "Full article in markdown format with H2/H3 headings",
   "excerpt": "2-3 sentence summary",
   "seo": {
-    "metaTitle": "SEO title (max 60 chars)",
-    "metaDescription": "Meta description (max 160 chars)",
-    "keywords": ["keyword1", "keyword2"]
+    "metaTitle": "SEO title (max 60 chars, include primary keyword)",
+    "metaDescription": "Meta description (max 120-160 chars, compelling with keyword)",
+    "keywords": ["primary keyword", "secondary keywords..."]
   },
   "internalLinks": [{"text": "anchor text", "url": "/path"}],
   "cta": "Call to action text"
@@ -34,22 +53,30 @@ export async function generateArticle(
   const userPrompt = `Write a comprehensive article for:
 
 Title: ${topic.title}
-Primary Keyword: ${topic.primaryKeyword || topic.title}
-Secondary Keywords: ${topic.secondaryKeywords?.join(", ") || "N/A"}
-Search Intent: ${topic.searchIntent || "informational"}
+Primary Keyword: ${primaryKeyword}
+Secondary Keywords: ${secondaryKeywords.join(", ") || "N/A"}
+Long-tail Keywords: ${longTailKeywords.join(", ") || "N/A"}
+Search Intent: ${seo?.searchIntent || topic.searchIntent || "informational"}
 Content Type: ${topic.contentType || "guide"}
 Target Audience: ${campaign.targetAudience?.join(", ") || "Businesses and developers"}
+Target Word Count: ${wordCountTarget} words
+
+${suggestedHeadings.length > 0 ? `Suggested Content Structure (use these as H2/H3 headings):\n${suggestedHeadings.map((h: string) => `- ${h}`).join("\n")}` : ""}
+
+${competitorGaps.length > 0 ? `Competitor Gaps to Address (include these unique angles competitors miss):\n${competitorGaps.map((g: string) => `- ${g}`).join("\n")}` : ""}
 
 Wall-V Context: ${context}
 
 Requirements:
-- 1500-2500 words
-- Use the primary keyword naturally in the first paragraph, H2, and conclusion
+- ${wordCountTarget} words minimum
+- Use the primary keyword naturally in the first paragraph, one H2 heading, and the conclusion
 - Include 3-5 H2 sections with H3 subsections where appropriate
+- Use secondary and long-tail keywords naturally throughout (not forced)
 - Include practical examples relevant to Wall-V's services
 - End with a clear CTA related to Wall-V's offerings
 - Write in a professional but approachable tone
-- Include at least 2 internal link suggestions`;
+- Include at least 3 internal link suggestions to related Wall-V content
+- Structure content for featured snippet opportunity (use lists, tables, or definition-style paragraphs)`;
 
   const result = await adapter.chat({
     model,

@@ -65,6 +65,17 @@ export interface IContentTopic extends Document {
     social: boolean;
   };
   notes?: string;
+  seoStrategy?: {
+    optimizedKeyword: string;
+    secondaryKeywords: string[];
+    longTailKeywords: string[];
+    searchIntent: string;
+    competitorGaps: string[];
+    suggestedHeadings: string[];
+    wordCountTarget: number;
+    schemaType: string;
+    internalLinkTargets: string[];
+  };
   createdAt: Date;
   updatedAt: Date;
 }
@@ -159,6 +170,17 @@ const ContentTopicSchema = new Schema<IContentTopic>(
       social: { type: Boolean, default: false },
     },
     notes: String,
+    seoStrategy: {
+      optimizedKeyword: String,
+      secondaryKeywords: [String],
+      longTailKeywords: [String],
+      searchIntent: String,
+      competitorGaps: [String],
+      suggestedHeadings: [String],
+      wordCountTarget: { type: Number, default: 2000 },
+      schemaType: { type: String, default: "Article" },
+      internalLinkTargets: [String],
+    },
   },
   { timestamps: true }
 );

@@ -1,31 +1,147 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 
+interface TurnstileWidget {
+  render: (container: HTMLElement, options: Record<string, unknown>) => string;
+  reset: (widgetId: string) => void;
+  getResponse: (widgetId: string) => string | null;
+}
+
+declare global {
+  interface Window {
+    turnstile?: TurnstileWidget;
+  }
+}
+
+function getPasswordStrength(password: string): {
+  score: number;
+  label: string;
+  color: string;
+} {
+  let score = 0;
+  if (password.length >= 8) score++;
+  if (password.length >= 12) score++;
+  if (/[A-Z]/.test(password)) score++;
+  if (/[a-z]/.test(password)) score++;
+  if (/[0-9]/.test(password)) score++;
+  if (/[^A-Za-z0-9]/.test(password)) score++;
+
+  if (score <= 2) return { score, label: "Weak", color: "bg-red-500" };
+  if (score <= 4) return { score, label: "Fair", color: "bg-yellow-500" };
+  return { score, label: "Strong", color: "bg-green-500" };
+}
+
 export default function SignupPage() {
   const router = useRouter();
+  const captchaRef = useRef<HTMLDivElement>(null);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [tosAccepted, setTosAccepted] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [availableProviders, setAvailableProviders] = useState<Record<string, boolean>>({});
+  const [availableProviders, setAvailableProviders] = useState<Record<string, { id: string; name: string }>>({});
+  const [captchaReady, setCaptchaReady] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [captchaWidgetId, setCaptchaWidgetId] = useState<string | null>(null);
+  const [startedAt] = useState(() => Date.now());
 
+  const passwordStrength = getPasswordStrength(password);
+
+  // Load providers (same pattern as login page)
   useEffect(() => {
     fetch("/api/auth/providers")
       .then((r) => r.json())
-      .then((d) => setAvailableProviders(d.providers || {}))
+      .then((d) => {
+        const providerMap: Record<string, { id: string; name: string }> = {};
+        for (const [key, val] of Object.entries(d)) {
+          if (val && typeof val === "object" && (val as Record<string, unknown>).id) {
+            providerMap[key] = val as { id: string; name: string };
+          }
+        }
+        setAvailableProviders(providerMap);
+      })
       .catch(() => {});
   }, []);
+
+  // Load Turnstile CAPTCHA
+  useEffect(() => {
+    const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+    if (!siteKey || !captchaRef.current) return;
+
+    const loadTurnstile = () => {
+      if (window.turnstile && captchaRef.current) {
+        try {
+          const widgetId = window.turnstile.render(captchaRef.current, {
+            sitekey: siteKey,
+            callback: (token: string) => {
+              setCaptchaToken(token);
+              setError("");
+            },
+            "expired-callback": () => {
+              setCaptchaToken(null);
+            },
+            "error-callback": () => {
+              setCaptchaToken(null);
+              setError("CAPTCHA verification failed. Please try again.");
+            },
+            theme: "light",
+            appearance: "interaction-only",
+          });
+          setCaptchaWidgetId(widgetId);
+          setCaptchaReady(true);
+        } catch {
+          // Turnstile failed to render — continue without CAPTCHA
+          setCaptchaReady(true);
+        }
+      }
+    };
+
+    // Check if script already loaded
+    if (document.querySelector('script[src*="turnstile"]')) {
+      loadTurnstile();
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+    script.async = true;
+    script.onload = loadTurnstile;
+    script.onerror = () => {
+      // CAPTCHA script failed to load — continue without it
+      setCaptchaReady(true);
+    };
+    document.head.appendChild(script);
+  }, []);
+
+  const resetCaptcha = useCallback(() => {
+    if (window.turnstile && captchaWidgetId) {
+      try {
+        window.turnstile.reset(captchaWidgetId);
+        setCaptchaToken(null);
+      } catch {
+        // ignore
+      }
+    }
+  }, [captchaWidgetId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
+
+    if (!tosAccepted) {
+      setError("You must accept the Terms of Service and Privacy Policy");
+      setLoading(false);
+      return;
+    }
 
     if (password !== confirmPassword) {
       setError("Passwords don't match");
@@ -33,20 +149,48 @@ export default function SignupPage() {
       return;
     }
 
+    if (passwordStrength.score <= 2) {
+      setError("Please choose a stronger password");
+      setLoading(false);
+      return;
+    }
+
     try {
+      const body: Record<string, unknown> = {
+        name,
+        email,
+        password,
+        _startedAt: startedAt,
+      };
+      if (captchaToken) {
+        body["cf-turnstile-response"] = captchaToken;
+      }
+
       const res = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify(body),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
         setError(data.error || "Signup failed");
+        resetCaptcha();
         return;
       }
 
+      // Check if this is a duplicate email (API returns success:true for both new and existing)
+      if (data.data?.message) {
+        // This is the duplicate-email response — account already exists
+        setError(
+          "An account with this email already exists. Please sign in instead."
+        );
+        setLoading(false);
+        return;
+      }
+
+      // Account created — sign in with NextAuth to establish session
       const result = await signIn("credentials", {
         email,
         password,
@@ -54,24 +198,26 @@ export default function SignupPage() {
       });
 
       if (result?.error) {
-        router.push("/login");
+        // Account was created but NextAuth sign-in failed — redirect to login
+        router.push("/login?signup=success");
         return;
       }
 
-      router.push("/dashboard");
-      router.refresh();
+      // Hard redirect to ensure session cookie persists
+      window.location.href = "/dashboard";
     } catch {
-      setError("Something went wrong");
+      setError("Something went wrong. Please try again.");
+      resetCaptcha();
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSocialLogin = async (provider: string) => {
-    await signIn(provider, { callbackUrl: "/dashboard" });
+  const handleSocialLogin = (provider: string) => {
+    signIn(provider, { callbackUrl: "/dashboard" });
   };
 
-  const hasSocialProviders = Object.values(availableProviders).some(Boolean);
+  const hasSocialProviders = Object.keys(availableProviders).length > 0;
 
   return (
     <div>
@@ -85,6 +231,7 @@ export default function SignupPage() {
           {availableProviders.google && (
             <button
               onClick={() => handleSocialLogin("google")}
+              type="button"
               className="flex items-center justify-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium hover:bg-muted transition-colors"
             >
               <svg className="h-5 w-5" viewBox="0 0 24 24">
@@ -99,6 +246,7 @@ export default function SignupPage() {
           {availableProviders.github && (
             <button
               onClick={() => handleSocialLogin("github")}
+              type="button"
               className="flex items-center justify-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium hover:bg-muted transition-colors"
             >
               <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
@@ -110,6 +258,7 @@ export default function SignupPage() {
           {availableProviders.facebook && (
             <button
               onClick={() => handleSocialLogin("facebook")}
+              type="button"
               className="flex items-center justify-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium hover:bg-muted transition-colors"
             >
               <svg className="h-5 w-5" fill="#1877F2" viewBox="0 0 24 24">
@@ -121,6 +270,7 @@ export default function SignupPage() {
           {availableProviders.linkedin && (
             <button
               onClick={() => handleSocialLogin("linkedin")}
+              type="button"
               className="flex items-center justify-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium hover:bg-muted transition-colors"
             >
               <svg className="h-5 w-5" fill="#0A66C2" viewBox="0 0 24 24">
@@ -151,59 +301,170 @@ export default function SignupPage() {
         )}
 
         <div>
-          <label className="text-sm font-medium">Name</label>
+          <label htmlFor="signup-name" className="text-sm font-medium">
+            Name
+          </label>
           <input
+            id="signup-name"
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
             className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
             placeholder="Your name"
+            autoComplete="name"
             required
           />
         </div>
 
         <div>
-          <label className="text-sm font-medium">Email</label>
+          <label htmlFor="signup-email" className="text-sm font-medium">
+            Email
+          </label>
           <input
+            id="signup-email"
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
             placeholder="your@email.com"
+            autoComplete="email"
             required
           />
         </div>
 
         <div>
-          <label className="text-sm font-medium">Password</label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
-            placeholder="••••••••"
-            required
-          />
+          <label htmlFor="signup-password" className="text-sm font-medium">
+            Password
+          </label>
+          <div className="relative mt-1">
+            <input
+              id="signup-password"
+              type={showPassword ? "text" : "password"}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full rounded-lg border px-3 py-2 pr-10 text-sm"
+              placeholder="Min. 8 characters"
+              autoComplete="new-password"
+              required
+              minLength={8}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
+              tabIndex={-1}
+            >
+              {showPassword ? (
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                </svg>
+              ) : (
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+              )}
+            </button>
+          </div>
+          {password.length > 0 && (
+            <div className="mt-2">
+              <div className="flex gap-1">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className={`h-1 flex-1 rounded-full ${
+                      i < passwordStrength.score ? passwordStrength.color : "bg-gray-200"
+                    }`}
+                  />
+                ))}
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {passwordStrength.label}
+              </p>
+            </div>
+          )}
         </div>
 
         <div>
-          <label className="text-sm font-medium">Confirm Password</label>
+          <label htmlFor="signup-confirm" className="text-sm font-medium">
+            Confirm Password
+          </label>
+          <div className="relative mt-1">
+            <input
+              id="signup-confirm"
+              type={showConfirm ? "text" : "password"}
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className="w-full rounded-lg border px-3 py-2 pr-10 text-sm"
+              placeholder="Repeat your password"
+              autoComplete="new-password"
+              required
+              minLength={8}
+            />
+            <button
+              type="button"
+              onClick={() => setShowConfirm(!showConfirm)}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
+              tabIndex={-1}
+            >
+              {showConfirm ? (
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                </svg>
+              ) : (
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+              )}
+            </button>
+          </div>
+          {confirmPassword.length > 0 && password !== confirmPassword && (
+            <p className="mt-1 text-xs text-destructive">Passwords don&apos;t match</p>
+          )}
+        </div>
+
+        {/* Turnstile CAPTCHA */}
+        <div ref={captchaRef} className="flex justify-center" />
+
+        {/* Terms of Service */}
+        <div className="flex items-start gap-2">
           <input
-            type="password"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
-            placeholder="••••••••"
+            id="signup-tos"
+            type="checkbox"
+            checked={tosAccepted}
+            onChange={(e) => setTosAccepted(e.target.checked)}
+            className="mt-1 h-4 w-4 rounded border-gray-300"
             required
           />
+          <label htmlFor="signup-tos" className="text-sm text-muted-foreground">
+            I agree to the{" "}
+            <Link href="/legal/terms" className="text-primary hover:underline" target="_blank">
+              Terms of Service
+            </Link>{" "}
+            and{" "}
+            <Link href="/legal/privacy" className="text-primary hover:underline" target="_blank">
+              Privacy Policy
+            </Link>
+          </label>
         </div>
 
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || !tosAccepted}
           className="w-full rounded-lg bg-primary px-6 py-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
         >
-          {loading ? "Creating account..." : "Create Account"}
+          {loading ? (
+            <span className="flex items-center justify-center gap-2">
+              <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+              Creating account...
+            </span>
+          ) : (
+            "Create Account"
+          )}
         </button>
       </form>
 
