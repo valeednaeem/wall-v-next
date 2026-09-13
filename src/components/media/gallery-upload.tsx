@@ -2,7 +2,7 @@
 
 import { Upload, X } from "lucide-react";
 import Image from "next/image";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 
 interface GalleryUploadProps {
   value: string[];
@@ -11,40 +11,50 @@ interface GalleryUploadProps {
 
 export default function GalleryUpload({ value, onChange }: GalleryUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
 
-  const handleUpload = async (file: File) => {
-    const formData = new FormData();
-    formData.append("file", file);
+  const handleUpload = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    setUploading(true);
 
-    const res = await fetch("/api/upload", {
-      method: "POST",
-      body: formData,
-    });
+    const fileArray = Array.from(files);
+    const uploaded: string[] = [];
 
-    const data = await res.json();
-    if (data.success) {
-      onChange([...value, data.data.url]);
+    await Promise.all(
+      fileArray.map(async (file) => {
+        const formData = new FormData();
+        formData.append("file", file);
+        const res = await fetch("/api/upload", { method: "POST", body: formData });
+        const data = await res.json();
+        if (data.success) {
+          uploaded.push(data.data.url);
+        }
+      })
+    );
+
+    if (uploaded.length > 0) {
+      onChange([...value, ...uploaded]);
     }
+    setUploading(false);
   };
 
   return (
     <div className="space-y-4">
       <div
-        className="border-2 border-dashed rounded-xl p-8 text-center cursor-pointer hover:bg-muted/40 transition"
+        className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer hover:bg-muted/40 transition ${uploading ? "opacity-50 pointer-events-none" : ""}`}
         onClick={() => inputRef.current?.click()}
       >
         <Upload className="mx-auto h-10 w-10 text-muted-foreground" />
-        <p className="mt-3 text-sm text-muted-foreground">Upload Gallery Images</p>
+        <p className="mt-3 text-sm text-muted-foreground">
+          {uploading ? "Uploading..." : "Upload Gallery Images"}
+        </p>
         <input
           ref={inputRef}
           hidden
           multiple
           type="file"
           accept="image/*"
-          onChange={(e) => {
-            const files = Array.from(e.target.files || []);
-            files.forEach(handleUpload);
-          }}
+          onChange={(e) => handleUpload(e.target.files)}
         />
       </div>
 
