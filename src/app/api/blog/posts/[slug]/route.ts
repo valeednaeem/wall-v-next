@@ -66,6 +66,7 @@ export async function PUT(
       for (const tagName of body.tags) {
         if (!tagName || typeof tagName !== "string") continue;
         const tagSlug = tagName.toLowerCase().replace(/[^\w\s-]/g, "").replace(/\s+/g, "-").trim();
+        if (!tagSlug) continue;
         let tagDoc = await BlogTag.findOne({ slug: tagSlug });
         if (!tagDoc) {
           tagDoc = await BlogTag.create({ name: tagName.trim(), slug: tagSlug });
@@ -90,7 +91,8 @@ export async function PUT(
     return NextResponse.json({ success: true, data: post });
   } catch (error) {
     console.error("Blog post PUT error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    const message = error instanceof Error ? error.message : "Unknown error";
+    return NextResponse.json({ error: "Internal server error", details: message }, { status: 500 });
   }
 }
 
