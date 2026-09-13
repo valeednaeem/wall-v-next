@@ -102,7 +102,7 @@ export function BlogListContent() {
                         src={featuredPost.featuredImage}
                         alt={featuredPost.title}
                         fill
-                        className="object-cover group-hover:scale-105 transition-transform duration-300"
+                        className="object-contain group-hover:scale-105 transition-transform duration-300"
                         sizes="(max-width: 768px) 100vw, 66vw"
                         priority
                       />
@@ -157,7 +157,7 @@ export function BlogListContent() {
                           src={post.featuredImage}
                           alt={post.title}
                           fill
-                          className="object-cover group-hover:scale-105 transition-transform duration-300"
+                          className="object-contain group-hover:scale-105 transition-transform duration-300"
                           sizes="(max-width: 640px) 100vw, 192px"
                         />
                       </div>
