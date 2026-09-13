@@ -136,7 +136,7 @@ export function ProductDetailContent() {
 
       <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-12">
         {/* Product Images */}
-        <div>
+        <div className="overflow-hidden">
           <div className="relative rounded-xl overflow-hidden border bg-muted aspect-square">
             {product.featuredImage ? (
               <Image
@@ -154,7 +154,7 @@ export function ProductDetailContent() {
             )}
           </div>
           {product.gallery.length > 0 && (
-            <div className="flex gap-3 mt-4 overflow-x-auto pb-2">
+            <div className="flex gap-3 mt-4 overflow-x-auto pb-2 scrollbar-hide">
               {product.gallery.map((img, i) => (
                 <div key={i} className="relative h-20 w-20 rounded-lg overflow-hidden border shrink-0">
                   <Image src={img} alt={`${product.name} ${i + 1}`} fill className="object-cover" sizes="80px" />
@@ -166,7 +166,7 @@ export function ProductDetailContent() {
 
         {/* Product Info */}
         <div>
-          <div className="flex items-center gap-2 mb-3">
+          <div className="flex flex-wrap items-center gap-2 mb-3">
             {product.category && (
               <Badge variant="secondary">{product.category.name}</Badge>
             )}
