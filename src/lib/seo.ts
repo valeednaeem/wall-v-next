@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 
+const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://www.wall-v.com";
+const DEFAULT_OG_IMAGE = `${BASE_URL}/og-default.png`;
+
 interface SEOProps {
   title: string;
   description: string;
@@ -8,6 +11,40 @@ interface SEOProps {
   type?: string;
   keywords?: string[];
   noindex?: boolean;
+}
+
+function isAbsoluteUrl(url: string): boolean {
+  return url.startsWith("http://") || url.startsWith("https://");
+}
+
+function resolveToAbsoluteUrl(url: string): string {
+  if (isAbsoluteUrl(url)) return url;
+  const path = url.startsWith("/") ? url : `/${url}`;
+  return `${BASE_URL}${path}`;
+}
+
+/**
+ * Centralized social image resolution.
+ *
+ * Priority:
+ *   1. Explicit ogImage override (from social.ogImage)
+ *   2. Content's primary image (featuredImage / image)
+ *   3. Global default OG image
+ *   4. Wall-V logo
+ *
+ * Always returns an absolute URL suitable for social crawlers.
+ */
+export function resolveSocialImage(
+  explicitOgImage?: string | null,
+  contentImage?: string | null,
+): string {
+  const candidates = [explicitOgImage, contentImage];
+  for (const candidate of candidates) {
+    if (candidate && typeof candidate === "string" && candidate.trim() !== "") {
+      return resolveToAbsoluteUrl(candidate.trim());
+    }
+  }
+  return DEFAULT_OG_IMAGE;
 }
 
 export function generateSEO({
@@ -19,9 +56,8 @@ export function generateSEO({
   keywords = [],
   noindex = false,
 }: SEOProps): Metadata {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://wall-v.com";
-  const fullUrl = url ? `${baseUrl}${url}` : baseUrl;
-  const ogImage = image || `${baseUrl}/og-default.png`;
+  const fullUrl = url ? `${BASE_URL}${url}` : BASE_URL;
+  const ogImage = image && image.trim() !== "" ? resolveToAbsoluteUrl(image.trim()) : DEFAULT_OG_IMAGE;
 
   return {
     title,
@@ -68,15 +104,13 @@ export function generateProductSchema(product: {
   rating?: number;
   reviewCount?: number;
 }) {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://wall-v.com";
-
   return {
     "@context": "https://schema.org",
     "@type": "Product",
     name: product.name,
     description: product.description,
     image: product.image,
-    url: `${baseUrl}/products/${product.slug}`,
+    url: `${BASE_URL}/products/${product.slug}`,
     offers: {
       "@type": "Offer",
       price: product.price,
@@ -101,15 +135,13 @@ export function generateArticleSchema(article: {
   publishedAt: string;
   slug: string;
 }) {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://wall-v.com";
-
   return {
     "@context": "https://schema.org",
     "@type": "Article",
     headline: article.title,
     description: article.description,
     image: article.image,
-    url: `${baseUrl}/blog/${article.slug}`,
+    url: `${BASE_URL}/blog/${article.slug}`,
     author: {
       "@type": "Person",
       name: article.author,
@@ -119,12 +151,11 @@ export function generateArticleSchema(article: {
 }
 
 export function generateOrganizationSchema(logoUrl?: string) {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://wall-v.com";
   return {
     "@context": "https://schema.org",
     "@type": "Organization",
     name: "Wall-V",
-    url: baseUrl,
+    url: BASE_URL,
     ...(logoUrl && { logo: logoUrl }),
     sameAs: [],
     contactPoint: {

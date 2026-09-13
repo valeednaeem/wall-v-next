@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { connectToDatabase } from "@/lib/mongodb";
 import Product from "@/models/product";
-import { generateSEO, generateProductSchema } from "@/lib/seo";
+import { generateSEO, generateProductSchema, resolveSocialImage } from "@/lib/seo";
 import { JsonLd } from "@/components/seo";
 import { ProductDetailContent } from "./product-detail-content";
 
@@ -28,11 +28,11 @@ export async function generateMetadata({ params }: PageParams): Promise<Metadata
     return { title: "Product Not Found", robots: { index: false } };
   }
   return generateSEO({
-    title: product.name,
-    description: product.shortDescription || product.description?.substring(0, 160) || product.name,
+    title: product.seo?.metaTitle || product.name,
+    description: product.seo?.metaDescription || product.shortDescription || product.description?.substring(0, 160) || product.name,
     url: `/products/${product.slug}`,
-    image: product.featuredImage,
-    keywords: [product.name, product.category?.name, product.type, "digital product", "buy online"].filter(Boolean),
+    image: resolveSocialImage(product.social?.ogImage, product.featuredImage),
+    keywords: product.seo?.keywords?.length ? product.seo.keywords : [product.name, product.category?.name, product.type, "digital product", "buy online"].filter(Boolean),
   });
 }
 
@@ -44,7 +44,7 @@ export default async function ProductDetailPage({ params }: PageParams) {
     ? generateProductSchema({
         name: product.name,
         description: product.shortDescription || product.description,
-        image: product.featuredImage || `${process.env.NEXT_PUBLIC_APP_URL || "https://www.wall-v.com"}/og-default.png`,
+        image: resolveSocialImage(product.social?.ogImage, product.featuredImage),
         price: product.salePrice || product.price,
         currency: product.currency || "USD",
         slug: product.slug,
