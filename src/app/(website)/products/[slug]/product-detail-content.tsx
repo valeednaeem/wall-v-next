@@ -136,7 +136,7 @@ export function ProductDetailContent() {
 
       <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-12">
         {/* Product Images */}
-        <div className="overflow-hidden">
+        <div>
           <div className="relative rounded-xl overflow-hidden border bg-muted aspect-square">
             {product.featuredImage ? (
               <Image
