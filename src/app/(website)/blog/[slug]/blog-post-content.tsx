@@ -38,7 +38,7 @@ export function BlogPostContent() {
 
   useEffect(() => {
     if (!params.slug) return;
-    fetch(`/api/blog/${params.slug}`)
+    fetch(`/api/blog/posts/${params.slug}`)
       .then((r) => r.json())
       .then((d) => {
         if (d.success) setPost(d.data);
