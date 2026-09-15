@@ -143,6 +143,15 @@ export class YouTubeAdapter implements PlatformAdapter {
         const ytError = errorBody?.error;
         const errorMessage = ytError?.message || JSON.stringify(errorBody);
 
+        if (uploadResponse.status === 429) {
+          return {
+            success: false,
+            platform: "youtube",
+            rateLimited: true,
+            error: "YouTube rate limited. Try again later.",
+          };
+        }
+
         if (uploadResponse.status === 401 || uploadResponse.status === 403) {
           return {
             success: false,

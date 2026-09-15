@@ -33,6 +33,7 @@ export async function generateMetadata({ params }: PageParams): Promise<Metadata
     url: `/products/${product.slug}`,
     image: resolveSocialImage(product.social?.ogImage, product.featuredImage),
     keywords: product.seo?.keywords?.length ? product.seo.keywords : [product.name, product.category?.name, product.type, "digital product", "buy online"].filter(Boolean),
+    updatedAt: product.updatedAt || product.createdAt,
   });
 }
 

@@ -135,6 +135,15 @@ export class TikTokAdapter implements PlatformAdapter {
         const tiktokError = errorBody?.error;
         const errorMessage = tiktokError?.message || JSON.stringify(errorBody);
 
+        if (initResponse.status === 429) {
+          return {
+            success: false,
+            platform: "tiktok",
+            rateLimited: true,
+            error: "TikTok rate limited. Try again later.",
+          };
+        }
+
         if (initResponse.status === 401 || initResponse.status === 403) {
           return {
             success: false,

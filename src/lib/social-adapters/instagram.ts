@@ -194,6 +194,16 @@ export class InstagramAdapter implements PlatformAdapter {
     if (!createResponse.ok) {
       const errorBody = await createResponse.json();
       console.error("[Instagram] Media container creation failed:", createResponse.status, errorBody);
+
+      if (createResponse.status === 429) {
+        return {
+          success: false,
+          platform: "instagram",
+          rateLimited: true,
+          error: "Instagram rate limited. Try again later.",
+        };
+      }
+
       const fbError = errorBody?.error;
       return {
         success: false,
@@ -229,6 +239,16 @@ export class InstagramAdapter implements PlatformAdapter {
     if (!publishResponse.ok) {
       const errorBody = await publishResponse.json();
       console.error("[Instagram] Publish failed:", publishResponse.status, errorBody);
+
+      if (publishResponse.status === 429) {
+        return {
+          success: false,
+          platform: "instagram",
+          rateLimited: true,
+          error: "Instagram rate limited. Try again later.",
+        };
+      }
+
       const fbError = errorBody?.error;
       return {
         success: false,

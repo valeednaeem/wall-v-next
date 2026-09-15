@@ -11,6 +11,7 @@ interface SEOProps {
   type?: string;
   keywords?: string[];
   noindex?: boolean;
+  updatedAt?: string | Date;
 }
 
 function isAbsoluteUrl(url: string): boolean {
@@ -55,9 +56,13 @@ export function generateSEO({
   type = "website",
   keywords = [],
   noindex = false,
+  updatedAt,
 }: SEOProps): Metadata {
   const fullUrl = url ? `${BASE_URL}${url}` : BASE_URL;
   const ogImage = image && image.trim() !== "" ? resolveToAbsoluteUrl(image.trim()) : DEFAULT_OG_IMAGE;
+  const ogUpdatedTime = updatedAt
+    ? new Date(updatedAt).toISOString()
+    : undefined;
 
   return {
     title,
@@ -78,6 +83,7 @@ export function generateSEO({
       ],
       locale: "en_US",
       type: type as "website",
+      ...(ogUpdatedTime && { modifiedTime: ogUpdatedTime }),
     },
     twitter: {
       card: "summary_large_image",

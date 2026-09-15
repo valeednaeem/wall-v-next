@@ -35,6 +35,7 @@ export async function generateMetadata({ params }: PageParams): Promise<Metadata
     image: resolveSocialImage(post.social?.ogImage, post.featuredImage),
     type: "article",
     keywords: post.seo?.keywords?.length ? post.seo.keywords : [post.title, post.category?.name, "blog", "Wall-V"].filter(Boolean),
+    updatedAt: post.updatedAt || post.publishedAt,
   });
 }
 
