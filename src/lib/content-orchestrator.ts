@@ -26,6 +26,7 @@ import { runQualityPipeline } from "@/lib/content-quality";
 import { findInternalLinks } from "@/lib/content-linking";
 import { checkForDuplicates } from "@/lib/content-analytics";
 import { getAdapter } from "@/lib/social-adapters";
+const SOCIAL_BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://www.wall-v.com";
 import { insertInternalLinks, runSEOAudit, enhanceSEOMetadata, generateArticleSchema, addFreshnessSignal, generateSEOStrategy } from "@/lib/seo-content-engine";
 import { marked } from "marked";
 
@@ -920,9 +921,14 @@ export async function executePlan(
 
           const isConnected = await adapter.isConnected();
           if (isConnected) {
+            const articleUrl = socialItem.seo?.canonicalUrl
+              || (socialItem.slug ? `${SOCIAL_BASE_URL}/blog/${socialItem.slug}` : undefined);
+
             const publishResult = await adapter.publish({
               content: socialItem.content || "",
               title: socialItem.title,
+              link: articleUrl,
+              description: socialItem.excerpt,
               hashtags: [],
             });
 
