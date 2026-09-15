@@ -61,6 +61,10 @@ export async function PUT(
       postData.readTime = Math.ceil(body.content.split(/\s+/).filter(Boolean).length / 200);
     }
 
+    if (body.category === "" || body.category === null || body.category === undefined) {
+      postData.category = undefined;
+    }
+
     if (body.tags && Array.isArray(body.tags)) {
       const tagObjIds: string[] = [];
       for (const tagName of body.tags) {
@@ -83,7 +87,11 @@ export async function PUT(
       }
     }
 
-    const post = await BlogPost.findOneAndUpdate({ slug }, postData, { new: true });
+    const post = await BlogPost.findOneAndUpdate(
+      { slug },
+      { $set: postData },
+      { new: true }
+    );
     if (!post) {
       return NextResponse.json({ error: "Post not found" }, { status: 404 });
     }
@@ -92,7 +100,7 @@ export async function PUT(
   } catch (error) {
     console.error("Blog post PUT error:", error);
     const message = error instanceof Error ? error.message : "Unknown error";
-    return NextResponse.json({ error: "Internal server error", details: message }, { status: 500 });
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
