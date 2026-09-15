@@ -191,7 +191,7 @@ className="object-contain"
             </div>
           )}
 
-          <div className="text-muted-foreground mb-6" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(product.shortDescription || product.description || "") }} />
+          <div className="inline-content text-muted-foreground mb-6" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(product.shortDescription || product.description || "") }} />
 
           <Card>
             <CardContent className="p-6">
@@ -341,12 +341,12 @@ className="object-contain"
         <h2 className="text-2xl font-bold mb-6">Description</h2>
         {product.content ? (
           <div
-            className="prose prose-lg max-w-none"
+            className="article-content max-w-none"
             dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(product.content) }}
           />
         ) : (
           <div
-            className="prose prose-lg max-w-none text-muted-foreground"
+            className="article-content max-w-none text-muted-foreground"
             dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(product.description || "") }}
           />
         )}

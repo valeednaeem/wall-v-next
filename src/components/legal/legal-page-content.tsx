@@ -36,5 +36,5 @@ export default function LegalPageContent({ html }: LegalPageContentProps) {
     });
   }, [html]);
 
-  return <div dangerouslySetInnerHTML={{ __html: sanitized }} />;
+  return <div className="article-content" dangerouslySetInnerHTML={{ __html: sanitized }} />;
 }

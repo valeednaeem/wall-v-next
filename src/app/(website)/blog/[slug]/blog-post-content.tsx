@@ -158,7 +158,7 @@ export function BlogPostContent() {
 
         <AdSenseBlogAds position="top" />
 
-        <div className="prose prose-lg max-w-none" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.content) }} />
+        <div className="article-content max-w-none" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.content) }} />
 
         <AdSenseBlogAds position="middle" />
 
