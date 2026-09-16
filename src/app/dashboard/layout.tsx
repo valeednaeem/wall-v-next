@@ -52,6 +52,7 @@ const sidebarItems: SidebarItem[] = [
   { label: "Blog", href: "/dashboard/blog", icon: <FileText className="h-4 w-4" />, permission: "blog:view", children: [
     { label: "All Posts", href: "/dashboard/blog", permission: "blog:view" },
     { label: "New Post", href: "/dashboard/blog/new", permission: "blog:create" },
+    { label: "Categories", href: "/dashboard/blog/categories", permission: "blog:view" },
   ]},
   { label: "AI", href: "/dashboard/ai-conversations", icon: <Bot className="h-4 w-4" />, permission: "ai:access", children: [
     { label: "Master Agent", href: "/dashboard/master-agent", permission: "ai:access" },

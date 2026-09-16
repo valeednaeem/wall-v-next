@@ -30,6 +30,11 @@ export default function NewBlogPostPage() {
     seo: {
       metaTitle: "",
       metaDescription: "",
+      keywords: "",
+    },
+    social: {
+      ogImage: "",
+      twitterHandle: "",
     },
   });
 
@@ -50,6 +55,10 @@ export default function NewBlogPostPage() {
         ...form,
         status,
         tags: form.tags.split(",").map((t) => t.trim()).filter(Boolean),
+        seo: {
+          ...form.seo,
+          keywords: form.seo.keywords.split(",").map((k) => k.trim()).filter(Boolean),
+        },
       };
       const res = await fetch("/api/blog/posts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       const data = await res.json();
@@ -132,6 +141,26 @@ export default function NewBlogPostPage() {
         <div>
           <label className="text-sm font-medium">Meta Description</label>
           <textarea value={form.seo.metaDescription} onChange={(e) => setForm({ ...form, seo: { ...form.seo, metaDescription: e.target.value } })} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm min-h-[80px]" />
+        </div>
+        <div>
+          <label className="text-sm font-medium">Keywords (comma separated)</label>
+          <input type="text" value={form.seo.keywords} onChange={(e) => setForm({ ...form, seo: { ...form.seo, keywords: e.target.value } })} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" placeholder="react, nextjs, ai" />
+        </div>
+      </div>
+
+      {/* Social Sharing */}
+      <div className="rounded-xl border p-6 space-y-4">
+        <h3 className="font-semibold">Social Sharing</h3>
+        <div>
+          <label className="text-sm font-medium">OG Image (for social previews)</label>
+          <div className="mt-1">
+            <ImageUpload value={form.social.ogImage} onChange={(url) => setForm({ ...form, social: { ...form.social, ogImage: url } })} />
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">Image shown when this post is shared on social media. Falls back to featured image.</p>
+        </div>
+        <div>
+          <label className="text-sm font-medium">Twitter Handle</label>
+          <input type="text" value={form.social.twitterHandle} onChange={(e) => setForm({ ...form, social: { ...form.social, twitterHandle: e.target.value } })} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" placeholder="@yourhandle" />
         </div>
       </div>
 

@@ -47,6 +47,12 @@ export default function ProductForm({ product, onSave }: ProductFormProps) {
     seo: {
       metaTitle: product?.seo?.metaTitle || "",
       metaDescription: product?.seo?.metaDescription || "",
+      keywords: product?.seo?.keywords?.join(", ") || "",
+      canonicalUrl: product?.seo?.canonicalUrl || "",
+    },
+    social: {
+      ogImage: product?.social?.ogImage || "",
+      twitterHandle: product?.social?.twitterHandle || "",
     },
   });
 
@@ -71,6 +77,10 @@ export default function ProductForm({ product, onSave }: ProductFormProps) {
       features: form.features.split("\n").map((f: string) => f.trim()).filter(Boolean),
       price: Number(form.price),
       salePrice: Number(form.salePrice) || undefined,
+      seo: {
+        ...form.seo,
+        keywords: form.seo.keywords.split(",").map((k: string) => k.trim()).filter(Boolean),
+      },
     };
 
     try {
@@ -202,6 +212,29 @@ export default function ProductForm({ product, onSave }: ProductFormProps) {
         <div>
           <label className="text-sm font-medium">Meta Description</label>
           <textarea value={form.seo.metaDescription} onChange={(e) => setForm({ ...form, seo: { ...form.seo, metaDescription: e.target.value } })} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm min-h-[80px]" />
+        </div>
+        <div>
+          <label className="text-sm font-medium">Keywords (comma separated)</label>
+          <input type="text" value={form.seo.keywords} onChange={(e) => setForm({ ...form, seo: { ...form.seo, keywords: e.target.value } })} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" placeholder="web design, saas, ai" />
+        </div>
+        <div>
+          <label className="text-sm font-medium">Canonical URL</label>
+          <input type="url" value={form.seo.canonicalUrl} onChange={(e) => setForm({ ...form, seo: { ...form.seo, canonicalUrl: e.target.value } })} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" placeholder="https://..." />
+        </div>
+      </div>
+
+      <div className="rounded-xl border p-6 space-y-4">
+        <h3 className="font-semibold">Social Sharing</h3>
+        <div>
+          <label className="text-sm font-medium">OG Image (for social previews)</label>
+          <div className="mt-1">
+            <ImageUpload value={form.social.ogImage} onChange={(url) => setForm({ ...form, social: { ...form.social, ogImage: url } })} />
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">Image shown when this product is shared on social media. Falls back to featured image.</p>
+        </div>
+        <div>
+          <label className="text-sm font-medium">Twitter Handle</label>
+          <input type="text" value={form.social.twitterHandle} onChange={(e) => setForm({ ...form, social: { ...form.social, twitterHandle: e.target.value } })} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" placeholder="@yourhandle" />
         </div>
       </div>
 

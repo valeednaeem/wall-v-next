@@ -1,6 +1,7 @@
 // Tool definition for OpenAI function calling
 import { ADMIN_ROLES } from "@/lib/api-middleware";
 import { CONTENT_TOOL_DEFINITIONS, executeContentTool } from "@/lib/content-agent-tools";
+import { MANAGEMENT_TOOL_DEFINITIONS, executeManagementTool } from "@/lib/management-agent-tools";
 
 export interface AgentToolDefinition {
   type: "function";
@@ -360,6 +361,7 @@ export const AGENT_TOOL_DEFINITIONS: AgentToolDefinition[] = [
     },
   },
   ...CONTENT_TOOL_DEFINITIONS,
+  ...MANAGEMENT_TOOL_DEFINITIONS,
 ];
 
 const COMPANY_INFO = `
@@ -1114,6 +1116,28 @@ export async function executeTool(
     case "get_content_schedule":
     case "execute_daily_content":
       return executeContentTool(toolName, args);
+    // Management tools (blog, product, SEO, security, logging, media)
+    case "create_blog_post":
+    case "update_blog_post":
+    case "get_blog_posts":
+    case "optimize_blog_seo":
+    case "create_product":
+    case "update_product":
+    case "get_products":
+    case "generate_product_listing":
+    case "run_seo_audit":
+    case "analyze_seo_keywords":
+    case "generate_seo_meta":
+    case "run_security_scan":
+    case "check_dependencies":
+    case "audit_authentication":
+    case "get_error_logs":
+    case "get_error_summary":
+    case "resolve_error":
+    case "get_system_notifications":
+    case "get_image_info":
+    case "generate_image_variants":
+      return executeManagementTool(toolName, args);
     default:
       return { error: `Unknown tool: ${toolName}` };
   }

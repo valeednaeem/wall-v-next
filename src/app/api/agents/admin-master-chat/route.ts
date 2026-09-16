@@ -234,6 +234,29 @@ async function executeInternalTool(toolName: string, args: Record<string, unknow
     case "find_content_duplicates":
     case "merge_content_duplicates":
       return await executeContentTool(toolName, args);
+    // Management tools
+    case "create_blog_post":
+    case "update_blog_post":
+    case "get_blog_posts":
+    case "optimize_blog_seo":
+    case "create_product":
+    case "update_product":
+    case "get_products":
+    case "generate_product_listing":
+    case "run_seo_audit":
+    case "analyze_seo_keywords":
+    case "generate_seo_meta":
+    case "run_security_scan":
+    case "check_dependencies":
+    case "audit_authentication":
+    case "get_error_logs":
+    case "get_error_summary":
+    case "resolve_error":
+    case "get_system_notifications":
+    case "get_image_info":
+    case "generate_image_variants":
+      const { executeManagementTool } = await import("@/lib/management-agent-tools");
+      return await executeManagementTool(toolName, args);
     default: return { error: `Unknown tool: ${toolName}` };
   }
 }
@@ -330,6 +353,40 @@ You also have access to Content Orchestrator tools:
 - repurpose_content: Repurpose content into other formats
 - find_content_duplicates: Scan for duplicates
 - merge_content_duplicates: Merge duplicate content
+
+You also have access to Management tools for Blog, Products, SEO, Security, and Error Logging:
+
+Blog Management:
+- create_blog_post: Create a new blog post (title, content, category, tags, SEO)
+- update_blog_post: Update an existing blog post
+- get_blog_posts: List/search blog posts
+- optimize_blog_seo: Analyze and get SEO recommendations for a blog post
+
+Product Management:
+- create_product: Create a new product (name, price, description, gallery)
+- update_product: Update an existing product
+- get_products: List/search products
+- generate_product_listing: Generate SEO-optimized product listing from a brief
+
+SEO Tools:
+- run_seo_audit: Audit a page for SEO issues
+- analyze_seo_keywords: Analyze keyword opportunities
+- generate_seo_meta: Generate optimized meta tags
+
+Security Tools:
+- run_security_scan: Scan for security vulnerabilities
+- check_dependencies: Check npm packages for vulnerabilities
+- audit_authentication: Audit auth configuration
+
+Error & Logging:
+- get_error_logs: Query error logs with filters
+- get_error_summary: Get error summary by level/source
+- resolve_error: Mark an error as resolved/ignored
+- get_system_notifications: Get system notifications and alerts
+
+Media:
+- get_image_info: Get image dimensions and format
+- generate_image_variants: Get responsive image size recommendations
 
 When a tool is needed, respond with a JSON block:
 \`\`\`json

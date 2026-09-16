@@ -14,6 +14,7 @@ import ProjectRequest from "@/models/project-request";
 import type { ToolResult } from "./types";
 import { validateToolArgs } from "./tool-registry";
 import { sendEmail, generateInquiryReceivedEmail } from "@/lib/mail";
+import { executeManagementTool } from "@/lib/management-agent-tools";
 
 function success(toolName: string, data: Record<string, unknown>): ToolResult {
   return { success: true, toolName, data, error: null, errorCode: null };
@@ -643,7 +644,16 @@ export async function executeConversationTool(
 ): Promise<ToolResult> {
   const handler = TOOL_MAP[toolName];
   if (!handler) {
-    return failure(toolName, `Unknown tool: ${toolName}`, "UNKNOWN_TOOL");
+    // Fall back to management tools (blog, product, SEO, security, logging)
+    try {
+      const result = await executeManagementTool(toolName, args);
+      if (result && typeof result === "object" && "error" in result) {
+        return failure(toolName, (result as { error: string }).error, "UNKNOWN_TOOL");
+      }
+      return success(toolName, result as Record<string, unknown>);
+    } catch {
+      return failure(toolName, `Unknown tool: ${toolName}`, "UNKNOWN_TOOL");
+    }
   }
 
   try {

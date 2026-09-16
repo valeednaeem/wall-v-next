@@ -275,6 +275,113 @@ export const CONVERSATION_TOOLS: ConversationToolDefinition[] = [
       required: ["type"],
     },
   },
+  // ─── Management Tools (Blog, Product, SEO, Security, Logging) ────────────
+  {
+    name: "get_blog_posts",
+    description: "List blog posts. Clients can browse published articles. Admin can see all statuses.",
+    parameters: {
+      type: "object",
+      properties: {
+        status: { type: "string", description: "Filter: draft, review, published, archived" },
+        search: { type: "string", description: "Search in title" },
+        limit: { type: "number", description: "Max results (default 10)" },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "get_products",
+    description: "List products. Clients can browse the catalog. Admin can see all statuses.",
+    parameters: {
+      type: "object",
+      properties: {
+        status: { type: "string", description: "Filter: draft, published, archived" },
+        type: { type: "string", description: "Filter by type" },
+        search: { type: "string", description: "Search in name" },
+        limit: { type: "number", description: "Max results (default 10)" },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "create_blog_post",
+    description: "Create a new blog post. Requires admin/manager role.",
+    parameters: {
+      type: "object",
+      properties: {
+        title: { type: "string", description: "Blog post title" },
+        content: { type: "string", description: "Full HTML content" },
+        excerpt: { type: "string", description: "Brief summary" },
+        status: { type: "string", description: "Status: draft, review, published" },
+        seoMetaTitle: { type: "string", description: "SEO meta title" },
+        seoMetaDescription: { type: "string", description: "SEO meta description" },
+      },
+      required: ["title", "content"],
+    },
+  },
+  {
+    name: "create_product",
+    description: "Create a new product. Requires admin/manager role.",
+    parameters: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "Product name" },
+        description: { type: "string", description: "Product description" },
+        price: { type: "number", description: "Price in USD" },
+        type: { type: "string", description: "Type: product, service, digital" },
+        status: { type: "string", description: "Status: draft, published" },
+      },
+      required: ["name", "price"],
+    },
+  },
+  {
+    name: "run_seo_audit",
+    description: "Run an SEO audit on a page. Returns score and recommendations.",
+    parameters: {
+      type: "object",
+      properties: {
+        url: { type: "string", description: "Page URL or path" },
+        pageType: { type: "string", description: "Page type: blog, product" },
+      },
+      required: ["url"],
+    },
+  },
+  {
+    name: "generate_seo_meta",
+    description: "Generate optimized SEO meta tags for a page.",
+    parameters: {
+      type: "object",
+      properties: {
+        title: { type: "string", description: "Page title" },
+        content: { type: "string", description: "Page content" },
+        targetKeyword: { type: "string", description: "Target keyword" },
+      },
+      required: ["title"],
+    },
+  },
+  {
+    name: "get_error_logs",
+    description: "Query error logs. Admin only.",
+    parameters: {
+      type: "object",
+      properties: {
+        level: { type: "string", description: "Filter: error, warning, critical" },
+        limit: { type: "number", description: "Max results (default 20)" },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "get_error_summary",
+    description: "Get error summary by level and source. Admin only.",
+    parameters: {
+      type: "object",
+      properties: {
+        hours: { type: "number", description: "Hours to look back (default 24)" },
+      },
+      required: [],
+    },
+  },
 ];
 
 /**
