@@ -637,18 +637,26 @@ const TOOL_MAP: Record<string, (args: Record<string, unknown>) => Promise<ToolRe
 /**
  * Execute a conversation tool by name.
  * Returns a verified ToolResult — never assumes success.
+ * @param role - The user's role for authorization (e.g., "customer", "admin")
  */
 export async function executeConversationTool(
   toolName: string,
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
+  role?: string
 ): Promise<ToolResult> {
   const handler = TOOL_MAP[toolName];
   if (!handler) {
     // Fall back to management tools (blog, product, SEO, security, logging)
+    // Management tools enforce role-based access control internally
     try {
-      const result = await executeManagementTool(toolName, args);
+      const result = await executeManagementTool(toolName, args, role);
       if (result && typeof result === "object" && "error" in result) {
-        return failure(toolName, (result as { error: string }).error, "UNKNOWN_TOOL");
+        const errMsg = (result as { error: string }).error;
+        // Distinguish access denied from other errors
+        if (errMsg.startsWith("Access denied")) {
+          return failure(toolName, errMsg, "ACCESS_DENIED");
+        }
+        return failure(toolName, errMsg, "TOOL_ERROR");
       }
       return success(toolName, result as Record<string, unknown>);
     } catch {

@@ -99,6 +99,7 @@ const sidebarItems: SidebarItem[] = [
     { label: "Payment Stats", href: "/dashboard/settings/payment", permission: "settings:manage" },
     { label: "Legal & Compliance", href: "/dashboard/settings/legal", permission: "settings:manage" },
   ]},
+  { label: "Notifications", href: "/dashboard/notifications", icon: <Bell className="h-4 w-4" /> },
   { label: "Error Logs", href: "/dashboard/errors", icon: <AlertTriangle className="h-4 w-4" />, permission: "settings:view" },
   { label: "Security", href: "/dashboard/security", icon: <Shield className="h-4 w-4" />, permission: "settings:manage" },
 ];
@@ -109,7 +110,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [bellOpen, setBellOpen] = useState(false);
+  const [bellNotifications, setBellNotifications] = useState<{ title: string; message: string; link?: string; read: boolean; createdAt: string; _id: string; type: string }[]>([]);
+  const [bellUnread, setBellUnread] = useState(0);
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const bellRef = useRef<HTMLDivElement>(null);
 
   const user = session?.user;
   const userRole = (user as { role?: string })?.role || "customer";
@@ -148,9 +153,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
         setUserMenuOpen(false);
       }
+      if (bellRef.current && !bellRef.current.contains(e.target as Node)) {
+        setBellOpen(false);
+      }
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/notifications", { credentials: "include" })
+      .then((r) => r.json())
+      .then((data) => {
+        setBellNotifications(data.data?.notifications || data.notifications || []);
+        setBellUnread(data.data?.unreadCount || 0);
+      })
+      .catch(() => {});
   }, []);
 
   const toggleExpand = (label: string) => {
@@ -290,10 +308,61 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <Link href="/" className="text-sm text-muted-foreground hover:text-primary px-3 py-2 rounded-lg hover:bg-accent transition-colors hidden sm:block">
               View Site
             </Link>
-            <button className="p-2 rounded-lg hover:bg-accent relative">
-              <Bell className="h-5 w-5 text-muted-foreground" />
-              <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-primary" />
-            </button>
+            <div className="relative" ref={bellRef}>
+              <button onClick={() => setBellOpen(!bellOpen)} className="p-2 rounded-lg hover:bg-accent relative">
+                <Bell className="h-5 w-5 text-muted-foreground" />
+                {bellUnread > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-primary text-[10px] font-bold text-primary-foreground flex items-center justify-center">
+                    {bellUnread > 9 ? "9+" : bellUnread}
+                  </span>
+                )}
+              </button>
+              {bellOpen && (
+                <div className="absolute right-0 top-full mt-2 w-80 bg-white border rounded-xl shadow-lg z-50 overflow-hidden">
+                  <div className="flex items-center justify-between px-4 py-3 border-b">
+                    <span className="text-sm font-semibold">Notifications</span>
+                    {bellUnread > 0 && (
+                      <button
+                        onClick={async () => {
+                          await fetch("/api/notifications", { method: "PUT", credentials: "include" });
+                          setBellNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+                          setBellUnread(0);
+                        }}
+                        className="text-xs text-primary hover:underline"
+                      >
+                        Mark all read
+                      </button>
+                    )}
+                  </div>
+                  <div className="max-h-80 overflow-y-auto">
+                    {bellNotifications.length === 0 ? (
+                      <div className="p-6 text-center text-sm text-muted-foreground">No notifications</div>
+                    ) : (
+                      bellNotifications.slice(0, 10).map((n) => (
+                        <div key={n._id} className="flex items-start gap-3 px-4 py-3 hover:bg-accent/50 transition-colors border-b last:border-0">
+                          <div className={`mt-1 h-2 w-2 rounded-full shrink-0 ${
+                            n.type === "success" ? "bg-green-500" :
+                            n.type === "warning" ? "bg-amber-500" :
+                            n.type === "error" ? "bg-red-500" : "bg-blue-500"
+                          }`} />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{n.title}</p>
+                            <p className="text-xs text-muted-foreground truncate">{n.message}</p>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                  <Link
+                    href="/dashboard/notifications"
+                    onClick={() => setBellOpen(false)}
+                    className="block text-center text-sm text-primary hover:bg-accent/50 py-2.5 border-t font-medium"
+                  >
+                    View all notifications
+                  </Link>
+                </div>
+              )}
+            </div>
           </div>
         </header>
 

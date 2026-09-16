@@ -6,6 +6,7 @@ import Invoice from "@/models/invoice";
 import Project from "@/models/project";
 import { logProjectActivity } from "@/lib/activity-logger";
 import { sendEmail, generatePaymentConfirmationEmail } from "@/lib/mail";
+import { notifyAdmins } from "@/lib/notify";
 
 export async function GET(
   request: NextRequest,
@@ -109,6 +110,14 @@ export async function POST(
     } catch {
       // Email failure should not block payment recording
     }
+
+    // In-app notification to admins
+    await notifyAdmins(
+      "Payment Received",
+      `Payment of ${amount} ${project.currency || "USD"} recorded for "${project.name}"`,
+      "success",
+      `/dashboard/projects/${id}`
+    ).catch(() => {});
 
     return NextResponse.json({ payment }, { status: 201 });
   } catch (error: unknown) {

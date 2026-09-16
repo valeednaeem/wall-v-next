@@ -5,6 +5,7 @@ import Invoice from "@/models/invoice";
 import Project from "@/models/project";
 import { logProjectActivity } from "@/lib/activity-logger";
 import { sendEmail, generateInvoiceEmail } from "@/lib/mail";
+import { notifyAdmins } from "@/lib/notify";
 
 export async function GET(
   request: NextRequest,
@@ -119,6 +120,14 @@ export async function POST(
     } catch {
       // Email failure should not block invoice creation
     }
+
+    // In-app notification to admins
+    await notifyAdmins(
+      "Invoice Created",
+      `Invoice ${invoiceNumber} (${total} ${project.currency || "USD"}) created for "${project.name}"`,
+      "info",
+      `/dashboard/projects/${id}`
+    ).catch(() => {});
 
     return NextResponse.json({ invoice }, { status: 201 });
   } catch (error: unknown) {

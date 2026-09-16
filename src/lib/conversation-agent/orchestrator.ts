@@ -227,6 +227,7 @@ export async function orchestrateConversation(params: {
   channel: "chat" | "voice" | "website" | "dashboard";
   agentId?: string;
   userId?: string;
+  userRole?: string;
   page?: string;
 }): Promise<OrchestrationResult> {
   const startTime = Date.now();
@@ -413,7 +414,7 @@ export async function orchestrateConversation(params: {
           // malformed args
         }
 
-        const toolResult = await executeConversationTool(toolCall.name, args);
+        const toolResult = await executeConversationTool(toolCall.name, args, params.userRole);
         toolCallsMade.push(toolResult);
         state = applyToolResult(state, toolCall.name, toolResult);
 
@@ -442,7 +443,7 @@ export async function orchestrateConversation(params: {
         for (const tc of followUp.toolCalls) {
           let a: Record<string, unknown> = {};
           try { a = JSON.parse(tc.arguments); } catch { /* */ }
-          const tr = await executeConversationTool(tc.name, a);
+          const tr = await executeConversationTool(tc.name, a, params.userRole);
           toolCallsMade.push(tr);
           state = applyToolResult(state, tc.name, tr);
         }
@@ -572,14 +573,14 @@ export async function orchestrateConversation(params: {
 async function executeAction(
   action: string,
   state: VisitorState,
-  params: { channel: string; userId?: string }
+  params: { channel: string; userId?: string; userRole?: string }
 ): Promise<ToolResult> {
   switch (action) {
     case "lookup_user": {
       const args: Record<string, string> = {};
       if (state.email) args.email = state.email;
       if (state.phone) args.phone = state.phone;
-      return executeConversationTool("lookup_user", args);
+      return executeConversationTool("lookup_user", args, params.userRole);
     }
     case "create_user": {
       // Only create if lookup didn't find one
@@ -592,13 +593,13 @@ async function executeAction(
         phone: state.phone || "",
         company: state.company || "",
         source: params.channel,
-      });
+      }, params.userRole);
     }
     case "lookup_client": {
       const args: Record<string, string> = {};
       if (state.email) args.email = state.email;
       if (state.phone) args.phone = state.phone;
-      return executeConversationTool("lookup_client", args);
+      return executeConversationTool("lookup_client", args, params.userRole);
     }
     case "create_client": {
       if (state.clientId) {
@@ -611,7 +612,7 @@ async function executeAction(
         company: state.company || "",
         source: params.channel,
         userId: state.userId || "",
-      });
+      }, params.userRole);
     }
     case "create_project_request": {
       if (state.projectRequestId) {
@@ -631,7 +632,7 @@ async function executeAction(
         targetAudience: state.targetAudience || "",
         designStyle: state.designStyle || "",
         integrations: state.integrations.join(", "),
-      });
+      }, params.userRole);
     }
     case "create_inquiry": {
       // Don't create duplicate inquiries if we already have one
@@ -652,7 +653,7 @@ async function executeAction(
         source: params.channel === "voice" ? "voice" : "chat",
         estimatedBudget: state.budget || undefined,
         estimatedTimeline: state.timeline || undefined,
-      });
+      }, params.userRole);
     }
     case "create_invoice": {
       if (state.invoiceId) {
@@ -666,7 +667,7 @@ async function executeAction(
         amount,
         description: `${state.projectType || "Project"} — ${state.objective || "Custom development"}`,
         projectName: `${(state.projectType || "Project").replace(/-/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())} for ${state.name || "Client"}`,
-      });
+      }, params.userRole);
     }
     case "create_notification": {
       return executeConversationTool("create_notification", {
@@ -674,14 +675,14 @@ async function executeAction(
         message: `New ${state.projectType || "inquiry"} from ${state.name || "visitor"} (${state.email || "no email"}): ${state.objective || "Conversation in progress"}`,
         type: "info",
         link: state.inquiryId ? `/dashboard/crm/inquiries` : undefined,
-      });
+      }, params.userRole);
     }
     case "delegate_to_agent": {
       return executeConversationTool("delegate_to_agent", {
         agentId: "project-manager",
         message: `Handle project request: ${state.projectType} for ${state.name}. Objective: ${state.objective}. Features: ${state.features.join(", ")}. Budget: ${state.budget || "TBD"}. Timeline: ${state.timeline || "TBD"}.`,
         context: { userId: state.userId, clientId: state.clientId, projectRequestId: state.projectRequestId },
-      });
+      }, params.userRole);
     }
     default:
       return { success: false, toolName: action, data: null, error: `Unknown action: ${action}`, errorCode: "UNKNOWN_ACTION" };

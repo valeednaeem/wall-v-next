@@ -5,6 +5,7 @@ import Quote from "@/models/quote";
 import Project from "@/models/project";
 import { logProjectActivity } from "@/lib/activity-logger";
 import { sendEmail, generateQuotationEmail } from "@/lib/mail";
+import { notifyAdmins } from "@/lib/notify";
 
 export async function GET(
   request: NextRequest,
@@ -116,6 +117,14 @@ export async function POST(
     } catch {
       // Email failure should not block quotation creation
     }
+
+    // In-app notification to admins
+    await notifyAdmins(
+      "Quotation Sent",
+      `Quotation ${reference} sent to client for "${project.name}" — ${total} ${project.currency || "USD"}`,
+      "success",
+      `/dashboard/projects/${id}`
+    ).catch(() => {});
 
     return NextResponse.json({ quote }, { status: 201 });
   } catch (error: unknown) {

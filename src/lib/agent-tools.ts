@@ -1,7 +1,7 @@
 // Tool definition for OpenAI function calling
 import { ADMIN_ROLES } from "@/lib/api-middleware";
 import { CONTENT_TOOL_DEFINITIONS, executeContentTool } from "@/lib/content-agent-tools";
-import { MANAGEMENT_TOOL_DEFINITIONS, executeManagementTool } from "@/lib/management-agent-tools";
+import { MANAGEMENT_TOOL_DEFINITIONS, executeManagementTool, getAllowedManagementTools } from "@/lib/management-agent-tools";
 
 export interface AgentToolDefinition {
   type: "function";
@@ -1056,7 +1056,8 @@ async function executePrepareRefundRequest(args: Record<string, unknown>) {
 // Main executor
 export async function executeTool(
   toolName: string,
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
+  role?: string
 ): Promise<unknown> {
   switch (toolName) {
     case "get_projects":
@@ -1137,7 +1138,7 @@ export async function executeTool(
     case "get_system_notifications":
     case "get_image_info":
     case "generate_image_variants":
-      return executeManagementTool(toolName, args);
+      return executeManagementTool(toolName, args, role);
     default:
       return { error: `Unknown tool: ${toolName}` };
   }
@@ -1152,8 +1153,9 @@ export async function runAgentWithTools(opts: {
   maxTokens: number;
   maxIterations?: number;
   agentId?: string;
+  userRole?: string;
 }): Promise<{ response: string; toolCalls: { name: string; args: unknown; result: unknown }[] }> {
-  const { systemPrompt, messages, model, temperature, maxTokens, maxIterations = 5, agentId } = opts;
+  const { systemPrompt, messages, model, temperature, maxTokens, maxIterations = 5, agentId, userRole } = opts;
   const apiKey = process.env.OPENAI_API_KEY;
 
   if (!apiKey) {
@@ -1162,6 +1164,18 @@ export async function runAgentWithTools(opts: {
 
   // Load tools from registry if agentId provided, otherwise use all hardcoded tools
   let toolDefinitions = AGENT_TOOL_DEFINITIONS;
+
+  // Filter management tools by user role (applies to all agents)
+  if (userRole) {
+    const allowedMgmtTools = getAllowedManagementTools(userRole);
+    const allowedMgmtNames = new Set(allowedMgmtTools.map((t) => t.function.name));
+    // Keep non-management tools, plus allowed management tools
+    toolDefinitions = [
+      ...AGENT_TOOL_DEFINITIONS.filter((t) => !allowedMgmtNames.has(t.function.name) && !MANAGEMENT_TOOL_DEFINITIONS.some((m) => m.function.name === t.function.name)),
+      ...allowedMgmtTools,
+    ];
+  }
+
   if (agentId) {
     try {
       const { getEffectiveConfig, toOpenAITools } = await import("@/lib/agent-registry");
@@ -1252,7 +1266,7 @@ export async function runAgentWithTools(opts: {
         // Parse error
       }
 
-      const result = await executeTool(fnName, fnArgs);
+      const result = await executeTool(fnName, fnArgs, userRole);
       toolCallsLog.push({ name: fnName, args: fnArgs, result });
 
       // Add tool result to messages

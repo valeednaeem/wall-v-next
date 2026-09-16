@@ -31,7 +31,7 @@ export default function ClientNotificationsPage() {
   };
 
   const markAllRead = async () => {
-    await fetch("/api/notifications/mark-all-read", { method: "PUT", credentials: "include" });
+    await fetch("/api/notifications", { method: "PUT", credentials: "include" });
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
   };
 

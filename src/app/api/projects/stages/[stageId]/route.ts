@@ -7,6 +7,7 @@ import Client from "@/models/client";
 import Task from "@/models/task";
 import { logProjectActivity } from "@/lib/activity-logger";
 import { sendEmail, generateProjectStageEmail } from "@/lib/mail";
+import { notifyAdmins } from "@/lib/notify";
 
 // PUT /api/projects/stages/[stageId]/status
 // Update stage status
@@ -80,6 +81,17 @@ export async function PUT(
       } catch {
         // Email notification failure should not block the request
       }
+    }
+
+    // In-app notification to admins
+    if (status === "completed" || status === "active") {
+      const projName = (await Project.findById(stage.project).lean())?.name || "Project";
+      await notifyAdmins(
+        `Stage ${status === "completed" ? "Completed" : "Started"}`,
+        `"${stage.name}" in "${projName}" is now ${status}`,
+        status === "completed" ? "success" : "info",
+        `/dashboard/projects/${stage.project}`
+      ).catch(() => {});
     }
 
     return NextResponse.json({ stage });

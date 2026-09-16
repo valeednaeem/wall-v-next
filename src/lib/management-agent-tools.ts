@@ -1,6 +1,73 @@
 import { connectToDatabase } from "@/lib/mongodb";
 import type { AgentToolDefinition } from "@/lib/agent-tools";
 
+// ─── Role-Based Access Control ──────────────────────────────────────────────
+// Maps each tool to the roles allowed to use it.
+// Based on Wall-V's permission model and legal/policy constraints:
+//   - Refunds only via refunds@wall-v.com (no agent tool)
+//   - Legal changes require legal team (no agent tool)
+//   - Pricing changes require admin approval
+//   - Security/error logs are admin-only (no client exposure)
+//   - Clients can only READ published content
+
+const ADMIN_ROLES = ["super-admin", "admin"];
+const INTERNAL_ROLES = ["super-admin", "admin", "project-manager", "staff", "developer", "designer", "marketing", "sales", "support"];
+const CLIENT_READ_ROLES = ["customer", "super-admin", "admin", "project-manager", "staff", "developer", "designer", "marketing", "sales", "support"];
+
+/** Which roles can use each management tool */
+const TOOL_ACCESS_CONTROL: Record<string, string[]> = {
+  // Blog — admin creates/updates, clients read published only
+  create_blog_post: ADMIN_ROLES,
+  update_blog_post: ADMIN_ROLES,
+  get_blog_posts: CLIENT_READ_ROLES,
+  optimize_blog_seo: ADMIN_ROLES,
+  // Products — admin creates/updates, clients read published only
+  create_product: ADMIN_ROLES,
+  update_product: ADMIN_ROLES,
+  get_products: CLIENT_READ_ROLES,
+  generate_product_listing: ADMIN_ROLES,
+  // SEO — admin only (exposes site strategy)
+  run_seo_audit: ADMIN_ROLES,
+  analyze_seo_keywords: ADMIN_ROLES,
+  generate_seo_meta: ADMIN_ROLES,
+  // Security — super-admin only (highly sensitive)
+  run_security_scan: ["super-admin"],
+  check_dependencies: ["super-admin"],
+  audit_authentication: ["super-admin"],
+  // Error/Logging — admin only (exposes internal issues)
+  get_error_logs: ADMIN_ROLES,
+  get_error_summary: ADMIN_ROLES,
+  resolve_error: ADMIN_ROLES,
+  // Notifications — internal roles
+  get_system_notifications: INTERNAL_ROLES,
+  // Media — internal roles
+  get_image_info: INTERNAL_ROLES,
+  generate_image_variants: INTERNAL_ROLES,
+};
+
+/** Check if a role is client-facing (not internal staff) */
+export function isClientFacingRole(role: string): boolean {
+  return role === "customer" || role === "prospect" || !role;
+}
+
+/** Get management tools allowed for a given role */
+export function getAllowedManagementTools(role?: string): AgentToolDefinition[] {
+  if (!role || role === "super-admin") {
+    return MANAGEMENT_TOOL_DEFINITIONS; // Super-admin gets everything
+  }
+  return MANAGEMENT_TOOL_DEFINITIONS.filter((tool) => {
+    const allowedRoles = TOOL_ACCESS_CONTROL[tool.function.name];
+    return allowedRoles?.includes(role) ?? false;
+  });
+}
+
+/** Check if a specific tool is allowed for a role */
+export function isToolAllowed(toolName: string, role?: string): boolean {
+  if (!role || role === "super-admin") return true;
+  const allowedRoles = TOOL_ACCESS_CONTROL[toolName];
+  return allowedRoles?.includes(role) ?? false;
+}
+
 // ─── Management Agent Tool Definitions ───────────────────────────────────────
 
 export const MANAGEMENT_TOOL_DEFINITIONS: AgentToolDefinition[] = [
@@ -477,7 +544,12 @@ async function executeGetBlogPosts(args: Record<string, unknown>) {
   await connectToDatabase();
 
   const query: Record<string, unknown> = {};
-  if (args.status) query.status = args.status;
+  // Client-facing roles can only see published posts
+  if (args._role && isClientFacingRole(args._role as string)) {
+    query.status = "published";
+  } else if (args.status) {
+    query.status = args.status;
+  }
   if (args.category) {
     const BlogCategory = (await import("@/models/blog-category")).default;
     const cat = await BlogCategory.findOne({ $or: [{ slug: args.category }, { _id: args.category }] });
@@ -644,7 +716,12 @@ async function executeGetProducts(args: Record<string, unknown>) {
   await connectToDatabase();
 
   const query: Record<string, unknown> = {};
-  if (args.status) query.status = args.status;
+  // Client-facing roles can only see published products
+  if (args._role && isClientFacingRole(args._role as string)) {
+    query.status = "published";
+  } else if (args.status) {
+    query.status = args.status;
+  }
   if (args.type) query.type = args.type;
   if (args.category) {
     const ProductCategory = (await import("@/models/product-category")).default;
@@ -1104,35 +1181,44 @@ async function executeGenerateImageVariants(args: Record<string, unknown>) {
 
 export async function executeManagementTool(
   toolName: string,
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
+  role?: string
 ): Promise<unknown> {
+  // Authorization check
+  if (!isToolAllowed(toolName, role)) {
+    return { error: `Access denied: ${toolName} is not available for role "${role || "guest"}"` };
+  }
+
+  // Inject role for client-facing filtering (read tools only)
+  const enrichedArgs = { ...args, _role: role };
+
   switch (toolName) {
     // Blog
-    case "create_blog_post": return executeCreateBlogPost(args);
-    case "update_blog_post": return executeUpdateBlogPost(args);
-    case "get_blog_posts": return executeGetBlogPosts(args);
-    case "optimize_blog_seo": return executeOptimizeBlogSeo(args);
+    case "create_blog_post": return executeCreateBlogPost(enrichedArgs);
+    case "update_blog_post": return executeUpdateBlogPost(enrichedArgs);
+    case "get_blog_posts": return executeGetBlogPosts(enrichedArgs);
+    case "optimize_blog_seo": return executeOptimizeBlogSeo(enrichedArgs);
     // Product
-    case "create_product": return executeCreateProduct(args);
-    case "update_product": return executeUpdateProduct(args);
-    case "get_products": return executeGetProducts(args);
-    case "generate_product_listing": return executeGenerateProductListing(args);
+    case "create_product": return executeCreateProduct(enrichedArgs);
+    case "update_product": return executeUpdateProduct(enrichedArgs);
+    case "get_products": return executeGetProducts(enrichedArgs);
+    case "generate_product_listing": return executeGenerateProductListing(enrichedArgs);
     // SEO
-    case "run_seo_audit": return executeRunSeoAudit(args);
-    case "analyze_seo_keywords": return executeAnalyzeSeoKeywords(args);
-    case "generate_seo_meta": return executeGenerateSeoMeta(args);
+    case "run_seo_audit": return executeRunSeoAudit(enrichedArgs);
+    case "analyze_seo_keywords": return executeAnalyzeSeoKeywords(enrichedArgs);
+    case "generate_seo_meta": return executeGenerateSeoMeta(enrichedArgs);
     // Security
-    case "run_security_scan": return executeRunSecurityScan(args);
+    case "run_security_scan": return executeRunSecurityScan(enrichedArgs);
     case "check_dependencies": return executeCheckDependencies();
     case "audit_authentication": return executeAuditAuthentication();
     // Error/Logging
-    case "get_error_logs": return executeGetErrorLogs(args);
-    case "get_error_summary": return executeGetErrorSummary(args);
-    case "resolve_error": return executeResolveError(args);
+    case "get_error_logs": return executeGetErrorLogs(enrichedArgs);
+    case "get_error_summary": return executeGetErrorSummary(enrichedArgs);
+    case "resolve_error": return executeResolveError(enrichedArgs);
     // Notifications/Media
-    case "get_system_notifications": return executeGetSystemNotifications(args);
-    case "get_image_info": return executeGetImageInfo(args);
-    case "generate_image_variants": return executeGenerateImageVariants(args);
+    case "get_system_notifications": return executeGetSystemNotifications(enrichedArgs);
+    case "get_image_info": return executeGetImageInfo(enrichedArgs);
+    case "generate_image_variants": return executeGenerateImageVariants(enrichedArgs);
     default:
       return { error: `Unknown management tool: ${toolName}` };
   }

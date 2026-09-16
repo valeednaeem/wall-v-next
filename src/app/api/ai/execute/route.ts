@@ -38,6 +38,7 @@ export async function POST(request: NextRequest) {
       visitorState: state,
       channel: channel || "chat",
       userId: user?.userId,
+      userRole: user?.role,
       page,
     });
 

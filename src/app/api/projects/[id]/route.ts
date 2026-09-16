@@ -8,6 +8,7 @@ import { verifyCsrfToken, CSRF_HEADER_NAME } from "@/lib/csrf";
 import mongoose from "mongoose";
 import { logError } from "@/lib/error-logger";
 import { sendEmail, generateProjectStatusEmail } from "@/lib/mail";
+import { notifyAdmins } from "@/lib/notify";
 
 const PROJECT_UPDATE_FIELDS = ["name", "title", "description", "status", "requirements", "budget", "currency", "milestones", "demoHTML", "demoId", "client", "priority", "progress", "paymentStatus"];
 
@@ -140,6 +141,17 @@ export async function PUT(
         });
         sendEmail({ to: clientEmail, ...statusEmail, template: "project-status" }).catch(() => {});
       }
+    }
+
+    // In-app notification to admins
+    if (projectData.status && projectData.status !== oldStatus) {
+      const projName = (project?.name as string) || "Project";
+      await notifyAdmins(
+        "Project Status Updated",
+        `"${projName}" changed from ${oldStatus || "unknown"} to ${projectData.status}`,
+        "info",
+        `/dashboard/projects/${id}`
+      ).catch(() => {});
     }
 
     return NextResponse.json({ project });

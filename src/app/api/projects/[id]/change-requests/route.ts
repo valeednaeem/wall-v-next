@@ -5,6 +5,7 @@ import ChangeRequest from "@/models/change-request";
 import Project from "@/models/project";
 import { logProjectActivity } from "@/lib/activity-logger";
 import { sendEmail, generateChangeRequestEmail } from "@/lib/mail";
+import { notifyAdmins } from "@/lib/notify";
 
 export async function GET(
   request: NextRequest,
@@ -117,6 +118,14 @@ export async function PUT(
         // Email failure should not block change request update
       }
     }
+
+    // In-app notification to admins
+    await notifyAdmins(
+      `Change Request ${action.charAt(0).toUpperCase() + action.slice(1)}ed`,
+      `"${cr.title}" on "${(await Project.findById(id).lean())?.name || "Project"}" was ${action}ed`,
+      action === "reject" ? "warning" : "info",
+      `/dashboard/projects/${id}`
+    ).catch(() => {});
     return NextResponse.json({ changeRequest: cr });
   } catch (error: unknown) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Failed" }, { status: 500 });
