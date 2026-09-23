@@ -8,6 +8,7 @@ import ServicePrice from "@/models/service-price";
 import { calculateBudget, type BudgetEstimate } from "@/lib/budget-calculator";
 import { generateDemoHTML, generateMilestonePrototype } from "@/lib/demo-generator";
 import { logError } from "@/lib/error-logger";
+import { normalizeBaseUrl } from "@/lib/utils";
 
 // ============================================================
 // TYPES
@@ -260,7 +261,7 @@ export async function runProductionWorkflow(
   if (previewUrl && !options?.skipPreview) {
     const token = await createPreviewTokenForProject(project._id.toString());
     if (token) {
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://wall-v.com";
+      const appUrl = normalizeBaseUrl(process.env.NEXT_PUBLIC_APP_URL || "https://wall-v.com");
       previewUrl = `${appUrl}/preview/${token}`;
     }
   }
@@ -287,7 +288,7 @@ export async function runProductionWorkflow(
   // 12. Generate production summary
   const productionSummary = generateProductionSummary(validatedReqs, firstMilestone, costAnalysis);
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://wall-v.com";
+  const appUrl = normalizeBaseUrl(process.env.NEXT_PUBLIC_APP_URL || "https://wall-v.com");
 
   return {
     projectId: project._id.toString(),
@@ -1228,7 +1229,7 @@ async function generateFirstMilestonePrototype(
     // Create preview token
     const token = await createPreviewTokenForProject(projectId);
     if (token) {
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://wall-v.com";
+      const appUrl = normalizeBaseUrl(process.env.NEXT_PUBLIC_APP_URL || "https://wall-v.com");
       return { success: true, previewUrl: `${appUrl}/preview/${token}`, prototypeHTML };
     }
 

@@ -3,6 +3,7 @@ import { connectToDatabase } from "@/lib/mongodb";
 import LegalPage from "@/models/legal-page";
 import LegalPageContent from "./legal-page-content";
 import { JsonLd } from "@/components/seo";
+import { normalizeBaseUrl } from "@/lib/utils";
 
 interface LegalPageData {
   title: string;
@@ -71,7 +72,7 @@ export async function generateLegalMetadata(slug: string, fallbackTitle: string)
   const seo = data.seo as Record<string, string> | null;
   const title = seo?.metaTitle || data.title;
   const description = seo?.metaDescription || "";
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.wall-v.com";
+  const baseUrl = normalizeBaseUrl(process.env.NEXT_PUBLIC_APP_URL || "https://www.wall-v.com");
 
   return {
     title: `${title} | Wall-V`,
@@ -96,7 +97,7 @@ export async function generateLegalMetadata(slug: string, fallbackTitle: string)
 }
 
 export default function LegalPageView({ data }: LegalPageViewProps) {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.wall-v.com";
+  const baseUrl = normalizeBaseUrl(process.env.NEXT_PUBLIC_APP_URL || "https://www.wall-v.com");
   return (
     <div className="min-h-screen bg-background">
       <JsonLd data={{

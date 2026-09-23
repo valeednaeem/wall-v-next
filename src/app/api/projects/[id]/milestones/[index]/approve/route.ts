@@ -3,6 +3,7 @@ import { connectToDatabase } from "@/lib/mongodb";
 import Project from "@/models/project";
 import { getAuthUserFromCookie } from "@/lib/auth-cookie";
 import { notifyAdmins, createNotification } from "@/lib/notify";
+import { normalizeBaseUrl } from "@/lib/utils";
 
 export async function POST(
   request: Request,
@@ -91,7 +92,7 @@ export async function POST(
     await project.save();
 
     // Notify
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.wall-v.com";
+    const appUrl = normalizeBaseUrl(process.env.NEXT_PUBLIC_APP_URL || "https://www.wall-v.com");
     if (project.projectManager) {
       createNotification(
         project.projectManager.toString(),

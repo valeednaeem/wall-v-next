@@ -5,6 +5,7 @@ import Project from "@/models/project";
 import Client from "@/models/client";
 import { getAuthUser } from "@/lib/auth";
 import { logError } from "@/lib/error-logger";
+import { normalizeBaseUrl } from "@/lib/utils";
 
 const DEFAULT_EXPIRY_MINUTES = 5;
 const DEFAULT_MAX_ACCESSES = 10;
@@ -68,7 +69,7 @@ export async function POST(request: Request) {
       ],
     });
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://wall-v.com";
+    const appUrl = normalizeBaseUrl(process.env.NEXT_PUBLIC_APP_URL || "https://wall-v.com");
 
     return NextResponse.json({
       success: true,

@@ -12,6 +12,7 @@ import { sendEmail, generateProjectCreatedEmail } from "@/lib/mail";
 import { corsHeaders, handleOPTIONS } from "@/lib/cors";
 import { logError } from "@/lib/error-logger";
 import { checkRateLimit, getClientIp, logSecurityEvent } from "@/lib/security";
+import { normalizeBaseUrl } from "@/lib/utils";
 import crypto from "crypto";
 
 function slugify(text: string): string {
@@ -819,7 +820,7 @@ export async function POST(request: Request) {
 
       // Send preview email to client
       if (clientEmail && clientEmail.includes("@")) {
-        const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://wall-v.com";
+        const appUrl = normalizeBaseUrl(process.env.NEXT_PUBLIC_APP_URL || "https://wall-v.com");
         const previewUrl = `${appUrl}/preview/${preview.token}`;
         const emailContent = generateProjectCreatedEmail({
           clientName,

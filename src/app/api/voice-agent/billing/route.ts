@@ -5,6 +5,7 @@ import Client from "@/models/client";
 import Invoice from "@/models/invoice";
 import { sendEmail } from "@/lib/mail";
 import { corsHeaders, handleOPTIONS } from "@/lib/cors";
+import { normalizeBaseUrl } from "@/lib/utils";
 
 function generateInvoiceNumber(): string {
   const now = new Date();
@@ -241,7 +242,7 @@ export async function POST(request: Request) {
       .map((m, i) => `Milestone ${i + 1}: ${m.name} — $${m.amount.toLocaleString()}`)
       .join(". ");
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://wall-v.com";
+    const appUrl = normalizeBaseUrl(process.env.NEXT_PUBLIC_APP_URL || "https://wall-v.com");
 
     const firstMilestoneName = milestones[0]?.name || "Discovery & Planning";
     const firstMilestoneAmount = milestones[0]?.amount || 0;

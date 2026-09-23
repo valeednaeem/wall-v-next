@@ -5,7 +5,7 @@ import {
   Settings, Loader2, CheckCircle2, XCircle, AlertTriangle,
   Key, ArrowRight, ArrowLeft, TestTube, Rocket, Eye, EyeOff,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, normalizeBaseUrl } from "@/lib/utils";
 
 interface GatewayConfig {
   _id: string;
@@ -249,7 +249,7 @@ export default function PaymentSettingsPage() {
     );
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.wall-v.com";
+  const appUrl = normalizeBaseUrl(process.env.NEXT_PUBLIC_APP_URL || "https://www.wall-v.com");
 
   return (
     <div className="space-y-6 max-w-3xl">

@@ -1,5 +1,8 @@
 import nodemailer from "nodemailer";
 import EmailLog from "@/models/email-log";
+import { normalizeBaseUrl } from "@/lib/utils";
+
+const APP_URL = normalizeBaseUrl(process.env.NEXT_PUBLIC_APP_URL || "https://www.wall-v.com");
 
 interface EmailOptions {
   to: string;
@@ -64,7 +67,7 @@ export function generateWelcomeEmail(name: string): { subject: string; html: str
         <h1 style="color: #7c3aed;">Welcome to Wall-V, ${name}!</h1>
         <p>Thank you for joining Wall-V. We're excited to have you on board.</p>
         <p>You can now access our AI-powered tools, manage your projects, and much more.</p>
-        <a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard" style="display: inline-block; background: #7c3aed; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; margin: 16px 0;">Go to Dashboard</a>
+        <a href="${APP_URL}/dashboard" style="display: inline-block; background: #7c3aed; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; margin: 16px 0;">Go to Dashboard</a>
       </div>
     `,
   };
@@ -94,7 +97,7 @@ export function generateProjectStageEmail(opts: {
             : `<p style="color: #2563eb; font-weight: bold;">🔄 Stage In Progress</p>`
           }
           <p style="color: #6b7280; font-size: 14px; margin-top: 24px;">
-            You can track progress in your <a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard/projects" style="color: #7c3aed;">Client Portal</a>.
+            You can track progress in your <a href="${APP_URL}/dashboard/projects" style="color: #7c3aed;">Client Portal</a>.
           </p>
         </div>
         <div style="text-align: center; padding: 16px; color: #9ca3af; font-size: 12px;">
@@ -146,7 +149,7 @@ export function generateInvoiceEmail(opts: {
               ` : ""}
             </table>
           </div>
-          <a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard/projects" style="display: inline-block; background: #7c3aed; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; margin: 16px 0;">
+          <a href="${APP_URL}/dashboard/projects" style="display: inline-block; background: #7c3aed; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; margin: 16px 0;">
             View in Portal
           </a>
         </div>
@@ -200,7 +203,7 @@ export function generateQuotationEmail(opts: {
           </div>
           <p style="color: #6b7280; font-size: 14px;">
             Please review the quotation and let us know if you have any questions.
-            You can approve or discuss changes through your <a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard/projects" style="color: #7c3aed;">Client Portal</a>.
+            You can approve or discuss changes through your <a href="${APP_URL}/dashboard/projects" style="color: #7c3aed;">Client Portal</a>.
           </p>
         </div>
         <div style="text-align: center; padding: 16px; color: #9ca3af; font-size: 12px;">
@@ -245,7 +248,7 @@ export function generatePaymentConfirmationEmail(opts: {
             </table>
           </div>
           <p style="color: #6b7280; font-size: 14px;">
-            Thank you for your payment! You can view your payment history in the <a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard/projects" style="color: #7c3aed;">Client Portal</a>.
+            Thank you for your payment! You can view your payment history in the <a href="${APP_URL}/dashboard/projects" style="color: #7c3aed;">Client Portal</a>.
           </p>
         </div>
         <div style="text-align: center; padding: 16px; color: #9ca3af; font-size: 12px;">
@@ -285,7 +288,7 @@ export function generateChangeRequestEmail(opts: {
             <p style="margin: 4px 0 0; color: #6b7280; font-size: 13px;">Type: ${opts.changeType}</p>
           </div>
           <p style="color: #6b7280; font-size: 14px;">
-            View details in your <a href="${process.env.NEXT_PUBLIC_APP_URL}/client/projects" style="color: #7c3aed;">Client Portal</a>.
+            View details in your <a href="${APP_URL}/client/projects" style="color: #7c3aed;">Client Portal</a>.
           </p>
         </div>
         <div style="text-align: center; padding: 16px; color: #9ca3af; font-size: 12px;">
@@ -314,7 +317,7 @@ export function generateAccountCreatedEmail(opts: {
             <p style="margin: 0; color: #6b7280;">Email: <strong>${opts.email}</strong></p>
           </div>
           <p style="color: #374151;">You can now log in, explore our services, and start projects.</p>
-          <a href="${process.env.NEXT_PUBLIC_APP_URL || "https://www.wall-v.com"}/login" style="display: inline-block; background: #7c3aed; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; margin: 16px 0;">Log In to Your Account</a>
+          <a href="${APP_URL}/login" style="display: inline-block; background: #7c3aed; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; margin: 16px 0;">Log In to Your Account</a>
         </div>
         <div style="text-align: center; padding: 16px; color: #9ca3af; font-size: 12px;">
           Wall-V Digital Agency
@@ -351,7 +354,7 @@ export function generateProjectCreatedEmail(opts: {
             </table>
           </div>
           <p style="color: #6b7280; font-size: 14px;">
-            Track progress in your <a href="${process.env.NEXT_PUBLIC_APP_URL || "https://www.wall-v.com"}/client/projects" style="color: #7c3aed;">Client Portal</a>.
+            Track progress in your <a href="${APP_URL}/client/projects" style="color: #7c3aed;">Client Portal</a>.
           </p>
         </div>
         <div style="text-align: center; padding: 16px; color: #9ca3af; font-size: 12px;">
@@ -382,7 +385,7 @@ export function generateInquiryReceivedEmail(opts: {
             ${opts.service ? `<p style="margin: 4px 0 0; color: #6b7280;">Service: <strong>${opts.service}</strong></p>` : ""}
           </div>
           <p style="color: #6b7280; font-size: 14px;">
-            You can also view your inquiries in the <a href="${process.env.NEXT_PUBLIC_APP_URL || "https://www.wall-v.com"}/client" style="color: #7c3aed;">Client Portal</a>.
+            You can also view your inquiries in the <a href="${APP_URL}/client" style="color: #7c3aed;">Client Portal</a>.
           </p>
         </div>
         <div style="text-align: center; padding: 16px; color: #9ca3af; font-size: 12px;">
@@ -415,7 +418,7 @@ export function generateProjectStatusEmail(opts: {
             <span style="font-weight: bold; color: #7c3aed; text-transform: capitalize;">${opts.newStatus}</span>
           </div>
           <p style="color: #6b7280; font-size: 14px;">
-            View details in your <a href="${process.env.NEXT_PUBLIC_APP_URL || "https://www.wall-v.com"}/client/projects" style="color: #7c3aed;">Client Portal</a>.
+            View details in your <a href="${APP_URL}/client/projects" style="color: #7c3aed;">Client Portal</a>.
           </p>
         </div>
         <div style="text-align: center; padding: 16px; color: #9ca3af; font-size: 12px;">
@@ -554,7 +557,7 @@ export function generateAdminNewProjectEmail(opts: {
               ${opts.budget ? `<tr><td style="padding: 8px 0; color: #6b7280;">Budget:</td><td style="padding: 8px 0; text-align: right;">${opts.budget}</td></tr>` : ""}
             </table>
           </div>
-          <a href="${process.env.NEXT_PUBLIC_APP_URL || "https://www.wall-v.com"}/dashboard/projects" style="display: inline-block; background: #7c3aed; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; margin: 16px 0;">View in Dashboard</a>
+          <a href="${APP_URL}/dashboard/projects" style="display: inline-block; background: #7c3aed; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; margin: 16px 0;">View in Dashboard</a>
         </div>
         <div style="text-align: center; padding: 16px; color: #9ca3af; font-size: 12px;">
           Wall-V Digital Agency

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { Save, Loader2, CheckCircle2, AlertCircle, FileText, RefreshCw, Globe, ExternalLink, Settings, Shield, Eye, EyeOff } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, normalizeBaseUrl } from "@/lib/utils";
 
 interface RobotsSettings {
   defaultDirectives: Array<{
@@ -154,7 +154,7 @@ export default function RobotsPage() {
 
   if (!session) return null;
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://wall-v.com";
+  const baseUrl = normalizeBaseUrl(process.env.NEXT_PUBLIC_APP_URL || "https://wall-v.com");
   const robotsUrl = `${baseUrl}/robots.txt`;
 
   return (

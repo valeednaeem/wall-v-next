@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { connectToDatabase } from "@/lib/mongodb";
 import SiteSettings from "@/models/site-settings";
 import { requirePermission } from "@/lib/api-middleware";
+import { normalizeBaseUrl } from "@/lib/utils";
 
 const GLOBAL_SEO_KEYS = [
   "siteTitle",
@@ -77,12 +78,17 @@ export async function PUT(request: Request) {
     await connectToDatabase();
 
     const updates = [];
+    const URL_KEYS = new Set(["canonicalDomain", "organizationUrl"]);
     for (const key of GLOBAL_SEO_KEYS) {
       if (body[key] !== undefined) {
+        let value = body[key];
+        if (URL_KEYS.has(key) && typeof value === "string") {
+          value = normalizeBaseUrl(value);
+        }
         updates.push(
           SiteSettings.findOneAndUpdate(
             { key: `seo.${key}` },
-            { key: `seo.${key}`, value: body[key], category: "seo", updatedAt: new Date() },
+            { key: `seo.${key}`, value, category: "seo", updatedAt: new Date() },
             { upsert: true, new: true }
           )
         );

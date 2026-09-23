@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { Save, Loader2, Eye, EyeOff, Globe, Share2, Image, CheckCircle2, AlertCircle, RefreshCw, ExternalLink, Plus } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, normalizeBaseUrl } from "@/lib/utils";
 
 interface OGSettings {
   defaultTitle: string;
@@ -136,7 +136,7 @@ export default function OGSettingsPage() {
 
   if (!session) return null;
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://wall-v.com";
+  const baseUrl = normalizeBaseUrl(process.env.NEXT_PUBLIC_APP_URL || "https://wall-v.com");
 
   return (
     <div className="space-y-6">

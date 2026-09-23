@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { Save, Loader2, CheckCircle2, AlertCircle, ExternalLink, RefreshCw, Eye, EyeOff, Key, Globe, Search, FileText, Package, Share2, Database, Zap } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, normalizeBaseUrl } from "@/lib/utils";
 
 interface GlobalSEOConfig {
   siteTitle: string;
@@ -146,7 +146,7 @@ export default function GlobalSEOPage() {
 
   if (!session) return null;
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://wall-v.com";
+  const baseUrl = normalizeBaseUrl(process.env.NEXT_PUBLIC_APP_URL || "https://wall-v.com");
   const fullUrl = `${baseUrl}/example-page`;
   const ogImage = config.defaultOGImage || `${baseUrl}/og-default.png`;
 

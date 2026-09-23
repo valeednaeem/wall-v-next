@@ -3,6 +3,7 @@ import { connectToDatabase } from "@/lib/mongodb";
 import SiteSettings from "@/models/site-settings";
 import { auth } from "@/lib/auth";
 import { clearSettingsCache } from "@/lib/site-settings";
+import { normalizeBaseUrl } from "@/lib/utils";
 
 const ALLOWED_ROLES = ["super-admin", "admin", "manager"];
 
@@ -46,12 +47,17 @@ export async function PUT(request: Request) {
     await connectToDatabase();
 
     const updates = [];
+    const URL_KEYS = new Set(["siteUrl", "canonicalUrl", "organizationUrl"]);
     for (const [category, keys] of Object.entries(body) as [string, Record<string, unknown>][]) {
       for (const [key, value] of Object.entries(keys)) {
+        let sanitized = value;
+        if (URL_KEYS.has(key) && typeof value === "string") {
+          sanitized = normalizeBaseUrl(value);
+        }
         updates.push(
           SiteSettings.findOneAndUpdate(
             { key: `${category}.${key}` },
-            { key: `${category}.${key}`, value, category, updatedAt: new Date() },
+            { key: `${category}.${key}`, value: sanitized, category, updatedAt: new Date() },
             { upsert: true, new: true }
           )
         );

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { Save, Loader2, CheckCircle2, AlertCircle, FileText, RefreshCw, Globe, ExternalLink, Settings } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, normalizeBaseUrl } from "@/lib/utils";
 
 interface SitemapSettings {
   includePages: boolean;
@@ -214,7 +214,7 @@ export default function SitemapPage() {
 
   if (!session) return null;
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://wall-v.com";
+  const baseUrl = normalizeBaseUrl(process.env.NEXT_PUBLIC_APP_URL || "https://wall-v.com");
   const sitemapUrl = `${baseUrl}/sitemap.xml`;
 
   return (

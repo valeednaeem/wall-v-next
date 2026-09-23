@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { connectToDatabase } from "@/lib/mongodb";
 import { requirePermission } from "@/lib/api-middleware";
+import { normalizeBaseUrl } from "@/lib/utils";
 
 export async function POST() {
   try {
@@ -23,7 +24,7 @@ export async function POST() {
 
     await connectToDatabase();
 
-    const siteUrl = process.env.NEXT_PUBLIC_APP_URL || "https://wall-v.com";
+    const siteUrl = normalizeBaseUrl(process.env.NEXT_PUBLIC_APP_URL || "https://wall-v.com");
     const sitemapUrl = `${siteUrl}/sitemap.xml`;
 
     // Fetch the sitemap

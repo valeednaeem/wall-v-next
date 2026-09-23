@@ -5,6 +5,7 @@ import Payment from "@/models/payment";
 import PaymentAuditLog from "@/models/payment-audit-log";
 import Invoice from "@/models/invoice";
 import Order from "@/models/order";
+import { normalizeBaseUrl } from "@/lib/utils";
 
 const GATEWAY_SLUG = "2checkout";
 
@@ -129,7 +130,7 @@ export async function createCheckoutSession(input: CheckoutSessionInput): Promis
       details: { paymentNumber, description: input.description },
     });
 
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.wall-v.com";
+    const baseUrl = normalizeBaseUrl(process.env.NEXT_PUBLIC_APP_URL || "https://www.wall-v.com");
     const returnUrl = config.returnUrl || `${baseUrl}/checkout/success`;
     const cancelUrl = config.cancelUrl || `${baseUrl}/checkout`;
 

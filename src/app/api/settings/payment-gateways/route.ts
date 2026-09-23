@@ -3,6 +3,7 @@ import { getAuthUser } from "@/lib/auth";
 import { PERMISSIONS, hasPermission } from "@/lib/permissions";
 import connectToDatabase from "@/lib/mongodb";
 import PaymentGateway from "@/models/payment-gateway";
+import { normalizeBaseUrl } from "@/lib/utils";
 
 export async function GET() {
   try {
@@ -95,7 +96,7 @@ export async function POST(request: NextRequest) {
     gateway.enabled = hasCredentials;
 
     if (returnUrl || cancelUrl) {
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.wall-v.com";
+      const baseUrl = normalizeBaseUrl(process.env.NEXT_PUBLIC_APP_URL || "https://www.wall-v.com");
       gateway.config.webhookUrl = `${baseUrl}/api/webhooks/2checkout`;
     }
 

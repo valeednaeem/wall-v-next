@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { cn } from "@/lib/utils";
+import { cn, normalizeBaseUrl } from "@/lib/utils";
 import { Providers } from "@/components/providers";
 import { CookieConsent } from "@/components/cookie-consent";
 import { SpeedInsights } from "@vercel/speed-insights/next";
@@ -28,7 +28,7 @@ async function getGoogleVerification(): Promise<string> {
 
 export async function generateMetadata(): Promise<Metadata> {
   const googleVerification = await getGoogleVerification();
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.wall-v.com";
+  const baseUrl = normalizeBaseUrl(process.env.NEXT_PUBLIC_APP_URL || "https://www.wall-v.com");
   return {
     title: {
       default: "Wall-V | AI-Powered Software Agency",

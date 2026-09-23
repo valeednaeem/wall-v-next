@@ -5,6 +5,7 @@ import User from "@/models/user";
 import PasswordResetToken from "@/models/password-reset-token";
 import { sendEmail, generatePasswordResetEmail } from "@/lib/mail";
 import { checkRateLimit, getClientIp } from "@/lib/security";
+import { normalizeBaseUrl } from "@/lib/utils";
 
 export async function POST(request: Request) {
   try {
@@ -45,7 +46,7 @@ export async function POST(request: Request) {
       expiresAt,
     });
 
-    const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL}/reset-password?token=${token}`;
+    const resetUrl = `${normalizeBaseUrl(process.env.NEXT_PUBLIC_APP_URL || "https://www.wall-v.com")}/reset-password?token=${token}`;
     const emailContent = generatePasswordResetEmail(resetUrl);
 
     await sendEmail({

@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 import { connectToDatabase } from "@/lib/mongodb";
 import RobotsSettings from "@/models/robots-settings";
 import SiteSettings from "@/models/site-settings";
+import { normalizeBaseUrl } from "@/lib/utils";
 
 const SYSTEM_PROTECTED_DISALLOW = [
   "/dashboard",
@@ -37,7 +38,7 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
     // Get site URL for sitemap
     const siteSettings = await SiteSettings.find({ key: { $in: ["seo.canonicalDomain", "general.siteUrl"] } }).lean();
     const canonicalDomain = siteSettings.find((s) => s.key === "seo.canonicalDomain")?.value as string;
-    const siteUrl = canonicalDomain || siteSettings.find((s) => s.key === "general.siteUrl")?.value as string || process.env.NEXT_PUBLIC_APP_URL || "https://wall-v.com";
+    const siteUrl = normalizeBaseUrl(canonicalDomain || (siteSettings.find((s) => s.key === "general.siteUrl")?.value as string) || process.env.NEXT_PUBLIC_APP_URL || "https://wall-v.com");
 
     // Build rules from settings
     const rules: MetadataRoute.Robots["rules"] = [];
@@ -66,7 +67,7 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
     }
 
     // Sitemap
-    const sitemapUrl = settings.sitemapUrl || `${siteUrl}/sitemap.xml`;
+    const sitemapUrl = normalizeBaseUrl(settings.sitemapUrl || `${siteUrl}/sitemap.xml`);
 
     return {
       rules,
@@ -84,7 +85,7 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
           disallow: SYSTEM_PROTECTED_DISALLOW,
         },
       ],
-      sitemap: `${process.env.NEXT_PUBLIC_APP_URL || "https://wall-v.com"}/sitemap.xml`,
+      sitemap: `${normalizeBaseUrl(process.env.NEXT_PUBLIC_APP_URL || "https://wall-v.com")}/sitemap.xml`,
     };
   }
 }

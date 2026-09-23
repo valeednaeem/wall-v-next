@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
+import { normalizeBaseUrl } from "@/lib/utils";
 
-const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://www.wall-v.com";
+const BASE_URL = normalizeBaseUrl(process.env.NEXT_PUBLIC_APP_URL || "https://www.wall-v.com");
 const DEFAULT_OG_IMAGE = `${BASE_URL}/og-default.png`;
 
 interface SEOProps {

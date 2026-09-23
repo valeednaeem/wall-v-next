@@ -6,6 +6,7 @@ import Preview, { createPreviewToken } from "@/models/preview";
 import { generateDemoHTML } from "@/lib/demo-generator";
 import { corsHeaders, handleOPTIONS } from "@/lib/cors";
 import { logError } from "@/lib/error-logger";
+import { normalizeBaseUrl } from "@/lib/utils";
 
 // Dograh HTTP API Tool endpoint — called by the voice agent before ending the call
 // Generates a demo/prototype and returns the preview URL
@@ -165,7 +166,7 @@ export async function POST(request: Request) {
     client.lastContact = new Date();
     await client.save();
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://wall-v.com";
+    const appUrl = normalizeBaseUrl(process.env.NEXT_PUBLIC_APP_URL || "https://wall-v.com");
     const previewUrl = `${appUrl}/preview/${preview.token}`;
     const checkoutUrl = `${appUrl}/checkout/${project._id}`;
 

@@ -3,9 +3,10 @@ import { connectToDatabase } from "@/lib/mongodb";
 import LegalPage from "@/models/legal-page";
 import Post from "@/models/blog-post";
 import Product from "@/models/product";
+import { getAppBaseUrl } from "@/lib/utils";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.wall-v.com";
+  const baseUrl = getAppBaseUrl();
 
   const entries: MetadataRoute.Sitemap = [
     {

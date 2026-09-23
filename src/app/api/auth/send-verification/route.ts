@@ -6,6 +6,7 @@ import User from "@/models/user";
 import EmailVerification from "@/models/email-verification";
 import crypto from "crypto";
 import { checkRateLimit, getClientIp, logSecurityEvent } from "@/lib/security";
+import { normalizeBaseUrl } from "@/lib/utils";
 
 /**
  * POST /api/auth/send-verification
@@ -61,7 +62,7 @@ export async function POST() {
     });
 
     // In production, send email here. For now, log the verification URL.
-    const verifyUrl = `${process.env.NEXT_PUBLIC_APP_URL || "https://www.wall-v.com"}/auth/verify-email?token=${verificationToken}`;
+    const verifyUrl = `${normalizeBaseUrl(process.env.NEXT_PUBLIC_APP_URL || "https://www.wall-v.com")}/auth/verify-email?token=${verificationToken}`;
     console.log(`[EMAIL VERIFICATION] Send to ${user.email}: ${verifyUrl}`);
 
     await logSecurityEvent({

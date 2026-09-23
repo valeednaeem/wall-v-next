@@ -4,6 +4,7 @@ import { connectToDatabase } from "@/lib/mongodb";
 import RobotsSettings from "@/models/robots-settings";
 import SiteSettings from "@/models/site-settings";
 import { requirePermission } from "@/lib/api-middleware";
+import { normalizeBaseUrl } from "@/lib/utils";
 
 const SYSTEM_PROTECTED_DISALLOW = [
   "/dashboard",
@@ -56,7 +57,7 @@ export async function GET() {
     // Get site URL for sitemap
     const siteSettings = await SiteSettings.find({ key: { $in: ["seo.canonicalDomain", "general.siteUrl"] } }).lean();
     const canonicalDomain = siteSettings.find((s) => s.key === "seo.canonicalDomain")?.value as string;
-    const siteUrl = canonicalDomain || siteSettings.find((s) => s.key === "general.siteUrl")?.value as string || process.env.NEXT_PUBLIC_APP_URL || "https://wall-v.com";
+    const siteUrl = normalizeBaseUrl(canonicalDomain || (siteSettings.find((s) => s.key === "general.siteUrl")?.value as string) || process.env.NEXT_PUBLIC_APP_URL || "https://wall-v.com");
 
     // Build robots.txt
     let robotsTxt = "";
@@ -114,7 +115,7 @@ export async function GET() {
     }
 
     // Sitemap
-    const sitemapUrl = settings.sitemapUrl || `${siteUrl}/sitemap.xml`;
+    const sitemapUrl = normalizeBaseUrl(settings.sitemapUrl || `${siteUrl}/sitemap.xml`);
     robotsTxt += `Sitemap: ${sitemapUrl}\n`;
 
     return NextResponse.json({ success: true, data: robotsTxt.trim() });

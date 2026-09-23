@@ -4,6 +4,7 @@ import Project from "@/models/project";
 import { getAuthUserFromCookie } from "@/lib/auth-cookie";
 import { generateMilestonePrototype, type MilestonePrototypeRequirements } from "@/lib/demo-generator";
 import { notifyAdmins, createNotification } from "@/lib/notify";
+import { normalizeBaseUrl } from "@/lib/utils";
 
 function slugify(text: string): string {
   return text
@@ -122,7 +123,7 @@ export async function POST(
     await project.save();
 
     // Notify
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.wall-v.com";
+    const appUrl = normalizeBaseUrl(process.env.NEXT_PUBLIC_APP_URL || "https://www.wall-v.com");
     const previewUrl = `${appUrl}/projects/${project._id}/milestones/${milestoneIndex}/preview`;
 
     if (clientObj?.email) {

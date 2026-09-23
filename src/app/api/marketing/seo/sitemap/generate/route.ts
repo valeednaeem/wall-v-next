@@ -7,6 +7,7 @@ import Product from "@/models/product";
 import LegalPage from "@/models/legal-page";
 import { requirePermission } from "@/lib/api-middleware";
 import SitemapSettings from "@/models/sitemap-settings";
+import { normalizeBaseUrl } from "@/lib/utils";
 
 function escapeXml(str: string): string {
   return str
@@ -54,7 +55,7 @@ export async function POST(request: Request) {
     // Get site settings for base URL
     const siteSettings = await SiteSettings.find({ key: { $in: ["seo.canonicalDomain", "general.siteUrl"] } }).lean();
     const canonicalDomain = siteSettings.find((s) => s.key === "seo.canonicalDomain")?.value as string;
-    const siteUrl = canonicalDomain || siteSettings.find((s) => s.key === "general.siteUrl")?.value as string || "https://wall-v.com";
+    const siteUrl = normalizeBaseUrl(canonicalDomain || (siteSettings.find((s) => s.key === "general.siteUrl")?.value as string) || "https://wall-v.com");
 
     // Get sitemap settings
     let settings = await SitemapSettings.findOne().lean();
@@ -73,7 +74,7 @@ export async function POST(request: Request) {
     }
 
     const urls: string[] = [];
-    const baseUrl = siteUrl.replace(/\/$/, "");
+    const baseUrl = siteUrl;
 
     // Static pages
     if (settings.includePages) {

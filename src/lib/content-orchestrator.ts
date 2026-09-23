@@ -15,7 +15,7 @@ import type { IContentPlan } from "@/models/content-plan";
 import type { IContentTopic } from "@/models/content-topic";
 import type { IContentItem } from "@/models/content-item";
 import { generateSlug } from "@/lib/generate-slug";
-import { slugify } from "@/lib/utils";
+import { slugify, normalizeBaseUrl } from "@/lib/utils";
 import { discoverTopics, scoreTopics, selectBestTopics } from "@/lib/topic-discovery";
 import {
   generateArticle,
@@ -26,7 +26,7 @@ import { runQualityPipeline } from "@/lib/content-quality";
 import { findInternalLinks } from "@/lib/content-linking";
 import { checkForDuplicates } from "@/lib/content-analytics";
 import { getAdapter } from "@/lib/social-adapters";
-const SOCIAL_BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://www.wall-v.com";
+const SOCIAL_BASE_URL = normalizeBaseUrl(process.env.NEXT_PUBLIC_APP_URL || "https://www.wall-v.com");
 import { insertInternalLinks, runSEOAudit, enhanceSEOMetadata, generateArticleSchema, addFreshnessSignal, generateSEOStrategy } from "@/lib/seo-content-engine";
 import { marked } from "marked";
 
@@ -784,7 +784,7 @@ export async function executePlan(
           const htmlContent = await marked.parse(contentWithFreshness) as string;
 
           // Generate JSON-LD schema for the article
-          const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.wall-v.com";
+          const baseUrl = normalizeBaseUrl(process.env.NEXT_PUBLIC_APP_URL || "https://www.wall-v.com");
           const articleSchema = generateArticleSchema(finalItem, baseUrl);
 
           const blogPost = await BlogPost.create({

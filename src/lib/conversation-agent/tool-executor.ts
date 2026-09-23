@@ -10,6 +10,7 @@ import User from "@/models/user";
 import Client from "@/models/client";
 import Inquiry from "@/models/inquiry";
 import Lead from "@/models/lead";
+import { normalizeBaseUrl } from "@/lib/utils";
 import ProjectRequest from "@/models/project-request";
 import type { ToolResult } from "./types";
 import { validateToolArgs } from "./tool-registry";
@@ -515,7 +516,7 @@ async function createInvoiceTool(args: Record<string, unknown>): Promise<ToolRes
 
   // Send invoice email
   if (clientEmail && clientEmail.includes("@")) {
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://wall-v.com";
+    const appUrl = normalizeBaseUrl(process.env.NEXT_PUBLIC_APP_URL || "https://wall-v.com");
     sendEmail({
       to: clientEmail,
       subject: `Invoice ${invoiceNumber} — ${projectName || "Wall-V Project"}`,

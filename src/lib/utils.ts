@@ -109,3 +109,27 @@ export function debounce<T extends (...args: unknown[]) => unknown>(
     timeout = setTimeout(() => func(...args), wait);
   };
 }
+
+/**
+ * Normalize a site/base URL so it never produces double slashes when
+ * paths are appended (`${base}/path`).
+ *
+ * - Strips trailing slashes: `https://wall-v.com/` → `https://wall-v.com`
+ * - Collapses duplicate slashes in the path: `https://wall-v.com//sitemap.xml` → `https://wall-v.com/sitemap.xml`
+ * - Leaves the protocol `//` intact
+ */
+export function normalizeBaseUrl(url: string): string {
+  if (!url) return url;
+  try {
+    const parsed = new URL(url.trim());
+    parsed.pathname = parsed.pathname.replace(/\/{2,}/g, "/");
+    return parsed.toString().replace(/\/+$/, "");
+  } catch {
+    return url.trim().replace(/\/+$/, "");
+  }
+}
+
+/** App base URL from env, normalized (no trailing slash). */
+export function getAppBaseUrl(fallback = "https://www.wall-v.com"): string {
+  return normalizeBaseUrl(process.env.NEXT_PUBLIC_APP_URL || fallback);
+}
