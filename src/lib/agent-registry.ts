@@ -219,6 +219,7 @@ export function toOpenAITools(
 
   // Include hardcoded conversation tools (they have real implementations)
   if (includeHardcoded) {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { CONVERSATION_TOOLS } = require("./conversation-agent/tool-registry");
     tools.push(...CONVERSATION_TOOLS);
   }

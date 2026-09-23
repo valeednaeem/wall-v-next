@@ -81,7 +81,7 @@ export function DomainSearch() {
       </div>
 
       <p className="mt-4 text-xs text-gray-500 text-center">
-        Domain availability and pricing will be shown on the provider's website
+        Domain availability and pricing will be shown on the provider&apos;s website
       </p>
     </div>
   );

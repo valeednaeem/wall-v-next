@@ -646,7 +646,7 @@ export default function ClientPortalPage() {
                   <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                     <h4 className="font-medium text-green-800 mb-2 flex items-center gap-2">
                       <CheckCircle2 className="h-4 w-4" />
-                      What's Included
+                      What&apos;s Included
                     </h4>
                     <ul className="text-sm text-green-700 space-y-1">
                       {project.costAnalysis.includedItems.map((item, idx) => (
@@ -660,7 +660,7 @@ export default function ClientPortalPage() {
                   <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                     <h4 className="font-medium text-red-800 mb-2 flex items-center gap-2">
                       <AlertCircle className="h-4 w-4" />
-                      What's Excluded
+                      What&apos;s Excluded
                     </h4>
                     <ul className="text-sm text-red-700 space-y-1">
                       {project.costAnalysis.excludedItems.map((item, idx) => (

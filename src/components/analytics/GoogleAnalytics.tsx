@@ -82,8 +82,8 @@ export function GoogleAnalytics() {
 
     // Ensure gtag function exists (GTM may have already created it)
     if (!window.gtag) {
-      window.gtag = function gtag() {
-        window.dataLayer.push(arguments);
+      window.gtag = function gtag(...args: unknown[]) {
+        window.dataLayer.push(args);
       };
     }
 

@@ -139,6 +139,7 @@ export async function sendDailyDigest(): Promise<{ sent: boolean }> {
   const [activeAlerts, newRisks, overdueTasks, openIssues] = await Promise.all([
     PmAlert.countDocuments({ status: "active" }),
     PmRisk.countDocuments({ status: { $nin: ["closed", "realized"] }, createdAt: { $gte: today } }),
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     require("@/models/task").default.countDocuments({ status: { $ne: "done" }, dueDate: { $lt: new Date() } }),
     PmIssue.countDocuments({ status: { $nin: ["resolved", "closed", "wont-fix", "duplicate"] } }),
   ]);
