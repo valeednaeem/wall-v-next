@@ -8,8 +8,9 @@ import {
   LayoutDashboard, FileText, FolderKanban, Users,
   Cloud, Globe, Settings, ShoppingBag, ChevronRight,
   Menu, X, LogOut, User, CreditCard, Shield, Search, Bell, AlertTriangle,
-  BarChart3, Bot, ClipboardList, CheckSquare, Activity, Scan, MessageSquare, DollarSign, GitBranch, Puzzle
+  BarChart3, Bot, ClipboardList, CheckSquare, Activity, Scan, MessageSquare, DollarSign, GitBranch, Puzzle, Wand2
 } from "lucide-react";
+import { Toaster } from "sonner";
 
 interface SidebarChild {
   label: string;
@@ -62,6 +63,17 @@ const sidebarItems: SidebarItem[] = [
     { label: "Project Requests", href: "/dashboard/agents/project-requests", permission: "agents:view" },
     { label: "Approvals", href: "/dashboard/agents/approvals", permission: "agents:approve" },
     { label: "Audit Logs", href: "/dashboard/agents/audit-logs", permission: "agents:monitor" },
+  ]},
+  { label: "AI Tools", href: "/dashboard/ai-tools", icon: <Wand2 className="h-4 w-4" />, permission: "ai-tools:view", children: [
+    { label: "Overview", href: "/dashboard/ai-tools", permission: "ai-tools:view" },
+    { label: "Tools", href: "/dashboard/ai-tools/tools", permission: "ai-tools:view" },
+    { label: "Categories", href: "/dashboard/ai-tools/categories", permission: "ai-tools:view" },
+    { label: "Plans & Access", href: "/dashboard/ai-tools/plans", permission: "ai-tools:pricing" },
+    { label: "Usage & Credits", href: "/dashboard/ai-tools/usage", permission: "ai-tools:analytics" },
+    { label: "Analytics", href: "/dashboard/ai-tools/analytics", permission: "ai-tools:analytics" },
+    { label: "Reports", href: "/dashboard/ai-tools/reports", permission: "ai-tools:reports" },
+    { label: "Providers", href: "/dashboard/ai-tools/providers", permission: "ai-tools:providers" },
+    { label: "Settings", href: "/dashboard/ai-tools/settings", permission: "ai-tools:view" },
   ]},
   { label: "CRM", href: "/dashboard/crm", icon: <Users className="h-4 w-4" />, permission: "crm:view", children: [
     { label: "Overview", href: "/dashboard/crm", permission: "crm:view" },
@@ -378,6 +390,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </p>
         </footer>
       </div>
+      <Toaster position="top-right" richColors />
     </div>
   );
 }
