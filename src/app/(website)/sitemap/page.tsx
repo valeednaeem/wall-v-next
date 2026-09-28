@@ -4,6 +4,7 @@ import { connectToDatabase } from "@/lib/mongodb";
 import LegalPage from "@/models/legal-page";
 import Post from "@/models/blog-post";
 import Product from "@/models/product";
+import AITool from "@/models/ai-tool";
 import { generateSEO } from "@/lib/seo";
 
 export const metadata: Metadata = generateSEO({
@@ -27,6 +28,7 @@ async function getSitemapData(): Promise<SitemapSection[]> {
         { label: "About", href: "/about" },
         { label: "Services", href: "/services" },
         { label: "Products", href: "/products" },
+        { label: "AI Tools", href: "/tools" },
         { label: "Blog", href: "/blog" },
         { label: "Pricing", href: "/pricing" },
         { label: "Contact", href: "/contact" },
@@ -54,10 +56,11 @@ async function getSitemapData(): Promise<SitemapSection[]> {
   try {
     await connectToDatabase();
 
-    const [posts, products, legalPages] = await Promise.all([
+    const [posts, products, legalPages, aiTools] = await Promise.all([
       Post.find({ status: "published" }).select("title slug").limit(50).lean(),
       Product.find({ isActive: true }).select("name slug").limit(50).lean(),
       LegalPage.find({ isActive: true, status: "published" }).select("title slug type").lean(),
+      AITool.find({ status: "published" }).select("name slug").limit(50).lean(),
     ]);
 
     if (posts.length > 0) {
@@ -71,6 +74,13 @@ async function getSitemapData(): Promise<SitemapSection[]> {
       sections.push({
         title: "Products",
         links: products.map((p) => ({ label: p.name, href: `/products/${p.slug}` })),
+      });
+    }
+
+    if (aiTools.length > 0) {
+      sections.push({
+        title: "AI Tools",
+        links: aiTools.map((t) => ({ label: t.name, href: `/tools/${t.slug}` })),
       });
     }
 

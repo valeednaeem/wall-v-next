@@ -1,8 +1,10 @@
 import dns from "dns";
 import mongoose from "mongoose";
 
+const DNS_SERVERS = ["8.8.8.8", "8.8.4.4"];
+
 try {
-  dns.setServers(["8.8.8.8"]);
+  dns.setServers(DNS_SERVERS);
 } catch {
   // Ignore — some runtimes don't support setServers
 }
@@ -23,6 +25,28 @@ if (!global.mongooseCache) {
   global.mongooseCache = cached;
 }
 
+async function connectWithRetry(uri: string, opts: { bufferCommands: boolean; dbName: string }) {
+  const delays = [0, 1000, 3000];
+  let lastError: unknown;
+  for (const delay of delays) {
+    if (delay > 0) await new Promise((resolve) => setTimeout(resolve, delay));
+    try {
+      // Re-apply before connecting: on some machines the module-load call
+      // above silently fails to rebind the resolver channel, and queries keep
+      // hitting a broken local DNS (127.0.0.1) with ECONNREFUSED.
+      dns.setServers(DNS_SERVERS);
+    } catch {
+      // Ignore — connect will surface real failures
+    }
+    try {
+      return await mongoose.connect(uri, opts);
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw lastError;
+}
+
 export async function connectToDatabase(): Promise<typeof mongoose> {
   if (cached.conn) {
     return cached.conn;
@@ -39,7 +63,7 @@ export async function connectToDatabase(): Promise<typeof mongoose> {
       dbName: "wallvnext",
     };
 
-    cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => mongoose);
+    cached.promise = connectWithRetry(MONGODB_URI, opts);
   }
 
   try {

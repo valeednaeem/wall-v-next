@@ -21,6 +21,7 @@ const navItems = [
   { label: "Home", href: "/" },
   { label: "Services", href: "/services" },
   { label: "Products", href: "/products" },
+  { label: "AI Tools", href: "/tools" },
   { label: "Hosting & Domains", href: "/hosting-domain" },
   { label: "Voice Agent", href: "/voice-agent" },
   { label: "Blog", href: "/blog" },

@@ -3,7 +3,10 @@ import { connectToDatabase } from "@/lib/mongodb";
 import LegalPage from "@/models/legal-page";
 import Post from "@/models/blog-post";
 import Product from "@/models/product";
+import AITool from "@/models/ai-tool";
 import { getAppBaseUrl } from "@/lib/utils";
+
+export const revalidate = 3600;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = getAppBaseUrl();
@@ -29,6 +32,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
     {
       url: `${baseUrl}/products`,
+      lastModified: new Date(),
+      changeFrequency: "daily",
+      priority: 0.9,
+    },
+    {
+      url: `${baseUrl}/tools`,
       lastModified: new Date(),
       changeFrequency: "daily",
       priority: 0.9,
@@ -140,10 +149,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   try {
     await connectToDatabase();
 
-    const [posts, products, legalPages] = await Promise.all([
+    const [posts, products, legalPages, aiTools] = await Promise.all([
       Post.find({ status: "published" }).select("slug updatedAt").limit(1000).lean(),
       Product.find({ isActive: true }).select("slug updatedAt").limit(1000).lean(),
       LegalPage.find({ isActive: true, status: "published" }).select("slug updatedAt").lean(),
+      AITool.find({ status: "published" }).select("slug updatedAt").limit(1000).lean(),
     ]);
 
     for (const post of posts) {
@@ -161,6 +171,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         lastModified: product.updatedAt ? new Date(product.updatedAt) : new Date(),
         changeFrequency: "weekly",
         priority: 0.7,
+      });
+    }
+
+    for (const tool of aiTools) {
+      entries.push({
+        url: `${baseUrl}/tools/${tool.slug}`,
+        lastModified: tool.updatedAt ? new Date(tool.updatedAt) : new Date(),
+        changeFrequency: "weekly",
+        priority: 0.8,
       });
     }
 
