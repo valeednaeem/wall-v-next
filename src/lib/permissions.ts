@@ -132,6 +132,17 @@ export const PERMISSIONS = {
   TOOLS_DELETE: "tools:delete",
   TOOLS_EXECUTE: "tools:execute",
 
+  // ─── AI Tools (public SaaS tools — distinct from agent tools:* above) ──────
+  AI_TOOLS_VIEW: "ai-tools:view",
+  AI_TOOLS_CREATE: "ai-tools:create",
+  AI_TOOLS_EDIT: "ai-tools:edit",
+  AI_TOOLS_DELETE: "ai-tools:delete",
+  AI_TOOLS_PUBLISH: "ai-tools:publish",
+  AI_TOOLS_ANALYTICS: "ai-tools:analytics",
+  AI_TOOLS_REPORTS: "ai-tools:reports",
+  AI_TOOLS_PROVIDERS: "ai-tools:providers",
+  AI_TOOLS_PRICING: "ai-tools:pricing",
+
   // ─── Workflows ──────────────────────────────────────────────────────────────
   WORKFLOWS_VIEW: "workflows:view",
   WORKFLOWS_CREATE: "workflows:create",
@@ -202,6 +213,8 @@ export const ROLE_HIERARCHY: Record<string, string[]> = {
     "agents:view", "agents:create", "agents:edit", "agents:delete", "agents:approve", "agents:monitor", "agents:configure",
     "skills:view", "skills:create", "skills:edit", "skills:manage",
     "tools:view", "tools:create", "tools:edit",
+    "ai-tools:view", "ai-tools:create", "ai-tools:edit", "ai-tools:delete", "ai-tools:publish",
+    "ai-tools:analytics", "ai-tools:reports", "ai-tools:providers", "ai-tools:pricing",
     "workflows:view", "workflows:create", "workflows:edit",
     "finance:view", "finance:read", "finance:edit", "finance:create_invoice", "finance:create_quotation", "finance:process_payment", "finance:refund", "finance:reconcile",
     "communications:prepare", "communications:send",

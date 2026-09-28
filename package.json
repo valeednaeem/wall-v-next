@@ -8,6 +8,11 @@
     "start": "next start",
     "lint": "next lint",
     "seed": "tsx src/scripts/seed.ts",
+    "seed:prices": "tsx src/scripts/seed-prices.ts",
+    "seed:hosting": "tsx src/scripts/seed-hosting-domains.ts",
+    "seed:legal": "tsx src/scripts/seed-legal.ts",
+    "seed:content": "tsx src/scripts/seed-site-content.ts",
+    "seed:ai-tools": "tsx src/scripts/seed-ai-tools.ts",
     "test": "jest",
     "test:coverage": "jest --coverage",
     "test:watch": "jest --watch"
