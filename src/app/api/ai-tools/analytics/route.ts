@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import mongoose from "mongoose";
 import { connectToDatabase } from "@/lib/mongodb";
 import AITool from "@/models/ai-tool";
 import AIToolDailyStat from "@/models/ai-tool-daily-stat";
@@ -315,6 +316,247 @@ async function userScope(from: Date, to: Date) {
   };
 }
 
+async function funnelScope(toolId: string | null, from: Date, to: Date) {
+  const match: Record<string, unknown> = { date: { $gte: from, $lte: to } };
+  if (toolId) match.tool = new mongoose.Types.ObjectId(toolId);
+
+  const [agg, tool] = await Promise.all([
+    AIToolDailyStat.aggregate<{
+      views: number;
+      started: number;
+      attempted: number;
+      succeeded: number;
+      upgradePrompts: number;
+      conversions: number;
+      executions: number;
+      credits: number;
+      cost: number;
+      revenue: number;
+    }>([
+      { $match: match },
+      {
+        $group: {
+          _id: null,
+          views: { $sum: "$funnel.views" },
+          started: { $sum: "$funnel.started" },
+          attempted: { $sum: "$funnel.attempted" },
+          succeeded: { $sum: "$funnel.succeeded" },
+          upgradePrompts: { $sum: "$funnel.upgradePrompts" },
+          conversions: { $sum: "$funnel.conversions" },
+          executions: { $sum: "$executions" },
+          credits: { $sum: "$credits" },
+          cost: { $sum: "$estimatedCost" },
+          revenue: { $sum: "$revenue" },
+        },
+      },
+    ]),
+    toolId ? AITool.findById(toolId).select("name slug").lean() : Promise.resolve(null),
+  ]);
+
+  const a = agg[0];
+  const totals = {
+    views: a?.views || 0,
+    started: a?.started || 0,
+    attempted: a?.attempted || 0,
+    succeeded: a?.succeeded || 0,
+    upgradePrompts: a?.upgradePrompts || 0,
+    conversions: a?.conversions || 0,
+    executions: a?.executions || 0,
+    credits: a?.credits || 0,
+    cost: a?.cost || 0,
+    revenue: a?.revenue || 0,
+  };
+
+  const defs: { key: keyof typeof totals; label: string }[] = [
+    { key: "views", label: "Views" },
+    { key: "started", label: "Opened" },
+    { key: "attempted", label: "Attempted" },
+    { key: "succeeded", label: "Succeeded" },
+    { key: "upgradePrompts", label: "Upgrade prompt" },
+    { key: "conversions", label: "Conversion" },
+  ];
+
+  const first = totals.views || totals.started || 1;
+  const stages = defs.map((d, i) => {
+    const count = totals[d.key];
+    const prev = i > 0 ? totals[defs[i - 1].key] : 0;
+    return {
+      key: d.key,
+      label: d.label,
+      count,
+      pctOfPrevious: i === 0 ? 100 : prev > 0 ? Math.round((count / prev) * 100) : 0,
+      pctOfFirst: Math.round((count / first) * 100),
+    };
+  });
+
+  return {
+    tool: tool ? { _id: String(tool._id), name: tool.name, slug: tool.slug } : null,
+    stages,
+    totals,
+  };
+}
+
+interface PerfRow {
+  _id: unknown;
+  executions: number;
+  success: number;
+  failure: number;
+  credits: number;
+  cost: number;
+  revenue: number;
+  views: number;
+  conversions: number;
+}
+
+async function performanceScope(from: Date, to: Date) {
+  const span = to.getTime() - from.getTime();
+  const prevTo = new Date(from.getTime() - 1);
+  const prevFrom = new Date(prevTo.getTime() - span);
+
+  const groupStage = {
+    $group: {
+      _id: "$tool",
+      executions: { $sum: "$executions" },
+      success: { $sum: "$successCount" },
+      failure: { $sum: "$failureCount" },
+      credits: { $sum: "$credits" },
+      cost: { $sum: "$estimatedCost" },
+      revenue: { $sum: "$revenue" },
+      views: { $sum: "$funnel.views" },
+      conversions: { $sum: "$funnel.conversions" },
+    },
+  };
+
+  const [current, previous, userAgg] = await Promise.all([
+    AIToolDailyStat.aggregate<PerfRow>([
+      { $match: { date: { $gte: from, $lte: to } } },
+      groupStage,
+    ]),
+    AIToolDailyStat.aggregate<{ _id: unknown; executions: number }>([
+      { $match: { date: { $gte: prevFrom, $lte: prevTo } } },
+      { $group: { _id: "$tool", executions: { $sum: "$executions" } } },
+    ]),
+    // Per-tool unique + repeat users over the range
+    AIToolExecution.aggregate<{ _id: { tool: unknown; user: unknown }; n: number }>([
+      { $match: { user: { $ne: null }, createdAt: { $gte: from, $lte: to } } },
+      { $group: { _id: { tool: "$tool", user: "$user" }, n: { $sum: 1 } } },
+    ]),
+  ]);
+
+  const prevById = new Map<string, number>();
+  for (const p of previous) prevById.set(String(p._id), p.executions || 0);
+
+  const usersByTool = new Map<string, { users: number; repeats: number }>();
+  for (const row of userAgg) {
+    const id = String(row._id.tool);
+    const entry = usersByTool.get(id) || { users: 0, repeats: 0 };
+    entry.users += 1;
+    if (row.n > 1) entry.repeats += 1;
+    usersByTool.set(id, entry);
+  }
+
+  const toolIds = current.map((c) => c._id).filter((v): v is mongoose.Types.ObjectId => v != null);
+  const toolNameById = new Map<string, { name: string; slug: string; status: string }>();
+  if (toolIds.length > 0) {
+    const tools = await AITool.find({ _id: { $in: toolIds } })
+      .select("name slug status")
+      .lean();
+    for (const t of tools) {
+      toolNameById.set(String(t._id), { name: t.name, slug: t.slug, status: t.status });
+    }
+  }
+
+  const rows = current
+    .map((c) => {
+      const id = String(c._id);
+      const prev = prevById.get(id) || 0;
+      const growth = prev === 0 ? (c.executions > 0 ? 100 : 0) : Math.round(((c.executions - prev) / prev) * 100);
+      const u = usersByTool.get(id) || { users: 0, repeats: 0 };
+      const meta = toolNameById.get(id);
+      return {
+        toolId: id,
+        name: meta?.name || "Unknown tool",
+        status: meta?.status || "unknown",
+        executions: c.executions,
+        growth,
+        previousExecutions: prev,
+        uniqueUsers: u.users,
+        repeatRate: u.users > 0 ? Math.round((u.repeats / u.users) * 100) : 0,
+        conversionRate: c.views > 0 ? Math.round((c.conversions / c.views) * 100) : 0,
+        revenue: c.revenue,
+        estimatedCost: c.cost,
+        profitContribution: Math.round((c.revenue - c.cost) * 10000) / 10000,
+        errorRate:
+          c.executions > 0 ? Math.round((c.failure / c.executions) * 100) : 0,
+        success: c.success,
+        failure: c.failure,
+        credits: c.credits,
+        views: c.views,
+        conversions: c.conversions,
+      };
+    })
+    .sort((a, b) => b.executions - a.executions);
+
+  return {
+    rows,
+    totals: {
+      executions: rows.reduce((s, r) => s + r.executions, 0),
+      estimatedCost: rows.reduce((s, r) => s + r.estimatedCost, 0),
+      revenue: rows.reduce((s, r) => s + r.revenue, 0),
+      credits: rows.reduce((s, r) => s + r.credits, 0),
+    },
+    previousWindow: { from: prevFrom, to: prevTo },
+  };
+}
+
+async function seoScope() {
+  const tools = await AITool.find({})
+    .select("name slug status seo")
+    .lean();
+
+  const rows = tools.map((t) => {
+    const seo = (t as { seo?: { metaTitle?: string; metaDescription?: string; keywords?: string[]; canonicalUrl?: string } }).seo;
+    const checks = {
+      metaTitle: Boolean(seo?.metaTitle),
+      metaDescription: Boolean(seo?.metaDescription),
+      keywords: (seo?.keywords?.length || 0) > 0,
+      canonicalUrl: Boolean(seo?.canonicalUrl),
+    };
+    const filled = Object.values(checks).filter(Boolean).length;
+    return {
+      toolId: String(t._id),
+      name: t.name,
+      slug: t.slug,
+      status: t.status,
+      checks,
+      completeness: Math.round((filled / 4) * 100),
+      indexed: null as number | null,
+      impressions: null as number | null,
+      clicks: null as number | null,
+      ctr: null as number | null,
+      source: "not_connected",
+    };
+  });
+
+  const avg =
+    rows.length > 0 ? Math.round(rows.reduce((s, r) => s + r.completeness, 0) / rows.length) : 0;
+
+  return {
+    rows,
+    summary: {
+      totalTools: rows.length,
+      avgCompleteness: avg,
+      fullyOptimized: rows.filter((r) => r.completeness === 100).length,
+      missingMeta: rows.filter((r) => !r.checks.metaTitle || !r.checks.metaDescription).length,
+    },
+    searchConsole: {
+      connected: false,
+      source: "not_connected" as const,
+      note: "Google Search Console is not connected. Impression, click, and CTR data will appear here once integrated.",
+    },
+  };
+}
+
 export async function GET(request: Request) {
   try {
     const guard = await requireAiToolsPermission(PERMISSIONS.AI_TOOLS_ANALYTICS);
@@ -351,6 +593,34 @@ export async function GET(request: Request) {
         success: true,
         data: { ...data, range: { from: range.from, to: range.to, label: range.label, key: range.key } },
       });
+    }
+
+    if (scope === "funnel") {
+      const toolId = searchParams.get("toolId");
+      if (toolId && !mongoose.Types.ObjectId.isValid(toolId)) {
+        return NextResponse.json({ error: "Invalid toolId" }, { status: 400 });
+      }
+      const data = await funnelScope(toolId, range.from, range.to);
+      if (toolId && !data.tool) {
+        return NextResponse.json({ error: "Tool not found" }, { status: 404 });
+      }
+      return NextResponse.json({
+        success: true,
+        data: { ...data, range: { from: range.from, to: range.to, label: range.label, key: range.key } },
+      });
+    }
+
+    if (scope === "performance") {
+      const data = await performanceScope(range.from, range.to);
+      return NextResponse.json({
+        success: true,
+        data: { ...data, range: { from: range.from, to: range.to, label: range.label, key: range.key } },
+      });
+    }
+
+    if (scope === "seo") {
+      const data = await seoScope();
+      return NextResponse.json({ success: true, data });
     }
 
     const data = await globalScope(range.from, range.to);
