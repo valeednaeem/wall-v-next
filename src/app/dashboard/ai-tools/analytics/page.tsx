@@ -17,6 +17,7 @@ import {
   Gauge,
   Lightbulb,
   Search,
+  Store,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -44,6 +45,7 @@ import { RankBar } from "@/components/ai-tools/charts/rank-bar";
 import { FunnelChart, type FunnelStage } from "@/components/ai-tools/charts/funnel-chart";
 import { PerformanceTable, type PerfRow } from "@/components/ai-tools/analytics/performance-table";
 import { InsightCard } from "@/components/ai-tools/insight-card";
+import { MarketTab } from "@/components/ai-tools/market-tab";
 import { formatPrice, formatDateTime } from "@/lib/utils";
 import type { Insight } from "@/lib/tools/insights";
 
@@ -54,7 +56,10 @@ type TabKey =
   | "funnel"
   | "performance"
   | "insights"
-  | "seo";
+  | "seo"
+  | "market";
+
+const TAB_KEYS: TabKey[] = ["global", "tool", "user", "funnel", "performance", "insights", "seo", "market"];
 
 interface GlobalScope {
   toolCounts: { total: number; byStatus: Record<string, number>; byAccess: Record<string, number> };
@@ -140,6 +145,7 @@ function AnalyticsContent() {
 
   const fetchScope = useCallback(
     async (activeTab: TabKey) => {
+      if (activeTab === "market") return; // MarketTab manages its own data
       setLoading(true);
       setError("");
       try {
@@ -201,7 +207,7 @@ function AnalyticsContent() {
   // Deep-link support: ?tab= &toolId=
   useEffect(() => {
     const t = searchParams.get("tab");
-    if (t && ["global", "tool", "user", "funnel", "performance", "insights", "seo"].includes(t)) {
+    if (t && TAB_KEYS.includes(t as TabKey)) {
       setTab(t as TabKey);
     }
     const tid = searchParams.get("toolId");
@@ -291,6 +297,9 @@ function AnalyticsContent() {
           </TabsTrigger>
           <TabsTrigger value="seo">
             <Search className="mr-1.5 h-4 w-4" /> SEO
+          </TabsTrigger>
+          <TabsTrigger value="market">
+            <Store className="mr-1.5 h-4 w-4" /> Market
           </TabsTrigger>
         </TabsList>
 
@@ -651,6 +660,11 @@ function AnalyticsContent() {
               </Card>
             </>
           ) : null}
+        </TabsContent>
+
+        {/* ── Market ── */}
+        <TabsContent value="market" className="space-y-4">
+          <MarketTab />
         </TabsContent>
       </Tabs>
     </div>
