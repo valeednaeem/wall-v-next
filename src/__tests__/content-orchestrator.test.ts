@@ -209,7 +209,7 @@ describe("Content Orchestrator", () => {
       );
 
       await expect(executePlan("plan123")).rejects.toThrow(
-        "Plan must be approved before execution"
+        "Plan cannot be executed"
       );
     });
   });

@@ -19,7 +19,7 @@ export async function POST(
     await connectToDatabase();
     const { id } = await params;
 
-    const item = await publishContentItem(id);
+    const item = await publishContentItem(id, user.userId);
 
     return NextResponse.json({ success: true, data: item });
   } catch (error) {

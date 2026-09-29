@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import BlogPost from "@/models/blog-post";
 import { getAuthUser } from "@/lib/auth";
+import { enqueuePublication } from "@/lib/social-publisher/enqueue";
+import { blogPostPayload } from "@/lib/social-publisher/payloads";
 
 export async function POST(
   _request: Request,
@@ -33,6 +35,14 @@ export async function POST(
     post.approvedBy = user.userId;
     post.approvedAt = new Date();
     await post.save();
+
+    await enqueuePublication({
+      type: "published",
+      contentType: "blog",
+      contentId: post._id.toString(),
+      payload: blogPostPayload(post),
+      actorId: user.userId,
+    });
 
     return NextResponse.json({ success: true, data: post });
   } catch (error) {

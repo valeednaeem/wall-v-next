@@ -14,6 +14,7 @@ import {
   Link2,
   Settings,
   Activity,
+  ListChecks,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -24,6 +25,7 @@ const TABS = [
   { label: "Calendar", href: "/dashboard/content/calendar", icon: CalendarDays },
   { label: "Articles", href: "/dashboard/content/articles", icon: FileText },
   { label: "Social", href: "/dashboard/content/social", icon: Share2 },
+  { label: "Publish Queue", href: "/dashboard/content/queue", icon: ListChecks },
   { label: "Connections", href: "/dashboard/content/connections", icon: Link2 },
   { label: "Settings", href: "/dashboard/content/settings", icon: Settings },
 ];

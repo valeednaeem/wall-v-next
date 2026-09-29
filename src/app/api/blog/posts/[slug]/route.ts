@@ -4,6 +4,9 @@ import BlogPost from "@/models/blog-post";
 import BlogTag from "@/models/blog-tag";
 import { getAuthUser } from "@/lib/auth";
 import { pickFields } from "@/lib/pick-fields";
+import { enqueuePublication, cancelOutstandingJobs } from "@/lib/social-publisher/enqueue";
+import { blogPostPayload } from "@/lib/social-publisher/payloads";
+import { makeRevision } from "@/lib/social-publisher/idempotency";
 
 const BLOG_POST_FIELDS = ["title", "content", "excerpt", "featuredImage", "category", "tags", "status", "isFeatured", "seo", "social"];
 
@@ -80,11 +83,13 @@ export async function PUT(
       postData.tags = tagObjIds;
     }
 
-    if (body.status === "published") {
-      const existing = await BlogPost.findOne({ slug }).lean();
-      if (existing && existing.status !== "published") {
-        postData.publishedAt = new Date();
-      }
+    const before = await BlogPost.findOne({ slug }).lean();
+    if (!before) {
+      return NextResponse.json({ error: "Post not found" }, { status: 404 });
+    }
+
+    if (body.status === "published" && before.status !== "published") {
+      postData.publishedAt = new Date();
     }
 
     const post = await BlogPost.findOneAndUpdate(
@@ -94,6 +99,23 @@ export async function PUT(
     );
     if (!post) {
       return NextResponse.json({ error: "Post not found" }, { status: 404 });
+    }
+
+    const wasPublished = before.status === "published";
+    const isPublished = post.status === "published";
+    const beforePayload = blogPostPayload(before);
+    const afterPayload = blogPostPayload(post);
+
+    if (isPublished && (!wasPublished || makeRevision(beforePayload) !== makeRevision(afterPayload))) {
+      await enqueuePublication({
+        type: wasPublished ? "updated" : "published",
+        contentType: "blog",
+        contentId: post._id.toString(),
+        payload: afterPayload,
+        actorId: user.userId,
+      });
+    } else if (wasPublished && !isPublished) {
+      await cancelOutstandingJobs("blog", post._id.toString());
     }
 
     return NextResponse.json({ success: true, data: post });
@@ -121,6 +143,8 @@ export async function DELETE(
     if (!post) {
       return NextResponse.json({ error: "Post not found" }, { status: 404 });
     }
+
+    await cancelOutstandingJobs("blog", post._id.toString());
 
     return NextResponse.json({ success: true, message: "Post deleted" });
   } catch (error) {

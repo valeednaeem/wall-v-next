@@ -3,9 +3,9 @@ import { getAuthUser } from "@/lib/auth";
 import { handleApiError, CONTENT_ROLES } from "@/lib/api-middleware";
 import { connectToDatabase } from "@/lib/mongodb";
 import ContentItem from "@/models/content-item";
-import ContentDistribution from "@/models/content-distribution";
-import { getAdapter } from "@/lib/social-adapters";
-import type { SocialPost } from "@/lib/social-adapters";
+import { enqueuePublication } from "@/lib/social-publisher/enqueue";
+import { contentItemPayload } from "@/lib/social-publisher/payloads";
+import { normalizePlatform } from "@/lib/social-publisher/platforms";
 
 const SUPPORTED_PLATFORMS = ["linkedin", "facebook", "x", "instagram", "tiktok", "youtube"];
 
@@ -52,106 +52,37 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    interface SocialVariant {
-      platform: string;
-      content: string;
-      hashtags?: string[];
-    }
-    const socialVariant = (item.socialVariants as SocialVariant[] | undefined)?.find(
-      (v) => platforms.includes(v.platform)
+    const payload = contentItemPayload(item);
+    payload.relatedContentItem = contentItemId;
+
+    const normalizedPlatforms = Array.from(
+      new Set(
+        platforms
+          .map((p) => normalizePlatform(p))
+          .filter((p): p is string => p !== null)
+      )
     );
 
-    const post: SocialPost = {
-      content: socialVariant?.content || item.content || item.title,
-      hashtags: socialVariant?.hashtags,
-      imageUrl: item.featuredImage,
-      title: item.title,
-      description: item.excerpt,
-    };
-
-    interface PublishRecord {
-      success: boolean;
-      requiresAuth?: boolean;
-      distributionId: string;
-    }
-    const results: Record<string, PublishRecord> = {};
-    const distributionIds: string[] = [];
-
-    for (const platform of platforms) {
-      const distribution = await ContentDistribution.create({
-        contentItem: item._id,
-        platform,
-        status: "publishing",
-        approvalRequired: item.approvalRequired,
-        approvedBy: item.approvedBy,
-        approvedAt: item.approvedAt,
-      });
-      distributionIds.push(distribution._id.toString());
-
-      const adapter = getAdapter(platform);
-      const isConnected = await adapter.isConnected();
-
-      if (!isConnected) {
-        await ContentDistribution.findByIdAndUpdate(distribution._id, {
-          status: "requires_auth",
-          error: `Platform ${platform} is not connected`,
-        });
-        results[platform] = {
-          success: false,
-          requiresAuth: true,
-          distributionId: distribution._id.toString(),
-        };
-        continue;
-      }
-
-      const publishResult = await adapter.publish(post);
-
-      const updateFields: Record<string, unknown> = {
-        status: publishResult.success ? "published" : "failed",
-        response: publishResult,
-      };
-      if (publishResult.platformPostId) {
-        updateFields.platformPostId = publishResult.platformPostId;
-      }
-      if (publishResult.platformUrl) {
-        updateFields.platformUrl = publishResult.platformUrl;
-      }
-      if (publishResult.publishedAt) {
-        updateFields.publishedAt = publishResult.publishedAt;
-      }
-      if (publishResult.error) {
-        updateFields.error = publishResult.error;
-      }
-
-      await ContentDistribution.findByIdAndUpdate(
-        distribution._id,
-        updateFields
-      );
-
-      results[platform] = {
-        ...publishResult,
-        distributionId: distribution._id.toString(),
-      };
-    }
-
-    await ContentItem.findByIdAndUpdate(contentItemId, {
-      $addToSet: { distribution: { $each: distributionIds } },
+    const result = await enqueuePublication({
+      type: "published",
+      contentType: "content-item",
+      contentId: contentItemId,
+      payload,
+      platforms: normalizedPlatforms,
+      actorId: user.userId,
     });
 
-    const resultValues = Object.values(results) as PublishRecord[];
-    const allFailed = resultValues.every((r) => !r.success);
-    const allSuccess = resultValues.every((r) => r.success);
+    if (result.eventId === null && result.created === 0) {
+      return NextResponse.json(
+        { error: "Failed to enqueue publication" },
+        { status: 500 }
+      );
+    }
 
-    if (allSuccess) {
-      await ContentItem.findByIdAndUpdate(contentItemId, {
-        status: "published",
-        publishedAt: new Date(),
-      });
-    } else if (allFailed) {
-      await ContentItem.findByIdAndUpdate(contentItemId, {
-        status: "failed",
-      });
-    } else {
+    // Only flip to "publishing" when new jobs were actually enqueued —
+    // otherwise we would clobber a terminal state (failed/cancelled) that the
+    // worker's status sync owns.
+    if (result.created > 0) {
       await ContentItem.findByIdAndUpdate(contentItemId, {
         status: "publishing",
       });
@@ -159,8 +90,12 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
+      enqueued: true,
       contentItemId,
-      results,
+      platforms: normalizedPlatforms,
+      jobsCreated: result.created,
+      jobsExisting: result.existing,
+      skippedReason: result.skippedReason,
     });
   } catch (error) {
     return handleApiError(error, "Content publish");

@@ -14,6 +14,8 @@ module.exports = {
   },
   moduleNameMapper: {
     "^@/(.*)$": "<rootDir>/src/$1",
+    "^bson$": "<rootDir>/node_modules/bson/lib/bson.cjs",
+    "^marked$": "<rootDir>/node_modules/marked/lib/marked.umd.js",
   },
   setupFilesAfterEnv: ["<rootDir>/src/__tests__/setup.ts"],
   transformIgnorePatterns: [

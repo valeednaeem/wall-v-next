@@ -7,6 +7,8 @@ import { generateSlug } from "@/lib/generate-slug";
 import { getAuthUser } from "@/lib/auth";
 import { pickFields } from "@/lib/pick-fields";
 import { escapeRegex } from "@/lib/escape-regex";
+import { enqueuePublication } from "@/lib/social-publisher/enqueue";
+import { blogPostPayload } from "@/lib/social-publisher/payloads";
 
 const BLOG_POST_FIELDS = ["title", "content", "excerpt", "featuredImage", "category", "tags", "status", "isFeatured", "seo", "social"];
 
@@ -121,6 +123,16 @@ export async function POST(request: Request) {
       tags: tagObjIds,
       publishedAt: body.status === "published" ? new Date() : undefined,
     });
+
+    if (post.status === "published") {
+      await enqueuePublication({
+        type: "published",
+        contentType: "blog",
+        contentId: post._id.toString(),
+        payload: blogPostPayload(post),
+        actorId: user.userId,
+      });
+    }
 
     return NextResponse.json({ success: true, data: post }, { status: 201 });
   } catch (error) {

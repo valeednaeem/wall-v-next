@@ -1,4 +1,19 @@
 import "@testing-library/jest-dom";
+import { TextDecoder, TextEncoder } from "util";
+
+// Never fire the fire-and-forget queue kick from unit tests.
+process.env.SOCIAL_QUEUE_DISABLE_KICK = "1";
+
+// jsdom does not provide TextEncoder/TextDecoder — required by mongodb's
+// dependency chain (whatwg-url) when tests load mongoose models.
+if (typeof globalThis.TextEncoder === "undefined") {
+  (globalThis as unknown as { TextEncoder: typeof TextEncoder }).TextEncoder =
+    TextEncoder;
+}
+if (typeof globalThis.TextDecoder === "undefined") {
+  (globalThis as unknown as { TextDecoder: typeof TextDecoder }).TextDecoder =
+    TextDecoder;
+}
 
 jest.mock("@/lib/mongodb", () => ({
   connectToDatabase: jest.fn().mockResolvedValue({ connection: {} }),

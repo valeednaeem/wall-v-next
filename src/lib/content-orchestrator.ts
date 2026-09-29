@@ -4,7 +4,6 @@ import ContentPlan from "@/models/content-plan";
 import ContentTopic from "@/models/content-topic";
 import ContentItem from "@/models/content-item";
 import ContentSettings from "@/models/content-settings";
-import ContentDistribution from "@/models/content-distribution";
 import ContentExecution from "@/models/content-execution";
 import BlogPost from "@/models/blog-post";
 import BlogCategory from "@/models/blog-category";
@@ -25,8 +24,9 @@ import {
 import { runQualityPipeline } from "@/lib/content-quality";
 import { findInternalLinks } from "@/lib/content-linking";
 import { checkForDuplicates } from "@/lib/content-analytics";
-import { getAdapter } from "@/lib/social-adapters";
-const SOCIAL_BASE_URL = normalizeBaseUrl(process.env.NEXT_PUBLIC_APP_URL || "https://www.wall-v.com");
+import { enqueuePublication } from "@/lib/social-publisher/enqueue";
+import { contentItemPayload, blogPostPayload } from "@/lib/social-publisher/payloads";
+import { normalizePlatform } from "@/lib/social-publisher/platforms";
 import { insertInternalLinks, runSEOAudit, enhanceSEOMetadata, generateArticleSchema, addFreshnessSignal, generateSEOStrategy } from "@/lib/seo-content-engine";
 import { marked } from "marked";
 
@@ -831,6 +831,14 @@ export async function executePlan(
           for (const tid of tagIds) {
             await BlogTag.findByIdAndUpdate(tid, { $inc: { postCount: 1 } });
           }
+
+          await enqueuePublication({
+            type: "published",
+            contentType: "blog",
+            contentId: blogPost._id.toString(),
+            payload: blogPostPayload(blogPost),
+            actorId: String(authorId),
+          });
         }
       } catch (blogErr) {
         const msg = blogErr instanceof Error ? blogErr.message : "BlogPost creation failed";
@@ -900,12 +908,11 @@ export async function executePlan(
         output: { platformCount: socials.length, platforms: socials.map((s) => s.platform) },
       });
 
-      // ─── Social Adapter Invocation ──────────────────────────────────────────
+      // ─── Social publication enqueue (event-driven queue) ────────────────────
       for (const socialItem of socialItems) {
         let socialPublishExec: Awaited<ReturnType<typeof createExecutionRecord>> | null = null;
         try {
           const platform = socialItem.platform || "linkedin";
-          const adapter = getAdapter(platform);
 
           socialPublishExec = await createExecutionRecord({
             campaign: plan.campaign.toString(),
@@ -919,47 +926,47 @@ export async function executePlan(
             contentItem: socialItem._id.toString(),
           });
 
-          const isConnected = await adapter.isConnected();
-          if (isConnected) {
-            const articleUrl = socialItem.seo?.canonicalUrl
-              || (socialItem.slug ? `${SOCIAL_BASE_URL}/blog/${socialItem.slug}` : undefined);
+          await updateExecutionStage(
+            socialPublishExec._id.toString(),
+            "enqueued",
+            "running",
+            `Queuing publication for ${platform}`
+          );
 
-            const publishResult = await adapter.publish({
-              content: socialItem.content || "",
-              title: socialItem.title,
-              link: articleUrl,
-              description: socialItem.excerpt,
-              hashtags: [],
+          const payload = contentItemPayload(socialItem);
+          payload.relatedContentItem = socialItem._id.toString();
+          payload.executionId = socialPublishExec._id.toString();
+
+          const enqueueResult = await enqueuePublication({
+            type: "published",
+            contentType: "content-item",
+            contentId: socialItem._id.toString(),
+            payload,
+            platforms: [platform],
+          });
+
+          console.log(
+            `[ContentOrchestrator] SOCIAL_ENQUEUE platform=${platform} postId=${socialItem._id} created=${enqueueResult.created} existing=${enqueueResult.existing}`
+          );
+
+          if (enqueueResult.created > 0) {
+            await ContentItem.findByIdAndUpdate(socialItem._id, {
+              status: "publishing",
             });
-
-            console.log(`[ContentOrchestrator] SOCIAL_PUBLISH_${publishResult.success ? "COMPLETED" : "FAILED"} platform=${platform} postId=${socialItem._id}`);
-
-            await updateExecutionStage(socialPublishExec._id.toString(), publishResult.success ? "published" : "publish_failed", publishResult.success ? "completed" : "failed", publishResult.error || "Published", {
-              output: { platformPostId: publishResult.platformPostId, platformUrl: publishResult.platformUrl },
-            });
-
-            await ContentDistribution.create({
-              contentItem: socialItem._id,
-              platform,
-              status: publishResult.success ? "published" : "failed",
-              platformPostId: publishResult.platformPostId,
-              platformUrl: publishResult.platformUrl,
-              publishedAt: publishResult.publishedAt,
-              error: publishResult.error,
-              response: publishResult as unknown as Record<string, unknown>,
-            });
-
-            if (publishResult.success) {
-              await ContentItem.findByIdAndUpdate(socialItem._id, {
-                status: "published",
-                publishedAt: new Date(),
-              });
-            }
+          } else {
+            await updateExecutionStage(
+              socialPublishExec._id.toString(),
+              "publish_skipped",
+              "completed",
+              enqueueResult.skippedReason || "No jobs queued",
+              { output: { skippedReason: enqueueResult.skippedReason } }
+            );
           }
-          // If not connected, leave in draft for manual publishing later
+          // Terminal states (published/retrying/failed/needs_review) are
+          // applied later by the social queue worker via payload.executionId.
         } catch (socialErr) {
           const msg = socialErr instanceof Error ? socialErr.message : "Social publish failed";
-          console.error(`[ContentOrchestrator] Social adapter failed for ${socialItem.platform}: ${msg}`);
+          console.error(`[ContentOrchestrator] Social enqueue failed for ${socialItem.platform}: ${msg}`);
           if (socialPublishExec) {
             await updateExecutionStage(socialPublishExec._id.toString(), "publish_error", "failed", msg);
           }
@@ -1082,7 +1089,8 @@ export async function approveContentItem(
 }
 
 export async function publishContentItem(
-  itemId: string
+  itemId: string,
+  actorId?: string
 ): Promise<IContentItem> {
   await connectToDatabase();
 
@@ -1114,6 +1122,27 @@ export async function publishContentItem(
     await ContentCampaign.findByIdAndUpdate(item.campaign, {
       $inc: { "stats.totalSocialPosts": 1 },
     });
+  }
+
+  if (updated) {
+    const rawPlatform = updated.platform;
+    const socialPlatform =
+      rawPlatform && rawPlatform !== "blog" && rawPlatform !== "email"
+        ? normalizePlatform(rawPlatform)
+        : null;
+
+    if (updated.type === "social_post" || socialPlatform) {
+      const payload = contentItemPayload(updated);
+      payload.relatedContentItem = itemId;
+      await enqueuePublication({
+        type: "published",
+        contentType: "content-item",
+        contentId: itemId,
+        payload,
+        platforms: socialPlatform ? [socialPlatform] : undefined,
+        actorId,
+      });
+    }
   }
 
   return updated as unknown as IContentItem;
