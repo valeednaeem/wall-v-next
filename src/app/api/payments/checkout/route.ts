@@ -4,7 +4,13 @@ import Order from "@/models/order";
 import Product from "@/models/product";
 import Project from "@/models/project";
 import Invoice from "@/models/invoice";
+import User from "@/models/user";
+import AITool from "@/models/ai-tool";
+import AIToolPlan from "@/models/ai-tool-plan";
 import { createCheckoutSession } from "@/lib/payment-gateway";
+import { getAuthUser } from "@/lib/auth";
+import { activateSubscription } from "@/lib/tools/subscription";
+import { logAiToolAction } from "@/lib/tools/api-guard";
 
 function generateOrderNumber(): string {
   const date = new Date();
@@ -299,6 +305,135 @@ export async function POST(request: Request) {
         },
       }, { status: 201 });
 
+    } else if (type === "subscription") {
+      const authUser = await getAuthUser();
+      if (!authUser) {
+        return NextResponse.json({ error: "Sign in required to subscribe" }, { status: 401 });
+      }
+      if (items.length !== 1) {
+        return NextResponse.json({ error: "Subscribe to one plan at a time" }, { status: 400 });
+      }
+
+      const subItem = items[0] as {
+        planSlug?: string;
+        planId?: string;
+        billing?: string;
+      };
+      if (!subItem.planSlug && !subItem.planId) {
+        return NextResponse.json({ error: "planSlug or planId is required" }, { status: 400 });
+      }
+      const billing = subItem.billing === "yearly" ? "yearly" : "monthly";
+
+      const plan = await AIToolPlan.findOne(
+        subItem.planId
+          ? { _id: subItem.planId, status: "active" }
+          : { slug: subItem.planSlug, status: "active" }
+      ).lean();
+      if (!plan) {
+        return NextResponse.json({ error: "Plan not found" }, { status: 404 });
+      }
+
+      const convertedViaTool =
+        typeof body.convertedViaTool === "string" && body.convertedViaTool
+          ? body.convertedViaTool
+          : undefined;
+      if (convertedViaTool) {
+        const toolExists = await AITool.exists({ _id: convertedViaTool, status: "published" });
+        if (!toolExists) {
+          return NextResponse.json({ error: "Invalid convertedViaTool" }, { status: 400 });
+        }
+      }
+
+      const price = billing === "yearly" ? plan.yearlyPrice : plan.monthlyPrice;
+
+      if (price <= 0) {
+        const subscription = await activateSubscription({
+          userId: authUser.userId,
+          planId: String(plan._id),
+          billing,
+          convertedViaTool,
+          pricePaid: 0,
+        });
+        await logAiToolAction(authUser, "subscription.activated", "AIToolSubscription", String(plan._id), {
+          billing,
+          amount: 0,
+          planSlug: plan.slug,
+          convertedViaTool: convertedViaTool || null,
+        });
+        return NextResponse.json(
+          {
+            success: true,
+            data: {
+              activated: true,
+              planId: plan._id,
+              planSlug: plan.slug,
+              subscriptionId: subscription._id,
+              currentPeriodEnd: subscription.currentPeriodEnd,
+            },
+          },
+          { status: 201 }
+        );
+      }
+
+      const profile = await User.findById(authUser.userId).select("name email").lean();
+      const customerEmail =
+        billingAddress?.email || guestEmail || (profile?.email as string) || authUser.email || "";
+      const customerName =
+        billingAddress?.name || (profile?.name as string) || customerEmail.split("@")[0] || "Customer";
+
+      const result = await createCheckoutSession({
+        amount: price,
+        currency,
+        customerEmail,
+        customerName,
+        description: `${plan.name} plan — ${billing} subscription`,
+        items: [
+          {
+            description: `${plan.name} plan (${billing})`,
+            amount: price,
+            type: "subscription",
+            referenceId: String(plan._id),
+          },
+        ],
+        billingAddress,
+        metadata: {
+          type: "subscription",
+          planId: String(plan._id),
+          planSlug: plan.slug,
+          billing,
+          userId: authUser.userId,
+          convertedViaTool: convertedViaTool || null,
+          orderNumber,
+        },
+      });
+
+      if (!result.success) {
+        return NextResponse.json({ error: result.error }, { status: 500 });
+      }
+
+      await logAiToolAction(authUser, "subscription.checkout_created", "AIToolSubscription", String(plan._id), {
+        billing,
+        amount: price,
+        planSlug: plan.slug,
+        paymentNumber: result.paymentNumber,
+        convertedViaTool: convertedViaTool || null,
+      });
+
+      return NextResponse.json(
+        {
+          success: true,
+          data: {
+            planId: plan._id,
+            planSlug: plan.slug,
+            billing,
+            total: price,
+            checkoutUrl: result.checkoutUrl,
+            paymentId: result.paymentId,
+            paymentNumber: result.paymentNumber,
+          },
+        },
+        { status: 201 }
+      );
     } else {
       return NextResponse.json({ error: "Invalid checkout type" }, { status: 400 });
     }

@@ -8,6 +8,7 @@ import PaymentGateway from "@/models/payment-gateway";
 import PaymentAuditLog from "@/models/payment-audit-log";
 import { verifyIpnHash, generateIpnResponse, generateIpnErrorResponse } from "@/services/2checkout";
 import { checkRateLimit, getClientIp, logSecurityEvent } from "@/lib/security";
+import { ensureSubscriptionActivatedFromPayment } from "@/lib/tools/subscription";
 
 export async function POST(request: Request) {
   try {
@@ -105,6 +106,7 @@ export async function POST(request: Request) {
 
     if (existingPayment && existingPayment.status === "completed" && orderStatus === "COMPLETE") {
       console.log("[2Checkout IPN] Already processed, returning success:", existingPayment.paymentNumber);
+      await ensureSubscriptionActivatedFromPayment(existingPayment);
       const ipnPid0 = ipnParams["IPN_PID[0]"] || "";
       const ipnPname0 = ipnParams["IPN_PNAME[0]"] || "";
       const ipnDate = ipnParams.IPN_DATE || "";
@@ -127,6 +129,13 @@ export async function POST(request: Request) {
       : { verified: true, orderRef: lookupRef, status: orderStatus, amount: totalGeneral, currency, rawPayload: ipnParams as unknown as Record<string, unknown> };
 
     const processResult = await processWebhookPayment(webhookResult);
+
+    if (processResult.success && orderStatus === "COMPLETE" && processResult.paymentId) {
+      const subscriptionPayment = await Payment.findById(processResult.paymentId);
+      if (subscriptionPayment) {
+        await ensureSubscriptionActivatedFromPayment(subscriptionPayment);
+      }
+    }
 
     if (!processResult.success) {
       // Fallback: try processing as an Order (legacy path)

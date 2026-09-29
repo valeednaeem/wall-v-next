@@ -18,6 +18,7 @@ export async function GET(_request: Request, { params }: Params) {
       .select(SAFE_SELECT)
       .populate("category", "name slug")
       .populate("tags", "name slug")
+      .populate("requiredPlan", "name slug monthlyPrice yearlyPrice includedCredits")
       .lean();
 
     if (!tool) {

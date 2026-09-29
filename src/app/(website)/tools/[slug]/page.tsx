@@ -18,6 +18,7 @@ async function getTool(slug: string) {
     const tool = await AITool.findOne({ slug, status: "published" })
       .populate("category", "name slug")
       .populate("tags", "name slug")
+      .populate("requiredPlan", "name slug monthlyPrice yearlyPrice includedCredits")
       .lean();
     return tool;
   } catch {

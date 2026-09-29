@@ -124,7 +124,7 @@ export default function AiToolPlansPage() {
 
       <div className="flex items-start gap-2 rounded-lg border bg-muted/50 px-4 py-3 text-sm text-muted-foreground">
         <Info className="h-4 w-4 mt-0.5 shrink-0" />
-        <span>Plans define entitlement only. Checkout and subscription billing are deferred to Phase 8 pending billing sign-off.</span>
+        <span>Plans power subscription entitlement: users subscribe from tool pages via 2Checkout, and execution enforces plan match plus credit deduction.</span>
       </div>
 
       {loading ? (

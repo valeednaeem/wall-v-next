@@ -7,6 +7,7 @@ import { getAuthUser } from "@/lib/auth";
 import { handleApiError } from "@/lib/api-middleware";
 import { getClientIp, checkRateLimit } from "@/lib/security";
 import { checkToolAccess } from "@/lib/tools/access";
+import { deductSubscriptionCredits } from "@/lib/tools/subscription";
 import { recordExecution, recordFunnelEvent } from "@/lib/tools/recorder";
 import { getProviderAdapter } from "@/lib/ai-provider-adapter";
 import { generateAIContent } from "@/services/ai";
@@ -21,6 +22,7 @@ const DENY_MESSAGES: Record<string, string> = {
   auth_required: "Sign in to use this tool.",
   plan_required: "This tool requires a paid plan.",
   limit_reached: "You have reached your usage limit for this tool.",
+  credits_exhausted: "You have used all the credits in your plan. Renew to keep going.",
   input_too_long: "Your input is too long for this tool.",
   not_found: "Tool not found.",
 };
@@ -65,7 +67,11 @@ export async function POST(request: Request, { params }: Params) {
     const toolId = String(tool._id);
     const access = await checkToolAccess(toolId, user, parsed.input.length, ip);
     if (!access.allowed) {
-      if (access.reason === "limit_reached" || access.reason === "plan_required") {
+      if (
+        access.reason === "limit_reached" ||
+        access.reason === "plan_required" ||
+        access.reason === "credits_exhausted"
+      ) {
         recordFunnelEvent(toolId, "upgradePrompts");
       }
       const status =
@@ -77,6 +83,7 @@ export async function POST(request: Request, { params }: Params) {
           remainingToday: access.remainingToday,
           remainingMonth: access.remainingMonth,
           freeRemaining: access.freeRemaining,
+          remainingCredits: access.remainingCredits,
         },
         { status }
       );
@@ -168,6 +175,14 @@ export async function POST(request: Request, { params }: Params) {
       estimatedCost,
     });
 
+    if (tool.accessModel === "subscription" && user) {
+      await deductSubscriptionCredits(
+        user.userId,
+        tool.usagePolicy?.creditsPerExecution ?? 0,
+        tool.requiredPlan ? String(tool.requiredPlan) : undefined
+      );
+    }
+
     // Refresh remaining quota after the run (same window math as checkToolAccess)
     const refreshed = await checkToolAccess(toolId, user, 0, ip);
 
@@ -178,6 +193,7 @@ export async function POST(request: Request, { params }: Params) {
         credits: tool.usagePolicy?.creditsPerExecution ?? 0,
         remainingToday: refreshed.remainingToday ?? access.remainingToday,
         freeRemaining: refreshed.freeRemaining ?? access.freeRemaining,
+        remainingCredits: refreshed.remainingCredits ?? access.remainingCredits,
       },
     });
   } catch (error) {

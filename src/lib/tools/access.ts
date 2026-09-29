@@ -1,6 +1,7 @@
 import { connectToDatabase } from "@/lib/mongodb";
 import AITool from "@/models/ai-tool";
 import AIToolExecution from "@/models/ai-tool-execution";
+import { checkSubscriptionEntitlement } from "@/lib/tools/subscription";
 import type { JWTPayload } from "@/lib/jwt";
 
 export type AccessDenyReason =
@@ -8,6 +9,7 @@ export type AccessDenyReason =
   | "auth_required"
   | "plan_required"
   | "limit_reached"
+  | "credits_exhausted"
   | "input_too_long"
   | "inactive";
 
@@ -17,6 +19,7 @@ export interface AccessCheck {
   remainingToday?: number;
   remainingMonth?: number;
   freeRemaining?: number;
+  remainingCredits?: number;
 }
 
 const ANONYMOUS_DAILY_CAP = 10;
@@ -46,11 +49,21 @@ export async function checkToolAccess(
     return { allowed: false, reason: "input_too_long" };
   }
 
-  // Subscription tools require a logged-in user (entitlement check is Phase 8)
   if (tool.accessModel === "subscription") {
     if (!user) return { allowed: false, reason: "auth_required" };
-    // Phase 8: replace with AIToolSubscription entitlement lookup
-    return { allowed: false, reason: "plan_required" };
+    const entitlement = await checkSubscriptionEntitlement(
+      user.userId,
+      tool.requiredPlan ? String(tool.requiredPlan) : undefined,
+      tool.usagePolicy?.creditsPerExecution ?? 0
+    );
+    if (!entitlement.ok) {
+      return {
+        allowed: false,
+        reason: entitlement.reason,
+        remainingCredits: entitlement.remainingCredits,
+      };
+    }
+    return { allowed: true, remainingCredits: entitlement.remainingCredits };
   }
 
   const sinceDay = startOf(new Date(), "day");

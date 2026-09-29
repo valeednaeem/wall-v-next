@@ -8,10 +8,17 @@ import { ToolHeader } from "@/components/tools/ToolHeader";
 import { ToolInput } from "@/components/tools/ToolInput";
 import { ToolOutput } from "@/components/tools/ToolOutput";
 import { UsageMeter } from "@/components/tools/UsageMeter";
-import { UpgradePrompt } from "@/components/tools/UpgradePrompt";
+import { UpgradePrompt, type UpgradePlanInfo } from "@/components/tools/UpgradePrompt";
 import DOMPurify from "isomorphic-dompurify";
 
-type UpgradeReason = "limit_reached" | "plan_required" | "auth_required";
+type UpgradeReason = "limit_reached" | "plan_required" | "auth_required" | "credits_exhausted";
+
+const UPGRADE_REASONS: UpgradeReason[] = [
+  "limit_reached",
+  "plan_required",
+  "auth_required",
+  "credits_exhausted",
+];
 
 export interface ToolDetailData {
   _id: string;
@@ -36,6 +43,7 @@ export interface ToolDetailData {
     maxInputLength: number;
     maxOutputLength: number;
   };
+  requiredPlan?: UpgradePlanInfo & { _id: string; yearlyPrice: number; includedCredits: number };
   seo?: { metaTitle?: string; metaDescription?: string };
 }
 
@@ -46,6 +54,7 @@ export function ToolDetailContent({ initialTool }: { initialTool: ToolDetailData
   const [error, setError] = useState("");
   const [upgradeReason, setUpgradeReason] = useState<UpgradeReason | null>(null);
   const [remainingToday, setRemainingToday] = useState<number | null>(null);
+  const [remainingCredits, setRemainingCredits] = useState<number | null>(null);
   const beaconSent = useRef(false);
 
   useEffect(() => {
@@ -69,9 +78,10 @@ export function ToolDetailContent({ initialTool }: { initialTool: ToolDetailData
 
       if (!res.ok) {
         const reason = data.reason as UpgradeReason | undefined;
-        if (reason && ["limit_reached", "plan_required", "auth_required"].includes(reason)) {
+        if (reason && UPGRADE_REASONS.includes(reason)) {
           setUpgradeReason(reason);
           if (typeof data.remainingToday === "number") setRemainingToday(data.remainingToday);
+          if (typeof data.remainingCredits === "number") setRemainingCredits(data.remainingCredits);
         } else {
           setError(data.error || "Something went wrong. Please try again.");
         }
@@ -81,6 +91,9 @@ export function ToolDetailContent({ initialTool }: { initialTool: ToolDetailData
       setOutput(data.output || "");
       if (typeof data.usage?.remainingToday === "number") {
         setRemainingToday(data.usage.remainingToday);
+      }
+      if (typeof data.usage?.remainingCredits === "number") {
+        setRemainingCredits(data.usage.remainingCredits);
       }
     } catch {
       setError("Network error. Please try again.");
@@ -97,6 +110,9 @@ export function ToolDetailContent({ initialTool }: { initialTool: ToolDetailData
     limitLines.push(`${policy.lifetimeFreeExecutions} free runs total`);
   }
   if (policy.creditsPerExecution > 0) limitLines.push(`${policy.creditsPerExecution} credit per run`);
+  if (tool.accessModel === "subscription" && tool.requiredPlan) {
+    limitLines.push(`Included with the ${tool.requiredPlan.name} plan`);
+  }
 
   return (
     <div className="container mx-auto px-4 py-12 space-y-10 max-w-5xl">
@@ -140,7 +156,12 @@ export function ToolDetailContent({ initialTool }: { initialTool: ToolDetailData
                 }
               />
               {upgradeReason && (
-                <UpgradePrompt reason={upgradeReason} toolName={tool.name} />
+                <UpgradePrompt
+                  reason={upgradeReason}
+                  toolName={tool.name}
+                  toolId={tool._id}
+                  plan={tool.requiredPlan ?? null}
+                />
               )}
               <ToolOutput result={output} error={error} busy={busy} />
             </div>
@@ -179,6 +200,13 @@ export function ToolDetailContent({ initialTool }: { initialTool: ToolDetailData
             {policy.maxInputLength > 0 && (
               <p className="text-xs text-muted-foreground">
                 Max input: {policy.maxInputLength.toLocaleString()} characters
+              </p>
+            )}
+            {tool.accessModel === "subscription" && remainingCredits != null && (
+              <p className="text-xs text-muted-foreground">
+                {remainingCredits < 0
+                  ? "Unlimited credits"
+                  : `${remainingCredits.toLocaleString()} credits remaining`}
               </p>
             )}
           </div>
