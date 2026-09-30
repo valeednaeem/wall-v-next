@@ -1,0 +1,107 @@
+{
+  "generatedAt": "2026-09-30T12:25:28.774Z",
+  "counts": {
+    "PASS": 9
+  },
+  "results": [
+    {
+      "id": "QA-1304a",
+      "module": "E2E CRM",
+      "title": "admin creates lead",
+      "priority": "P1",
+      "expected": "2xx + id",
+      "actual": "201 id=6abcffb8be0cc61a85418934",
+      "status": "PASS",
+      "evidence": "{\"success\":true,\"data\":{\"name\":\"QA Lead\",\"email\":\"qa-lead-1790771127905@localhost.invalid\",\"source\":\"qa-test\",\"status\":\"",
+      "at": "2026-09-30T12:25:28.225Z"
+    },
+    {
+      "id": "QA-1304b",
+      "module": "E2E CRM",
+      "title": "lead appears in admin list",
+      "priority": "P1",
+      "expected": "200 + email present",
+      "actual": "200 found=true",
+      "status": "PASS",
+      "at": "2026-09-30T12:25:28.252Z"
+    },
+    {
+      "id": "QA-1304c",
+      "module": "E2E CRM",
+      "title": "lead status update",
+      "priority": "P1",
+      "expected": "2xx",
+      "actual": "200",
+      "status": "PASS",
+      "evidence": "{\"success\":true,\"data\":{\"_id\":\"6abcffb8be0cc61a85418934\",\"name\":\"QA Lead\",\"email\":\"qa-lead-179077112",
+      "at": "2026-09-30T12:25:28.278Z"
+    },
+    {
+      "id": "QA-1304d",
+      "module": "E2E CRM",
+      "title": "lead deleted + gone",
+      "priority": "P1",
+      "expected": "2xx + 404/absent",
+      "actual": "del=200 get=404",
+      "status": "PASS",
+      "at": "2026-09-30T12:25:28.314Z"
+    },
+    {
+      "id": "QA-1401",
+      "module": "DB Integrity",
+      "title": "users.email unique index exists",
+      "priority": "P1",
+      "expected": "unique index on email",
+      "actual": "unique=true",
+      "status": "PASS",
+      "at": "2026-09-30T12:25:28.415Z"
+    },
+    {
+      "id": "QA-1402",
+      "module": "DB Integrity",
+      "title": "blogposts.slug unique index exists",
+      "priority": "P1",
+      "expected": "unique index on slug",
+      "actual": "unique=true",
+      "status": "PASS",
+      "at": "2026-09-30T12:25:28.418Z"
+    },
+    {
+      "id": "QA-1403",
+      "module": "DB Integrity",
+      "title": "duplicate slug insert rejected (E11000)",
+      "priority": "P1",
+      "expected": "11000 on second insert",
+      "actual": "first=ok second=11000",
+      "status": "PASS",
+      "at": "2026-09-30T12:25:28.438Z"
+    },
+    {
+      "id": "QA-1404",
+      "module": "DB Integrity",
+      "title": "publicationjobs.idempotencyKey unique",
+      "priority": "P1",
+      "expected": "unique index",
+      "actual": "unique=true",
+      "status": "PASS",
+      "at": "2026-09-30T12:25:28.461Z"
+    },
+    {
+      "id": "QA-1405",
+      "module": "Cleanup",
+      "title": "QA fixture cleanup (contacts/blog/leads/login-attempts)",
+      "priority": "P1",
+      "expected": "0 remaining",
+      "actual": "{\"contacts\":0,\"blogposts\":0,\"leads\":0}",
+      "status": "PASS",
+      "evidence": "{\"contacts\":1,\"blogposts\":0,\"leads\":0,\"securityevents\":3}",
+      "at": "2026-09-30T12:25:28.764Z"
+    }
+  ],
+  "cleanup": {
+    "contacts": 1,
+    "blogposts": 0,
+    "leads": 0,
+    "securityevents": 3
+  }
+}
