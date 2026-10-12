@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useDograh } from "./voice-agent";
 import { Mic, PhoneOff, Loader2, X, Volume2, User, Mail, Phone, ExternalLink, CreditCard, CheckCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -44,6 +45,8 @@ const DEFAULT_VOICE_SETTINGS: VoiceSettings = {
 };
 
 export function FloatingVoiceWidget({ position: positionProp }: FloatingVoiceWidgetProps) {
+  const pathname = usePathname();
+  const ownsVoiceRuntime = pathname !== "/voice-agent";
   const [voiceSettings, setVoiceSettings] = useState<VoiceSettings>(DEFAULT_VOICE_SETTINGS);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
@@ -51,11 +54,7 @@ export function FloatingVoiceWidget({ position: positionProp }: FloatingVoiceWid
   const [dismissed, setDismissed] = useState(false);
   const [clientDetails, setClientDetails] = useState<ClientDetails>({ name: "", email: "", phone: "" });
   const [selectedSuggestion, setSelectedSuggestion] = useState<string>("");
-  const [callData, setCallData] = useState<{ agentId: string; workflowRunId: string } | null>(null);
   const [demoResult, setDemoResult] = useState<{ previewUrl: string; checkoutUrl: string; projectId: string } | null>(null);
-
-  const clientDetailsRef = useRef(clientDetails);
-  clientDetailsRef.current = clientDetails;
 
   const voiceSettingsRef = useRef(voiceSettings);
   voiceSettingsRef.current = voiceSettings;
@@ -81,33 +80,8 @@ export function FloatingVoiceWidget({ position: positionProp }: FloatingVoiceWid
       .catch(() => setSettingsLoaded(true));
   }, []);
 
-  const handleCallEnd = useCallback((data: { agentId: string; workflowRunId: string; durationSeconds: number }) => {
-    console.log("[Voice Widget] Call ended, saving:", data);
-    fetch("/api/voice-agent/call-ended", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        agentId: data.agentId,
-        workflowRunId: data.workflowRunId,
-        durationSeconds: data.durationSeconds,
-        status: "completed",
-        clientName: clientDetailsRef.current.name,
-        clientEmail: clientDetailsRef.current.email,
-        clientPhone: clientDetailsRef.current.phone,
-      }),
-    })
-      .then((r) => r.json())
-      .then((result) => {
-        if (result.previewUrl) {
-          setDemoResult({
-            previewUrl: result.previewUrl,
-            checkoutUrl: result.checkoutUrl,
-            projectId: result.projectId,
-          });
-        }
-      })
-      .catch((err) => console.error("[Voice Widget] Failed to save call:", err));
-    setCallData(null);
+  const handleCallEnd = useCallback(() => {
+    console.log("[Voice Widget] Call ended; authenticated Dograh webhook will persist the conversation.");
   }, []);
 
   const {
@@ -120,9 +94,9 @@ export function FloatingVoiceWidget({ position: positionProp }: FloatingVoiceWid
     getStatusLabel,
     duration,
   } = useDograh({
+    enabled: ownsVoiceRuntime && (!settingsLoaded || voiceSettings.enabled),
     mode: "headless",
     widgetScriptUrl: voiceSettings.widgetUrl || undefined,
-    onCallConnected: (data) => setCallData(data),
     onCallDisconnected: handleCallEnd,
   });
 

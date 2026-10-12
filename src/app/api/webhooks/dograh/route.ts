@@ -13,7 +13,8 @@ import { corsHeaders, handleOPTIONS } from "@/lib/cors";
 import { logError } from "@/lib/error-logger";
 import { checkRateLimit, getClientIp, logSecurityEvent } from "@/lib/security";
 import { normalizeBaseUrl } from "@/lib/utils";
-import crypto from "crypto";
+import DograhWebhookEvent from "@/models/dograh-webhook-event";
+import { authenticateDograhWebhook, MAX_DOGRAH_WEBHOOK_BYTES, validateDograhWebhookBody } from "@/lib/dograh-webhook";
 
 function slugify(text: string): string {
   return text
@@ -420,6 +421,23 @@ function extractVoicePayload(body: Record<string, unknown>): NormalizedVoicePayl
 export async function POST(request: Request) {
   const headers = corsHeaders(request);
   const ip = getClientIp(request);
+  let eventRecordId: unknown = null;
+
+  const markEventProcessed = async (conversationId?: unknown) => {
+    if (!eventRecordId) return;
+    await DograhWebhookEvent.updateOne(
+      { _id: eventRecordId },
+      { $set: { status: "processed", processedAt: new Date(), ...(conversationId ? { conversationId } : {}) }, $unset: { error: 1 } }
+    );
+  };
+
+  const markEventFailed = async (error: unknown) => {
+    if (!eventRecordId) return;
+    await DograhWebhookEvent.updateOne(
+      { _id: eventRecordId },
+      { $set: { status: "failed", error: error instanceof Error ? error.message.slice(0, 500) : "Webhook processing failed" } }
+    );
+  };
 
   try {
     // Rate limit: 30 requests per minute per IP
@@ -436,25 +454,40 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429, headers });
     }
 
-    // Shared secret verification (optional — configure DOGRAH_WEBHOOK_SECRET env var)
-    const webhookSecret = process.env.DOGRAH_WEBHOOK_SECRET;
-    if (webhookSecret) {
-      const providedSecret = request.headers.get("x-webhook-secret") || request.headers.get("authorization")?.replace("Bearer ", "");
-      if (!providedSecret || !crypto.timingSafeEqual(Buffer.from(providedSecret), Buffer.from(webhookSecret))) {
-        await logSecurityEvent({
-          type: "webhook_signature_invalid",
-          severity: "critical",
-          ip,
-          path: "/api/webhooks/dograh",
-          method: "POST",
-          blocked: true,
-        });
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers });
-      }
+    const auth = authenticateDograhWebhook(request);
+    if (!auth.ok) {
+      await logSecurityEvent({
+        type: "webhook_signature_invalid",
+        severity: auth.status === 503 ? "high" : "critical",
+        ip,
+        path: "/api/webhooks/dograh",
+        method: "POST",
+        blocked: true,
+        details: { reason: auth.reason },
+      });
+      return NextResponse.json({ error: auth.reason }, { status: auth.status, headers });
     }
 
-    const rawBody = await request.json();
-    console.log("[Dograh Webhook] VOICE_WEBHOOK_RECEIVED:", JSON.stringify(rawBody).slice(0, 800));
+    const contentLength = Number(request.headers.get("content-length") || 0);
+    if (Number.isFinite(contentLength) && contentLength > MAX_DOGRAH_WEBHOOK_BYTES) {
+      return NextResponse.json({ error: "Webhook payload is too large" }, { status: 413, headers });
+    }
+
+    let rawBody: unknown;
+    try {
+      const rawText = await request.text();
+      if (new TextEncoder().encode(rawText).byteLength > MAX_DOGRAH_WEBHOOK_BYTES) {
+        return NextResponse.json({ error: "Webhook payload is too large" }, { status: 413, headers });
+      }
+      rawBody = JSON.parse(rawText);
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400, headers });
+    }
+
+    const bodyValidation = validateDograhWebhookBody(rawBody);
+    if (!bodyValidation.valid) {
+      return NextResponse.json({ error: bodyValidation.reason }, { status: 400, headers });
+    }
 
     const body = rawBody as Record<string, unknown>;
     const {
@@ -468,6 +501,16 @@ export async function POST(request: Request) {
       messages,
     } = extractVoicePayload(body);
 
+    if (!workflowRunId && !sessionId) {
+      return NextResponse.json({ error: "Missing workflow_run_id or session_id" }, { status: 400, headers });
+    }
+    if (workflowRunId.length > 200 || sessionId.length > 200 || transcript.length > 200_000 || summary.length > 20_000) {
+      return NextResponse.json({ error: "Webhook payload contains oversized fields" }, { status: 413, headers });
+    }
+    if (messages.length > 500 || messages.some((message) => message.content.length > 20_000)) {
+      return NextResponse.json({ error: "Webhook payload contains too many or oversized messages" }, { status: 413, headers });
+    }
+
     console.log("[Dograh Webhook] VOICE_PAYLOAD_NORMALIZED:", JSON.stringify({
       workflowRunId,
       sessionId,
@@ -478,6 +521,37 @@ export async function POST(request: Request) {
     }));
 
     await connectToDatabase();
+
+    const eventKey = workflowRunId ? `workflow:${workflowRunId}` : `session:${sessionId}`;
+    const staleProcessingAt = new Date(Date.now() - 10 * 60 * 1000);
+    try {
+      const event = await DograhWebhookEvent.create({
+        eventKey,
+        workflowRunId: workflowRunId || sessionId,
+        status: "processing",
+      });
+      eventRecordId = event._id;
+    } catch (error) {
+      const existingEvent = await DograhWebhookEvent.findOne({ eventKey });
+      if (existingEvent?.status === "processed") {
+        return NextResponse.json({ success: true, duplicate: true }, { headers });
+      }
+      const reclaimed = await DograhWebhookEvent.findOneAndUpdate(
+        {
+          eventKey,
+          $or: [
+            { status: "failed" },
+            { status: "processing", updatedAt: { $lt: staleProcessingAt } },
+          ],
+        },
+        { $set: { status: "processing", error: undefined } },
+        { new: true }
+      );
+      if (!reclaimed) {
+        return NextResponse.json({ success: true, duplicate: true, processing: true }, { headers });
+      }
+      eventRecordId = reclaimed._id;
+    }
 
     // Find conversation by workflowRunId → sessionId → recent orphaned placeholder
     let filter: Record<string, unknown> | null = null;
@@ -520,6 +594,7 @@ export async function POST(request: Request) {
     const hasExistingContent = existing && ((existing.messages?.length || 0) > 0 || !!existing.voiceAgent?.transcript);
     if (hasExistingContent && !transcript && messages.length === 0) {
       console.log("[Dograh Webhook] Skipping update — existing content present and incoming payload empty");
+      await markEventProcessed(existing._id);
       return NextResponse.json({ success: true, conversationId: existing._id }, { headers });
     }
 
@@ -563,6 +638,21 @@ export async function POST(request: Request) {
       { $set: conversationData },
       { upsert: true, new: true }
     );
+
+    if (!conversation) {
+      throw new Error("Unable to persist Dograh conversation");
+    }
+
+    // A retry after business records were already linked must not create a second inquiry/project.
+    if (conversation.projectId || conversation.outcome === "project-created") {
+      await markEventProcessed(conversation._id);
+      return NextResponse.json({
+        success: true,
+        duplicate: true,
+        conversationId: conversation._id,
+        projectId: conversation.projectId,
+      }, { headers });
+    }
 
     // Merge callerInfo with transcript extraction and context variables
     const callerInfo = (pick(body, ["callerInfo", "caller_info", "caller"]) || {}) as Record<string, unknown>;
@@ -831,6 +921,7 @@ export async function POST(request: Request) {
         );
       }
 
+      await markEventProcessed(conversation._id);
       return NextResponse.json({
         success: true,
         conversationId: conversation._id,
@@ -845,8 +936,10 @@ export async function POST(request: Request) {
       }, { headers });
     }
 
+    await markEventProcessed(conversation._id);
     return NextResponse.json({ success: true, conversationId: conversation._id }, { headers });
   } catch (error) {
+    await markEventFailed(error);
     await logError({
       level: "error",
       message: "Error processing dograh webhook",

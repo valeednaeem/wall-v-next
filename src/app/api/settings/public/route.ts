@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import SiteSettings from "@/models/site-settings";
 import AdSenseSettings from "@/models/adsense-settings";
+import { resolveDograhWidgetUrl } from "@/lib/dograh-widget";
 
 export async function GET() {
   try {
@@ -49,6 +50,11 @@ export async function GET() {
       contact.country,
     ].filter(Boolean);
     const fullAddress = addressParts.join(", ") || "1692, B Block, Master City Housing Society, Near Peoples Colony, Gujranwala, Pakistan";
+    const dograhWidget = resolveDograhWidgetUrl(
+      grouped.voice?.widgetUrl,
+      process.env.NEXT_PUBLIC_DOGRAH_WIDGET_URL,
+      { production: process.env.NODE_ENV === "production" }
+    );
 
     return NextResponse.json({
       success: true,
@@ -76,7 +82,9 @@ export async function GET() {
         },
         voice: {
           enabled: grouped.voice?.enabled ?? true,
-          widgetUrl: grouped.voice?.widgetUrl || process.env.NEXT_PUBLIC_DOGRAH_WIDGET_URL || "",
+          widgetUrl: dograhWidget.url,
+          widgetConfigured: Boolean(dograhWidget.url),
+          widgetConfigError: dograhWidget.error || "",
           apiUrl: grouped.voice?.apiUrl || process.env.DOGRAH_API_URL || "",
           agentId: grouped.voice?.agentId || "",
           position: grouped.voice?.position || "bottom-left",

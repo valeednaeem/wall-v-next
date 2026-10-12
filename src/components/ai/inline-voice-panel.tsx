@@ -36,18 +36,8 @@ export function InlineVoicePanel({
   }, []);
 
   const handleCallDisconnected = useCallback(
-    (data: { agentId: string; workflowRunId: string; durationSeconds: number }) => {
-      console.log("[Inline Voice] VOICE_CONVERSATION_COMPLETED:", data.workflowRunId);
-      fetch("/api/voice-agent/call-ended", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          agentId: data.agentId,
-          workflowRunId: data.workflowRunId,
-          durationSeconds: data.durationSeconds,
-          status: "completed",
-        }),
-      }).catch((err) => console.error("[Inline Voice] VOICE_PERSISTENCE_ERROR:", err));
+    () => {
+      console.log("[Inline Voice] Call ended; authenticated Dograh webhook will persist the conversation.");
     },
     []
   );

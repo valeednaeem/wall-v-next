@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { validateDograhWidgetUrl } from "@/lib/dograh-widget";
 
 export function DograhWidgetLoader() {
   const [widgetUrl, setWidgetUrl] = useState<string | null>(null);
@@ -27,8 +28,14 @@ export function DograhWidgetLoader() {
         // Fallback to env var
       }
 
+      const isProduction = window.location.protocol === "https:" && !["localhost", "127.0.0.1"].includes(window.location.hostname);
+      const validation = validateDograhWidgetUrl(url, { production: isProduction });
+      if (!validation.valid) {
+        console.error("[Dograh] Widget configuration unavailable:", validation.reason);
+      }
+
       setEnabled(isEnabled);
-      setWidgetUrl(isEnabled ? (url ?? null) : null);
+      setWidgetUrl(isEnabled && validation.valid ? (url || "").trim() : null);
     }
 
     loadConfig();
@@ -37,11 +44,9 @@ export function DograhWidgetLoader() {
   useEffect(() => {
     if (!widgetUrl) return;
 
-    console.log("[Dograh] Loader running — URL:", widgetUrl);
-
     const d = document;
     const s = "script";
-    const id = "dograh-widget-script";
+    const id = "dograh-widget";
 
     if (d.getElementById(id) || window.DograhWidget) {
       console.log("[Dograh] Widget script already loaded");
@@ -52,9 +57,13 @@ export function DograhWidgetLoader() {
     const js = d.createElement(s);
     js.id = id;
     js.src = widgetUrl;
+    js.setAttribute("data-dograh-context", JSON.stringify({
+      page_url: window.location.href,
+      today: new Date().toISOString().slice(0, 10),
+    }));
     js.async = true;
     js.onload = () => console.log("[Dograh] Widget script DOM loaded");
-    js.onerror = () => console.error("[Dograh] Widget script failed to load:", widgetUrl);
+    js.onerror = () => console.error("[Dograh] Widget script failed to load. Verify the generated Dograh URL and Allowed Domains.");
     fjs.parentNode?.insertBefore(js, fjs);
     console.log("[Dograh] Widget script tag injected");
   }, [widgetUrl]);

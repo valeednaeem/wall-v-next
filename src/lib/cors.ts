@@ -18,7 +18,7 @@ export function corsHeaders(request: Request): Record<string, string> {
   return {
     "Access-Control-Allow-Origin": allowed,
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-API-Key, X-Webhook-Secret",
     "Access-Control-Max-Age": "86400",
   };
 }
@@ -29,7 +29,7 @@ export function handleOPTIONS() {
     headers: {
       "Access-Control-Allow-Origin": isDev ? "http://localhost:3000" : ALLOWED_ORIGINS[0],
       "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type, Authorization",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization, X-API-Key, X-Webhook-Secret",
       "Access-Control-Max-Age": "86400",
     },
   });

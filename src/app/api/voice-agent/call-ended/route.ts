@@ -1,99 +1,64 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import Conversation from "@/models/conversation";
-import Project from "@/models/project";
+import { authenticateDograhWebhook } from "@/lib/dograh-webhook";
 
-// Called from the browser when a Dograh voice call ends
+// Deprecated compatibility endpoint. Authenticated Dograh webhooks are authoritative.
+// This endpoint may update an existing voice conversation, but it never creates records
+// from browser-controlled input.
 export async function POST(request: Request) {
-  try {
-    const body = await request.json();
-    const { agentId, workflowRunId, durationSeconds, status, clientName, clientEmail, clientPhone } = body;
+  const auth = authenticateDograhWebhook(request);
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.reason }, { status: auth.status });
+  }
 
-    console.log("[Voice Agent] Call ended:", { agentId, workflowRunId, durationSeconds, status });
+  try {
+    let body: Record<string, unknown>;
+    try {
+      const parsed = await request.json();
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        return NextResponse.json({ error: "Request body must be a JSON object" }, { status: 400 });
+      }
+      body = parsed as Record<string, unknown>;
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+    }
+    const workflowRunId = typeof body.workflowRunId === "string" ? body.workflowRunId.trim() : "";
+    const durationSeconds = typeof body.durationSeconds === "number" ? body.durationSeconds : 0;
+    const status = typeof body.status === "string" ? body.status.trim().slice(0, 50) : "completed";
+
+    if (!workflowRunId || workflowRunId.length > 200) {
+      return NextResponse.json({ error: "workflowRunId is required" }, { status: 400 });
+    }
+    if (!Number.isFinite(durationSeconds) || durationSeconds < 0 || durationSeconds > 24 * 60 * 60) {
+      return NextResponse.json({ error: "Invalid durationSeconds" }, { status: 400 });
+    }
 
     await connectToDatabase();
-
-    // Find the conversation by workflowRunId or create a new one
-    let conversation = null;
-    if (workflowRunId) {
-      conversation = await Conversation.findOne({ "voiceAgent.workflowRunId": workflowRunId });
-    }
+    const conversation = await Conversation.findOne({
+      channel: "voice",
+      "voiceAgent.workflowRunId": workflowRunId,
+    });
 
     if (!conversation) {
-      // Create placeholder record — the Dograh server webhook will claim this
-      // record (via orphan-claim matching) and attach transcript/messages.
-      conversation = await Conversation.create({
-        sessionId: `voice_${Date.now()}`,
-        agentType: "voice-agent",
-        channel: "voice",
-        messages: [],
-        messageCount: 0,
-        startedAt: new Date(Date.now() - (durationSeconds || 0) * 1000),
-        endedAt: new Date(),
-        voiceAgent: {
-          dograhAgentId: agentId || "",
-          workflowRunId: workflowRunId || "",
-          durationSeconds: durationSeconds || 0,
-          callStatus: status || "completed",
-        },
-      });
-      console.log("[Voice Agent] VOICE_SESSION_CREATED (placeholder, awaiting webhook):", {
-        conversationId: conversation._id,
-        workflowRunId,
-      });
-    } else {
-      // Update existing conversation
-      conversation.endedAt = new Date();
-      if (durationSeconds) conversation.voiceAgent.durationSeconds = durationSeconds;
-      if (status) conversation.voiceAgent.callStatus = status;
-      await conversation.save();
-      console.log("[Voice Agent] VOICE_CONVERSATION_UPDATED:", { conversationId: conversation._id });
+      return NextResponse.json({
+        success: true,
+        accepted: true,
+        message: "Conversation will be created by the authenticated Dograh webhook.",
+      }, { status: 202 });
     }
 
-    // Try to find the project (may have been created by the Dograh webhook)
-    let previewUrl = null;
-    let checkoutUrl = null;
-    let projectId = null;
+    conversation.endedAt = new Date();
+    conversation.voiceAgent = {
+      ...conversation.voiceAgent,
+      durationSeconds,
+      callStatus: status || conversation.voiceAgent?.callStatus || "completed",
+    };
+    await conversation.save();
 
-    if (conversation.projectId) {
-      const project = await Project.findById(conversation.projectId)
-        .select("_id demoId status")
-        .lean();
-      if (project) {
-        projectId = project._id.toString();
-        previewUrl = `/preview/${project._id}`;
-        checkoutUrl = `/checkout/${project._id}`;
-      }
-    }
-
-    // If no project linked to conversation, try to find by client email
-    if (!conversation.projectId && clientEmail) {
-      const project = await Project.findOne({
-        "client.email": clientEmail,
-        status: "demo",
-      })
-        .sort({ createdAt: -1 })
-        .select("_id demoId status")
-        .lean();
-      if (project) {
-        projectId = project._id.toString();
-        previewUrl = `/preview/${project._id}`;
-        checkoutUrl = `/checkout/${project._id}`;
-        // Link the project to the conversation for future lookups
-        conversation.projectId = project._id;
-        await conversation.save();
-      }
-    }
-
-    return NextResponse.json({
-      success: true,
-      conversationId: conversation._id,
-      previewUrl,
-      checkoutUrl,
-      projectId,
-    });
+    return NextResponse.json({ success: true, conversationId: conversation._id });
   } catch (error) {
-    console.error("[Voice Agent] Call-ended error:", error);
+    console.error("[Voice Agent] Authenticated call-ended update failed:", error instanceof Error ? error.message : "unknown error");
     return NextResponse.json({ error: "Failed to record call" }, { status: 500 });
   }
 }

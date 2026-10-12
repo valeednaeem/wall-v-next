@@ -7,6 +7,8 @@ const devConnectSrc = isDev
   ? " http://localhost:3010 http://localhost:8000"
   : "";
 
+const devScriptSrc = isDev ? " http://localhost:3010" : "";
+
 const devCorsOrigins = isDev ? " http://localhost:3000" : "";
 
 const securityHeaders = [
@@ -23,7 +25,7 @@ const securityHeaders = [
     key: "Content-Security-Policy",
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://checkout.stripe.com https://apis.google.com https://accounts.google.com https://dograh.vercel.app https://app.dograh.com https://www.googletagmanager.com https://www.google-analytics.com https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://adservice.google.com",
+      `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://checkout.stripe.com https://apis.google.com https://accounts.google.com https://dograh.vercel.app https://app.dograh.com https://www.googletagmanager.com https://www.google-analytics.com https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://adservice.google.com${devScriptSrc}`,
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "img-src 'self' data: blob: https: http: https://www.google-analytics.com https://stats.g.doubleclick.net",
       "font-src 'self' https://fonts.gstatic.com",

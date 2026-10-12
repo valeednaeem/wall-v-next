@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { Save, Globe, Search, Eye, EyeOff, Loader2, Upload, X, Image, MapPin, DollarSign } from "lucide-react";
 import Link from "next/link";
 import HtmlEditor from "@/components/editor/html-editor";
+import { validateDograhWidgetUrl } from "@/lib/dograh-widget";
 
 interface SiteSettings {
   siteName: string;
@@ -68,7 +69,7 @@ export default function GeneralSettingsPage() {
 
   const [voice, setVoice] = useState<VoiceAgentSettings>({
     enabled: true,
-    widgetUrl: "https://cdn.dograh.com/widget.js",
+    widgetUrl: "",
     agentId: "",
     position: "bottom-left",
     buttonColor: "#7c3aed",
@@ -160,6 +161,18 @@ BEHAVIOR:
   const handleSave = async () => {
     setSaving(true);
     setSaveMessage(null);
+    const widgetValidation = voice.widgetUrl
+      ? validateDograhWidgetUrl(voice.widgetUrl, {
+          production: typeof window !== "undefined" && window.location.protocol === "https:" && !["localhost", "127.0.0.1"].includes(window.location.hostname),
+        })
+      : { valid: true };
+
+    if (!widgetValidation.valid) {
+      setSaveMessage({ type: "error", text: widgetValidation.reason || "Invalid Dograh widget URL" });
+      setSaving(false);
+      return;
+    }
+
     try {
       const res = await fetch("/api/settings/general", {
         method: "PUT",
@@ -438,8 +451,12 @@ BEHAVIOR:
                 <div className="grid md:grid-cols-2 gap-4">
                   <div className="md:col-span-2">
                     <label className="text-sm font-medium">Widget Script URL</label>
-                    <input type="url" value={voice.widgetUrl} onChange={(e) => setVoice({ ...voice, widgetUrl: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" placeholder="https://your-dograh-instance.com/widget.js" />
-                    <p className="text-xs text-muted-foreground mt-1">The script URL from your Dograh dashboard → Agent Settings → Add to Website</p>
+                    <input type="url" value={voice.widgetUrl} onChange={(e) => setVoice({ ...voice, widgetUrl: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" placeholder="Paste the URL copied from Dograh Agent Settings" />
+                    <p className="text-xs text-muted-foreground mt-1">Copy the generated website widget URL from Dograh Agent Settings → Add to Website. Do not enter a generic CDN URL.</p>
+                    {!voice.widgetUrl && <p className="text-xs text-amber-600 mt-1">Voice is enabled, but no Dograh widget URL is configured.</p>}
+                    {voice.widgetUrl && !validateDograhWidgetUrl(voice.widgetUrl).valid && (
+                      <p className="text-xs text-destructive mt-1">{validateDograhWidgetUrl(voice.widgetUrl).reason}</p>
+                    )}
                   </div>
                   <SecretInput label="Agent ID" value={voice.agentId} onChange={(v) => setVoice({ ...voice, agentId: v })} placeholder="Optional — for API management" />
                 </div>

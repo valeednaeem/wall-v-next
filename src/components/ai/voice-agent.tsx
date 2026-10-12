@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import { validateDograhWidgetUrl } from "@/lib/dograh-widget";
 
 // ─── Dograh Widget Global Types ──────────────────────────────────────────────
 // Based on official Dograh integration docs:
@@ -32,6 +33,7 @@ declare global {
 export type CallStatus = "idle" | "connecting" | "connected" | "failed";
 
 interface VoiceAgentConfig {
+  enabled?: boolean;
   mode?: "floating" | "inline" | "headless";
   inlineContainerId?: string;
   widgetScriptUrl?: string;
@@ -42,7 +44,7 @@ interface VoiceAgentConfig {
 }
 
 function waitForDograhWidget(maxWaitMs = 8000): Promise<void> {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     if (window.DograhWidget) {
       resolve();
       return;
@@ -51,7 +53,8 @@ function waitForDograhWidget(maxWaitMs = 8000): Promise<void> {
     const interval = setInterval(() => {
       if (window.DograhWidget || Date.now() - start > maxWaitMs) {
         clearInterval(interval);
-        resolve();
+        if (window.DograhWidget) resolve();
+        else reject(new Error("Dograh widget did not initialize"));
       }
     }, 50);
   });
@@ -63,23 +66,33 @@ function loadDograhScript(url: string): Promise<void> {
       resolve();
       return;
     }
-    const existing = document.getElementById("dograh-widget-script");
+    const existing = document.getElementById("dograh-widget");
     if (existing) {
-      waitForDograhWidget().then(resolve);
+      const expectedUrl = new URL(url, window.location.href).href;
+      const existingUrl = existing instanceof HTMLScriptElement ? existing.src : "";
+      if (existingUrl && existingUrl !== expectedUrl) {
+        reject(new Error("A different Dograh widget script is already loaded"));
+        return;
+      }
+      waitForDograhWidget().then(resolve, reject);
       return;
     }
     const script = document.createElement("script");
-    script.id = "dograh-widget-script";
+    script.id = "dograh-widget";
     script.src = url;
+    script.setAttribute("data-dograh-context", JSON.stringify({
+      page_url: window.location.href,
+      today: new Date().toISOString().slice(0, 10),
+    }));
     script.async = true;
-    script.onload = () => waitForDograhWidget().then(resolve);
+    script.onload = () => waitForDograhWidget().then(resolve, reject);
     script.onerror = () => reject(new Error("Failed to load Dograh widget script"));
     document.head.appendChild(script);
   });
 }
 
 export function useDograh(config: VoiceAgentConfig) {
-  const { mode = "floating", widgetScriptUrl, onStatusChange, onCallConnected, onCallDisconnected, onError } = config;
+  const { enabled = true, mode = "floating", widgetScriptUrl, onStatusChange, onCallConnected, onCallDisconnected, onError } = config;
   const [status, setStatus] = useState<CallStatus>("idle");
   const [scriptLoaded, setScriptLoaded] = useState(false);
   const [scriptError, setScriptError] = useState<string | null>(null);
@@ -97,15 +110,28 @@ export function useDograh(config: VoiceAgentConfig) {
 
   // Load the Dograh widget script
   useEffect(() => {
+    if (!enabled) {
+      setScriptLoaded(false);
+      setScriptError(null);
+      return;
+    }
+
     const url = widgetScriptUrl || process.env.NEXT_PUBLIC_DOGRAH_WIDGET_URL;
-    console.log("[Dograh] Widget URL:", url);
     if (!url) {
       console.warn("[Dograh] No widget URL configured");
       setScriptError("Voice agent not configured");
       return;
     }
 
-    loadDograhScript(url)
+    const isProduction = window.location.protocol === "https:" && !["localhost", "127.0.0.1"].includes(window.location.hostname);
+    const validation = validateDograhWidgetUrl(url, { production: isProduction });
+    if (!validation.valid) {
+      console.warn("[Dograh] Widget configuration unavailable:", validation.reason);
+      setScriptError(validation.reason || "Voice agent not configured");
+      return;
+    }
+
+    loadDograhScript(url.trim())
       .then(() => {
         console.log("[Dograh] Script loaded successfully");
         setScriptLoaded(true);
@@ -115,39 +141,45 @@ export function useDograh(config: VoiceAgentConfig) {
         console.error("[Dograh] Script load failed:", err);
         setScriptError("Voice agent unavailable — failed to load");
       });
-  }, [widgetScriptUrl]);
+  }, [enabled, widgetScriptUrl]);
 
   // Subscribe to Dograh widget events
   useEffect(() => {
-    if (!scriptLoaded || !window.DograhWidget) {
+    if (!enabled || !scriptLoaded || !window.DograhWidget) {
       console.log("[Dograh] Not subscribing yet — scriptLoaded:", scriptLoaded, "DograhWidget:", !!window.DograhWidget);
       return;
     }
 
     console.log("[Dograh] Subscribing to widget events");
+    let active = true;
 
     const statusHandler = (s: CallStatus, text?: string, subtext?: string) => {
+      if (!active) return;
       console.log("[Dograh] Status changed:", s, text, subtext);
       setStatus(s);
       onStatusChangeRef.current?.(s, text, subtext);
     };
 
     const callStartHandler = () => {
+      if (!active) return;
       setDuration(0);
     };
 
     const callConnectedHandler = (data: { agentId: string; workflowRunId: string }) => {
+      if (!active) return;
       console.log("[Dograh] Call connected:", data);
       onCallConnectedRef.current?.(data);
     };
 
     const callDisconnectedHandler = (data: { agentId: string; workflowRunId: string; durationSeconds: number }) => {
+      if (!active) return;
       console.log("[Dograh] Call disconnected:", data);
       setDuration(data.durationSeconds);
       onCallDisconnectedRef.current?.(data);
     };
 
     const errorHandler = (err: Error) => {
+      if (!active) return;
       console.error("[Dograh] Error:", err);
       onErrorRef.current?.(err);
     };
@@ -160,10 +192,10 @@ export function useDograh(config: VoiceAgentConfig) {
     window.DograhWidget.onError(errorHandler);
 
     return () => {
-      // Dograh widget doesn't support unsubscribe, but we can null out refs
-      // The handlers will become no-ops on next render
+      // Dograh widget doesn't support unsubscribe; deactivate this instance's closures.
+      active = false;
     };
-  }, [scriptLoaded]);
+  }, [enabled, scriptLoaded]);
 
   // Live duration timer — counts up every second during active calls
   useEffect(() => {
@@ -176,7 +208,7 @@ export function useDograh(config: VoiceAgentConfig) {
 
   // Inline mode: initialize widget inside a container element
   useEffect(() => {
-    if (!scriptLoaded || mode !== "inline" || !containerRef.current || !window.DograhWidget) return;
+    if (!enabled || !scriptLoaded || mode !== "inline" || !containerRef.current || !window.DograhWidget) return;
 
     let retries = 0;
     const tryInit = () => {
@@ -191,24 +223,26 @@ export function useDograh(config: VoiceAgentConfig) {
       }
     };
     tryInit();
-  }, [scriptLoaded, mode]);
+  }, [enabled, scriptLoaded, mode]);
 
   // start() MUST run inside a user-gesture handler (click) for microphone access.
   // The calling component (voice-widget.tsx, inline-voice-panel.tsx) ensures this
   // is called from an onClick handler. We do NOT call start() automatically.
   const startCall = useCallback(() => {
+    if (!enabled) return;
     console.log("[Dograh] startCall called — DograhWidget exists:", !!window.DograhWidget);
     if (!window.DograhWidget) {
       console.error("[Dograh] Cannot start — widget not loaded. Check NEXT_PUBLIC_DOGRAH_WIDGET_URL env var.");
       return;
     }
     window.DograhWidget.start();
-  }, []);
+  }, [enabled]);
 
   const endCall = useCallback(() => {
+    if (!enabled) return;
     if (!window.DograhWidget) return;
     window.DograhWidget.end();
-  }, []);
+  }, [enabled]);
 
   const isLive = status === "connected" || status === "connecting";
 
