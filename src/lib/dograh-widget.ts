@@ -8,6 +8,9 @@ export interface DograhWidgetUrlResolution {
   error?: string;
 }
 
+/** Emitted when the shared Dograh script has initialized its browser global. */
+export const DOGRAH_WIDGET_READY_EVENT = "dograh-widget-ready";
+
 const LEGACY_WIDGET_HOSTS = new Set(["cdn.dograh.com"]);
 
 export function validateDograhWidgetUrl(

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { validateDograhWidgetUrl } from "@/lib/dograh-widget";
+import { DOGRAH_WIDGET_READY_EVENT, validateDograhWidgetUrl } from "@/lib/dograh-widget";
 
 export function DograhWidgetLoader() {
   const [widgetUrl, setWidgetUrl] = useState<string | null>(null);
@@ -62,7 +62,18 @@ export function DograhWidgetLoader() {
       today: new Date().toISOString().slice(0, 10),
     }));
     js.async = true;
-    js.onload = () => console.log("[Dograh] Widget script DOM loaded");
+    js.onload = () => {
+      console.log("[Dograh] Widget script DOM loaded");
+      const startedAt = Date.now();
+      const readyCheck = window.setInterval(() => {
+        if (window.DograhWidget || Date.now() - startedAt >= 8000) {
+          window.clearInterval(readyCheck);
+          if (window.DograhWidget) {
+            window.dispatchEvent(new Event(DOGRAH_WIDGET_READY_EVENT));
+          }
+        }
+      }, 50);
+    };
     js.onerror = () => console.error("[Dograh] Widget script failed to load. Verify the generated Dograh URL and Allowed Domains.");
     fjs.parentNode?.insertBefore(js, fjs);
     console.log("[Dograh] Widget script tag injected");

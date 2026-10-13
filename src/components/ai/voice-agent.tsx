@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import { validateDograhWidgetUrl } from "@/lib/dograh-widget";
+import { DOGRAH_WIDGET_READY_EVENT, validateDograhWidgetUrl } from "@/lib/dograh-widget";
 
 // ─── Dograh Widget Global Types ──────────────────────────────────────────────
 // Based on official Dograh integration docs:
@@ -116,11 +116,23 @@ export function useDograh(config: VoiceAgentConfig) {
       return;
     }
 
+    const handleWidgetReady = () => {
+      if (window.DograhWidget) {
+        setScriptLoaded(true);
+        setScriptError(null);
+      }
+    };
+    window.addEventListener(DOGRAH_WIDGET_READY_EVENT, handleWidgetReady);
+
+    // The shared preloader may have initialized the global before this hook's
+    // own script-loading effect runs. Treat that as ready immediately.
+    handleWidgetReady();
+
     const url = widgetScriptUrl || process.env.NEXT_PUBLIC_DOGRAH_WIDGET_URL;
     if (!url) {
       console.warn("[Dograh] No widget URL configured");
       setScriptError("Voice agent not configured");
-      return;
+      return () => window.removeEventListener(DOGRAH_WIDGET_READY_EVENT, handleWidgetReady);
     }
 
     const isProduction = window.location.protocol === "https:" && !["localhost", "127.0.0.1"].includes(window.location.hostname);
@@ -128,7 +140,7 @@ export function useDograh(config: VoiceAgentConfig) {
     if (!validation.valid) {
       console.warn("[Dograh] Widget configuration unavailable:", validation.reason);
       setScriptError(validation.reason || "Voice agent not configured");
-      return;
+      return () => window.removeEventListener(DOGRAH_WIDGET_READY_EVENT, handleWidgetReady);
     }
 
     loadDograhScript(url.trim())
@@ -141,6 +153,8 @@ export function useDograh(config: VoiceAgentConfig) {
         console.error("[Dograh] Script load failed:", err);
         setScriptError("Voice agent unavailable — failed to load");
       });
+
+    return () => window.removeEventListener(DOGRAH_WIDGET_READY_EVENT, handleWidgetReady);
   }, [enabled, widgetScriptUrl]);
 
   // Subscribe to Dograh widget events

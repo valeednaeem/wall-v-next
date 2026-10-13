@@ -87,6 +87,7 @@ export function FloatingVoiceWidget({ position: positionProp }: FloatingVoiceWid
   const {
     status,
     scriptLoaded,
+    scriptError,
     containerRef,
     startCall,
     endCall,
@@ -355,6 +356,11 @@ export function FloatingVoiceWidget({ position: positionProp }: FloatingVoiceWid
               <Mic className="h-4 w-4" />
               Start Call
             </button>
+            {!scriptLoaded && scriptError && (
+              <p className="mt-2 text-center text-xs text-destructive" role="status">
+                {scriptError}
+              </p>
+            )}
           </div>
         </div>
       )}
