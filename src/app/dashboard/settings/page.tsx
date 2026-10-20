@@ -168,7 +168,11 @@ BEHAVIOR:
   const handleSave = async () => {
     setSaving(true);
     setSaveMessage(null);
-    const widgetValidation = voice.widgetUrl
+    // The widget URL is a Dograh-only setting — validate it only while Dograh
+    // is the active provider. Vapi uses the Assistant ID + env public key and
+    // has no script URL (see useVapi()).
+    const isVapiProvider = voice.provider === "vapi";
+    const widgetValidation = !isVapiProvider && voice.widgetUrl
       ? validateDograhWidgetUrl(voice.widgetUrl, {
           production: typeof window !== "undefined" && window.location.protocol === "https:" && !["localhost", "127.0.0.1"].includes(window.location.hostname),
         })
@@ -180,11 +184,17 @@ BEHAVIOR:
       return;
     }
 
+    // Vapi never reads the Dograh widget URL. Omit it from the payload while
+    // Vapi is active so a stale or mistyped value can never overwrite the
+    // working Dograh URL kept for rollback (PUT updates only present keys).
+    const voicePayload: Partial<VoiceAgentSettings> = { ...voice };
+    if (isVapiProvider) delete voicePayload.widgetUrl;
+
     try {
       const res = await fetch("/api/settings/general", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ site, seo, voice, contact: location }),
+        body: JSON.stringify({ site, seo, voice: voicePayload, contact: location }),
       });
       if (res.status === 401) { window.location.href = "/login?callbackUrl=/dashboard/settings"; return; }
       const data = await res.json();
@@ -500,7 +510,7 @@ BEHAVIOR:
           <div className="rounded-lg border p-6 space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="font-semibold">Dograh AI Voice Agent</h3>
+                <h3 className="font-semibold">Voice Agent</h3>
                 <p className="text-sm text-muted-foreground mt-1">
                   Add a voice AI agent to your website. Visitors can speak naturally to get answers about your services.
                 </p>
@@ -513,28 +523,44 @@ BEHAVIOR:
 
             {voice.enabled && (
               <div className="space-y-4 pt-4 border-t">
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800">
-                  <p className="font-medium">Setup Instructions</p>
-                  <ol className="mt-2 space-y-1 list-decimal list-inside text-xs">
-                    <li>Deploy Dograh via Docker: <code className="bg-blue-100 px-1 rounded">docker compose -f docker-compose.sip.yaml up -d</code></li>
-                    <li>Create an agent at <code className="bg-blue-100 px-1 rounded">your-dograh-instance.com/workflow</code></li>
-                    <li>Configure the widget in Agent Settings → Add to Website</li>
-                    <li>Paste the widget script URL below</li>
-                  </ol>
-                </div>
+                {voice.provider === "dograh" && (
+                  <div className="space-y-4">
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800">
+                      <p className="font-medium">Setup Instructions</p>
+                      <ol className="mt-2 space-y-1 list-decimal list-inside text-xs">
+                        <li>Deploy Dograh via Docker: <code className="bg-blue-100 px-1 rounded">docker compose -f docker-compose.sip.yaml up -d</code></li>
+                        <li>Create an agent at <code className="bg-blue-100 px-1 rounded">your-dograh-instance.com/workflow</code></li>
+                        <li>Configure the widget in Agent Settings → Add to Website</li>
+                        <li>Paste the widget script URL below</li>
+                      </ol>
+                    </div>
 
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="md:col-span-2">
-                    <label className="text-sm font-medium">Widget Script URL</label>
-                    <input type="url" value={voice.widgetUrl} onChange={(e) => setVoice({ ...voice, widgetUrl: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" placeholder="Paste the URL copied from Dograh Agent Settings" />
-                    <p className="text-xs text-muted-foreground mt-1">Copy the generated website widget URL from Dograh Agent Settings → Add to Website. Do not enter a generic CDN URL.</p>
-                    {!voice.widgetUrl && <p className="text-xs text-amber-600 mt-1">Voice is enabled, but no Dograh widget URL is configured.</p>}
-                    {voice.widgetUrl && !validateDograhWidgetUrl(voice.widgetUrl).valid && (
-                      <p className="text-xs text-destructive mt-1">{validateDograhWidgetUrl(voice.widgetUrl).reason}</p>
-                    )}
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div className="md:col-span-2">
+                        <label className="text-sm font-medium">Dograh Widget Script URL</label>
+                        <input type="url" value={voice.widgetUrl} onChange={(e) => setVoice({ ...voice, widgetUrl: e.target.value })} className="mt-1 w-full rounded-lg border px-3 py-2 text-sm" placeholder="Paste the URL copied from Dograh Agent Settings" />
+                        <p className="text-xs text-muted-foreground mt-1">Copy the generated website widget URL from Dograh Agent Settings → Add to Website. Do not enter a generic CDN URL.</p>
+                        {!voice.widgetUrl && <p className="text-xs text-amber-600 mt-1">Voice is enabled, but no Dograh widget URL is configured.</p>}
+                        {voice.widgetUrl && !validateDograhWidgetUrl(voice.widgetUrl).valid && (
+                          <p className="text-xs text-destructive mt-1">{validateDograhWidgetUrl(voice.widgetUrl).reason}</p>
+                        )}
+                      </div>
+                      <SecretInput label="Agent ID" value={voice.agentId} onChange={(v) => setVoice({ ...voice, agentId: v })} placeholder="Optional — for API management" />
+                    </div>
                   </div>
-                  <SecretInput label="Agent ID" value={voice.agentId} onChange={(v) => setVoice({ ...voice, agentId: v })} placeholder="Optional — for API management" />
-                </div>
+                )}
+
+                {voice.provider === "vapi" && (
+                  <div className="bg-muted border rounded-lg p-4 text-sm text-muted-foreground">
+                    <p className="font-medium text-foreground">Vapi Web SDK</p>
+                    <p className="mt-1 text-xs">
+                      Vapi does not use a widget script URL. Calls run through the bundled{" "}
+                      <code className="bg-muted px-1 rounded">@vapi-ai/web</code> SDK using{" "}
+                      <code className="bg-muted px-1 rounded">NEXT_PUBLIC_VAPI_PUBLIC_KEY</code> from the environment
+                      and the Vapi Assistant ID in the provider card above.
+                    </p>
+                  </div>
+                )}
 
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
