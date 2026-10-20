@@ -25,6 +25,71 @@ export interface VapiConfigValidation {
   reason?: string;
 }
 
+/**
+ * Active voice provider (decision D1).
+ * Persisted as settings.voice.provider; defaults to "dograh" so production
+ * behavior is byte-identical until Vapi is deliberately enabled.
+ */
+export type VoiceProvider = "dograh" | "vapi";
+
+/**
+ * Whitelists the provider value coming from the DB / API.
+ * Anything other than the exact string "vapi" falls back to "dograh" —
+ * an unknown value can never silently enable Vapi.
+ */
+export function normalizeVoiceProvider(value: unknown): VoiceProvider {
+  return value === "vapi" ? "vapi" : "dograh";
+}
+
+/** Public (client-safe) view of the Vapi configuration. */
+export interface PublicVoiceVapiConfig {
+  /** Whitelisted provider, defaults to "dograh". */
+  provider: VoiceProvider;
+  /** Assistant ID served to the browser (IDs are not secrets). */
+  vapiAssistantId: string;
+  /** True only when BOTH public key and assistant ID are present. */
+  vapiConfigured: boolean;
+  /** Human-readable reason when not configured ("" when configured). */
+  vapiConfigError: string;
+}
+
+/**
+ * Builds the public voice-provider view for /api/settings/public.
+ * Never reads or returns VAPI_WEBHOOK_SECRET (server-only).
+ *
+ * Assistant ID precedence: settings.voice.vapiAssistantId → VAPI_ASSISTANT_ID env.
+ * A separate key from voice.agentId is intentional: voice.agentId keeps holding
+ * the Dograh agent ID so Dograh stays a working rollback path.
+ */
+export function resolvePublicVoiceVapiConfig(
+  stored: { provider?: unknown; vapiAssistantId?: unknown }
+): PublicVoiceVapiConfig {
+  const provider = normalizeVoiceProvider(stored.provider);
+  const vapiAssistantId =
+    typeof stored.vapiAssistantId === "string" && stored.vapiAssistantId.trim()
+      ? stored.vapiAssistantId.trim()
+      : process.env[VAPI_ASSISTANT_ID_ENV]?.trim() ?? "";
+  const publicKey = getVapiPublicKey();
+
+  if (!publicKey) {
+    return {
+      provider,
+      vapiAssistantId,
+      vapiConfigured: false,
+      vapiConfigError: "Vapi public key is not configured.",
+    };
+  }
+  if (!vapiAssistantId) {
+    return {
+      provider,
+      vapiAssistantId,
+      vapiConfigured: false,
+      vapiConfigError: "Vapi assistant ID is not configured.",
+    };
+  }
+  return { provider, vapiAssistantId, vapiConfigured: true, vapiConfigError: "" };
+}
+
 /** Reads the browser-safe Vapi public key from the environment. */
 export function getVapiPublicKey(): string {
   return process.env[VAPI_PUBLIC_KEY_ENV]?.trim() ?? "";
@@ -32,8 +97,10 @@ export function getVapiPublicKey(): string {
 
 /**
  * Resolves the assistant ID for client use.
- * Source of truth is settings.voice.agentId (served by /api/settings/public,
- * which merges the server-side VAPI_ASSISTANT_ID env as fallback).
+ * Source of truth is settings.voice.vapiAssistantId (served by
+ * /api/settings/public, which merges the server-side VAPI_ASSISTANT_ID env as
+ * fallback). Kept separate from voice.agentId, which still holds the Dograh
+ * agent ID for rollback.
  */
 export function resolveVapiAssistantId(settingsAssistantId: string | null | undefined): string {
   if (typeof settingsAssistantId !== "string") return "";

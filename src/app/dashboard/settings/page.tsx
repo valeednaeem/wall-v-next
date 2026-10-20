@@ -5,6 +5,7 @@ import { Save, Globe, Search, Eye, EyeOff, Loader2, Upload, X, Image, MapPin, Do
 import Link from "next/link";
 import HtmlEditor from "@/components/editor/html-editor";
 import { validateDograhWidgetUrl } from "@/lib/dograh-widget";
+import { cn } from "@/lib/utils";
 
 interface SiteSettings {
   siteName: string;
@@ -23,6 +24,10 @@ interface SEOSettings {
 
 interface VoiceAgentSettings {
   enabled: boolean;
+  /** Active voice provider. "dograh" (default/rollback) or "vapi". */
+  provider: "dograh" | "vapi";
+  /** Vapi assistant ID (separate from Dograh's agentId, preserved for rollback). */
+  vapiAssistantId: string;
   widgetUrl: string;
   agentId: string;
   position: "bottom-left" | "bottom-right";
@@ -69,6 +74,8 @@ export default function GeneralSettingsPage() {
 
   const [voice, setVoice] = useState<VoiceAgentSettings>({
     enabled: true,
+    provider: "dograh",
+    vapiAssistantId: "",
     widgetUrl: "",
     agentId: "",
     position: "bottom-left",
@@ -422,6 +429,74 @@ BEHAVIOR:
       {/* Voice Agent */}
       {activeTab === "voice" && (
         <div className="space-y-6">
+          {/* Voice Provider selector (Dograh ↔ Vapi) */}
+          <div className="rounded-lg border p-6 space-y-4">
+            <div>
+              <h3 className="font-semibold">Voice Provider</h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                Choose which engine powers the website voice agent. Dograh is the safe rollback; Vapi is the new
+                Web SDK integration. Changing this takes effect on the next page load — no redeploy needed.
+              </p>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              {(["dograh", "vapi"] as const).map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => setVoice({ ...voice, provider: p })}
+                  className={cn(
+                    "rounded-lg border p-4 text-left transition-colors",
+                    voice.provider === p
+                      ? "border-primary bg-primary/5 ring-1 ring-primary/20"
+                      : "border-border hover:bg-muted/50"
+                  )}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium capitalize">{p}</span>
+                    <span
+                      className={cn(
+                        "text-[10px] font-semibold px-2 py-0.5 rounded-full",
+                        p === "dograh"
+                          ? "bg-amber-500/10 text-amber-600"
+                          : "bg-green-500/10 text-green-600"
+                      )}
+                    >
+                      {p === "dograh" ? "ROLLBACK" : "NEW"}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1.5">
+                    {p === "dograh"
+                      ? "Current production behavior. Keeps working as a fallback at any time."
+                      : "Direct Vapi Web SDK. Uses the public key from the environment."}
+                  </p>
+                </button>
+              ))}
+            </div>
+
+            {voice.provider === "vapi" && (
+              <div className="space-y-2 pt-2 border-t">
+                <label className="text-sm font-medium">Vapi Assistant ID</label>
+                <input
+                  type="text"
+                  value={voice.vapiAssistantId}
+                  onChange={(e) => setVoice({ ...voice, vapiAssistantId: e.target.value })}
+                  className="w-full rounded-lg border px-3 py-2 text-sm"
+                  placeholder="asst_xxxxxxxx (from the Vapi dashboard)"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Set <code className="px-1 py-0.5 rounded bg-muted">NEXT_PUBLIC_VAPI_PUBLIC_KEY</code> in the
+                  environment (Vercel + local). Never put a private Vapi key there.
+                  {!voice.vapiAssistantId && (
+                    <span className="block mt-1 text-amber-600">
+                      No assistant ID saved yet — voice will show a configuration error until this is set.
+                    </span>
+                  )}
+                </p>
+              </div>
+            )}
+          </div>
+
           <div className="rounded-lg border p-6 space-y-4">
             <div className="flex items-center justify-between">
               <div>

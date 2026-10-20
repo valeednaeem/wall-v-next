@@ -1,10 +1,13 @@
 import {
   VAPI_PUBLIC_KEY_ENV,
   VAPI_ASSISTANT_ID_ENV,
+  VAPI_WEBHOOK_SECRET_ENV,
   getVapiPublicKey,
   resolveVapiAssistantId,
   isServerVapiConfigured,
   validateVapiConfig,
+  normalizeVoiceProvider,
+  resolvePublicVoiceVapiConfig,
 } from "@/lib/vapi-config";
 
 describe("vapi-config", () => {
@@ -87,6 +90,74 @@ describe("vapi-config", () => {
       const result = validateVapiConfig({});
       expect(result.valid).toBe(false);
       expect(result.reason).toMatch(/not configured/i);
+    });
+  });
+
+  describe("normalizeVoiceProvider (provider flag, D1)", () => {
+    it("defaults every unknown/absent value to dograh so Vapi can never silently enable", () => {
+      expect(normalizeVoiceProvider(undefined)).toBe("dograh");
+      expect(normalizeVoiceProvider(null)).toBe("dograh");
+      expect(normalizeVoiceProvider("")).toBe("dograh");
+      expect(normalizeVoiceProvider("dograh")).toBe("dograh");
+      expect(normalizeVoiceProvider("VAPI")).toBe("dograh"); // case-sensitive
+      expect(normalizeVoiceProvider("vapi ")).toBe("dograh"); // no trim-matching
+      expect(normalizeVoiceProvider(1)).toBe("dograh");
+      expect(normalizeVoiceProvider({})).toBe("dograh");
+    });
+
+    it("accepts only the exact string vapi", () => {
+      expect(normalizeVoiceProvider("vapi")).toBe("vapi");
+    });
+  });
+
+  describe("resolvePublicVoiceVapiConfig (public settings view)", () => {
+    it("returns provider=dograh and unconfigured when nothing is set", () => {
+      const result = resolvePublicVoiceVapiConfig({});
+      expect(result.provider).toBe("dograh");
+      expect(result.vapiConfigured).toBe(false);
+      expect(result.vapiConfigError).toMatch(/public key/i);
+      expect(result.vapiAssistantId).toBe("");
+    });
+
+    it("reports assistant ID missing when only the public key exists", () => {
+      process.env[VAPI_PUBLIC_KEY_ENV] = "pk_test_wallv";
+      const result = resolvePublicVoiceVapiConfig({ provider: "vapi", vapiAssistantId: "" });
+      expect(result.provider).toBe("vapi");
+      expect(result.vapiConfigured).toBe(false);
+      expect(result.vapiConfigError).toMatch(/assistant ID/i);
+    });
+
+    it("uses settings assistant ID and falls back to VAPI_ASSISTANT_ID env", () => {
+      process.env[VAPI_PUBLIC_KEY_ENV] = "pk_test_wallv";
+      process.env[VAPI_ASSISTANT_ID_ENV] = "asst_from_env";
+      // settings value wins over env
+      expect(
+        resolvePublicVoiceVapiConfig({ provider: "vapi", vapiAssistantId: " asst_from_settings " }).vapiAssistantId
+      ).toBe("asst_from_settings");
+      // blank settings value falls back to env
+      expect(
+        resolvePublicVoiceVapiConfig({ provider: "vapi", vapiAssistantId: "   " }).vapiAssistantId
+      ).toBe("asst_from_env");
+      delete process.env[VAPI_ASSISTANT_ID_ENV];
+    });
+
+    it("reports fully configured when both public key and assistant ID are present", () => {
+      process.env[VAPI_PUBLIC_KEY_ENV] = "pk_test_wallv";
+      const result = resolvePublicVoiceVapiConfig({ provider: "vapi", vapiAssistantId: "asst_ok" });
+      expect(result).toEqual({
+        provider: "vapi",
+        vapiAssistantId: "asst_ok",
+        vapiConfigured: true,
+        vapiConfigError: "",
+      });
+    });
+
+    it("never leaks the private webhook secret into the public view", () => {
+      process.env[VAPI_PUBLIC_KEY_ENV] = "pk_test_wallv";
+      process.env[VAPI_WEBHOOK_SECRET_ENV] = "super-secret-webhook-value";
+      const result = resolvePublicVoiceVapiConfig({ provider: "vapi", vapiAssistantId: "asst_ok" });
+      expect(JSON.stringify(result)).not.toContain("super-secret-webhook-value");
+      delete process.env[VAPI_WEBHOOK_SECRET_ENV];
     });
   });
 });

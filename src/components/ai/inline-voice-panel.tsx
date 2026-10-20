@@ -2,6 +2,7 @@
 
 import { useId, useCallback, useEffect, useRef, useState } from "react";
 import { useDograh } from "./voice-agent";
+import { useVapi, type VapiVariableValues } from "./use-vapi";
 import { Mic, PhoneOff, Loader2, Phone, Volume2, AlertCircle, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -23,7 +24,11 @@ export function InlineVoicePanel({
   const systemPromptRef = useRef("");
   systemPromptRef.current = systemPrompt;
 
-  // Fetch system prompt from DB
+  // Provider flag (D1) — same source as the floating widget.
+  const [provider, setProvider] = useState<"dograh" | "vapi">("dograh");
+  const [vapiAssistantId, setVapiAssistantId] = useState("");
+
+  // Fetch system prompt + provider from DB
   useEffect(() => {
     fetch("/api/settings/public")
       .then((r) => r.json())
@@ -31,36 +36,60 @@ export function InlineVoicePanel({
         if (d?.data?.voice?.systemPrompt) {
           setSystemPrompt(d.data.voice.systemPrompt);
         }
+        if (d?.data?.voice?.provider === "vapi") setProvider("vapi");
+        if (d?.data?.voice?.vapiAssistantId) setVapiAssistantId(d.data.voice.vapiAssistantId);
       })
       .catch(() => {});
   }, []);
 
   const handleCallDisconnected = useCallback(
     () => {
-      console.log("[Inline Voice] Call ended; authenticated Dograh webhook will persist the conversation.");
+      console.log("[Inline Voice] Call ended by the active voice provider.");
     },
     []
   );
+
+  // Provider branch: only the active provider's hook runs (rollback-safe).
+  const useVapiMode = provider === "vapi";
+
+  const dograhVoice = useDograh({
+    mode: "inline",
+    inlineContainerId: containerId,
+    enabled: !useVapiMode,
+    onCallDisconnected: handleCallDisconnected,
+  });
+
+  const vapiVoice = useVapi({
+    enabled: useVapiMode,
+    assistantId: vapiAssistantId,
+    onCallDisconnected: handleCallDisconnected,
+  });
+
+  const activeVoice = useVapiMode ? vapiVoice : dograhVoice;
 
   const {
     status,
     scriptLoaded,
     scriptError,
     containerRef,
-    startCall,
     endCall,
     isLive,
-    getStatusLabel,
     getStatusColor,
     duration,
-  } = useDograh({
-    mode: "inline",
-    inlineContainerId: containerId,
-    onCallDisconnected: handleCallDisconnected,
-  });
+  } = activeVoice;
 
   // Pass system prompt when call starts
   const handleStartCall = useCallback(() => {
+    if (useVapiMode) {
+      const context: VapiVariableValues = {};
+      if (systemPromptRef.current) {
+        context.system_prompt = systemPromptRef.current;
+        context.instructions = systemPromptRef.current;
+      }
+      void vapiVoice.startCall(context);
+      return;
+    }
+
     if (window.DograhWidget && systemPromptRef.current) {
       window.DograhWidget.setContext({
         system_prompt: systemPromptRef.current,
@@ -68,8 +97,8 @@ export function InlineVoicePanel({
       });
       console.log("[Inline Voice] System prompt set via setContext()");
     }
-    startCall();
-  }, [startCall]);
+    dograhVoice.startCall();
+  }, [useVapiMode, vapiVoice, dograhVoice]);
 
   const formatDuration = (seconds: number) => {
     const m = Math.floor(seconds / 60);
@@ -154,9 +183,11 @@ export function InlineVoicePanel({
             </div>
           )}
 
-          {status === "failed" && (
-            <p className="text-xs text-destructive text-center max-w-xs">
-              Connection failed. Please check your microphone permissions and try again.
+          {(status === "failed" || status === "error") && (
+            <p className="text-xs text-destructive text-center max-w-xs" role="status">
+              {status === "error" && useVapiMode && vapiVoice.error
+                ? vapiVoice.error
+                : "Connection failed. Please check your microphone permissions and try again."}
             </p>
           )}
 

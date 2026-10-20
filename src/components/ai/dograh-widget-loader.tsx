@@ -11,6 +11,7 @@ export function DograhWidgetLoader() {
     async function loadConfig() {
       let url = process.env.NEXT_PUBLIC_DOGRAH_WIDGET_URL;
       let isEnabled = true;
+      let isVapiProvider = false;
 
       try {
         const res = await fetch("/api/settings/public");
@@ -19,6 +20,8 @@ export function DograhWidgetLoader() {
           const voice = data?.data?.voice;
           if (voice) {
             isEnabled = voice.enabled ?? true;
+            // When Vapi is the active provider, do NOT inject the Dograh script.
+            isVapiProvider = voice.provider === "vapi";
             if (voice.widgetUrl) {
               url = voice.widgetUrl;
             }
@@ -26,6 +29,13 @@ export function DograhWidgetLoader() {
         }
       } catch {
         // Fallback to env var
+      }
+
+      if (isVapiProvider) {
+        console.log("[Dograh] Voice provider is vapi — skipping Dograh widget script injection");
+        setEnabled(false);
+        setWidgetUrl(null);
+        return;
       }
 
       const isProduction = window.location.protocol === "https:" && !["localhost", "127.0.0.1"].includes(window.location.hostname);

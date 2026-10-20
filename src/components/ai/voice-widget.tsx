@@ -4,11 +4,16 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useDograh } from "./voice-agent";
+import { useVapi, type VapiVariableValues } from "./use-vapi";
 import { Mic, PhoneOff, Loader2, X, Volume2, User, Mail, Phone, ExternalLink, CreditCard, CheckCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface VoiceSettings {
   enabled: boolean;
+  /** Active voice provider: "dograh" (default/rollback) or "vapi". */
+  provider: "dograh" | "vapi";
+  /** Vapi assistant ID (separate key; agentId below still holds the Dograh ID). */
+  vapiAssistantId: string;
   widgetUrl: string;
   agentId: string;
   position: "bottom-left" | "bottom-right";
@@ -36,6 +41,8 @@ const SUGGESTIONS = [
 
 const DEFAULT_VOICE_SETTINGS: VoiceSettings = {
   enabled: true,
+  provider: "dograh",
+  vapiAssistantId: "",
   widgetUrl: "",
   agentId: "",
   position: "bottom-left",
@@ -67,6 +74,8 @@ export function FloatingVoiceWidget({ position: positionProp }: FloatingVoiceWid
         if (d?.data?.voice) {
           setVoiceSettings({
             enabled: d.data.voice.enabled ?? true,
+            provider: d.data.voice.provider === "vapi" ? "vapi" : "dograh",
+            vapiAssistantId: d.data.voice.vapiAssistantId || "",
             widgetUrl: d.data.voice.widgetUrl || "",
             agentId: d.data.voice.agentId || "",
             position: d.data.voice.position || "bottom-left",
@@ -81,25 +90,37 @@ export function FloatingVoiceWidget({ position: positionProp }: FloatingVoiceWid
   }, []);
 
   const handleCallEnd = useCallback(() => {
-    console.log("[Voice Widget] Call ended; authenticated Dograh webhook will persist the conversation.");
+    console.log("[Voice Widget] Call ended by the active voice provider.");
   }, []);
+
+  // Provider flag (D1): only the ACTIVE provider's hook is enabled, so exactly
+  // one voice runtime is live at a time. Dograh code stays intact for rollback.
+  const useVapiMode = voiceSettings.provider === "vapi";
+
+  const dograhVoice = useDograh({
+    enabled: ownsVoiceRuntime && !useVapiMode && (!settingsLoaded || voiceSettings.enabled),
+    mode: "headless",
+    widgetScriptUrl: voiceSettings.widgetUrl || undefined,
+    onCallDisconnected: handleCallEnd,
+  });
+
+  const vapiVoice = useVapi({
+    enabled: ownsVoiceRuntime && useVapiMode && (!settingsLoaded || voiceSettings.enabled),
+    assistantId: voiceSettings.vapiAssistantId,
+    onCallDisconnected: handleCallEnd,
+  });
+
+  const activeVoice = useVapiMode ? vapiVoice : dograhVoice;
 
   const {
     status,
     scriptLoaded,
     scriptError,
     containerRef,
-    startCall,
     endCall,
     isLive,
-    getStatusLabel,
     duration,
-  } = useDograh({
-    enabled: ownsVoiceRuntime && (!settingsLoaded || voiceSettings.enabled),
-    mode: "headless",
-    widgetScriptUrl: voiceSettings.widgetUrl || undefined,
-    onCallDisconnected: handleCallEnd,
-  });
+  } = activeVoice;
 
   useEffect(() => {
     if (!dismissed && voiceSettings.enabled) {
@@ -134,6 +155,25 @@ export function FloatingVoiceWidget({ position: positionProp }: FloatingVoiceWid
   }, []);
 
   const handleSubmitDetails = useCallback(() => {
+    if (useVapiMode) {
+      // Vapi path: context is passed as call-start variableValues.
+      const context: VapiVariableValues = {
+        client_name: clientDetails.name,
+        client_email: clientDetails.email,
+        client_phone: clientDetails.phone,
+        selected_option: selectedSuggestion,
+      };
+      const prompt = voiceSettingsRef.current.systemPrompt;
+      if (prompt) {
+        context.system_prompt = prompt;
+        context.instructions = prompt;
+      }
+      setShowForm(false);
+      void vapiVoice.startCall(context);
+      return;
+    }
+
+    // Dograh path (rollback/reference — unchanged).
     if (window.DograhWidget) {
       // Pass client details as context
       window.DograhWidget.setContext({
@@ -155,8 +195,8 @@ export function FloatingVoiceWidget({ position: positionProp }: FloatingVoiceWid
       console.log("[Voice Widget] Context + system prompt set via setContext()");
     }
     setShowForm(false);
-    startCall();
-  }, [startCall, clientDetails, selectedSuggestion]);
+    dograhVoice.startCall();
+  }, [useVapiMode, vapiVoice, dograhVoice, clientDetails, selectedSuggestion]);
 
   // Don't render if voice is disabled
   if (!settingsLoaded || !voiceSettings.enabled) return null;

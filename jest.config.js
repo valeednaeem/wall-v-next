@@ -7,8 +7,14 @@ module.exports = {
     "^.+\\.tsx?$": [
       "ts-jest",
       {
-        tsconfig: "tsconfig.json",
-        jsx: "react-jsx",
+        // Object form: ts-jest reads <rootDir>/tsconfig.json and merges these
+        // compilerOptions on top. The `jsx` override is REQUIRED for .tsx tests
+        // because the project tsconfig uses jsx: "preserve" (Next.js default),
+        // which would emit raw JSX that Jest cannot parse. The old top-level
+        // `jsx` option was ignored by ts-jest 29.
+        tsconfig: {
+          jsx: "react-jsx",
+        },
       },
     ],
   },
