@@ -49,7 +49,6 @@ const AgentTeamSchema = new Schema<IAgentTeam>(
   { timestamps: true }
 );
 
-AgentTeamSchema.index({ slug: 1 });
 AgentTeamSchema.index({ status: 1 });
 AgentTeamSchema.index({ projectId: 1 });
 AgentTeamSchema.index({ "members.agent": 1 });

@@ -2,8 +2,14 @@
  * Seed default service prices into the database.
  * Run with: npx tsx src/scripts/seed-prices.ts
  */
+import dotenv from "dotenv";
+import path from "path";
+import dns from "dns";
 import { connectToDatabase } from "@/lib/mongodb";
 import ServicePrice from "@/models/service-price";
+
+dotenv.config({ path: path.resolve(process.cwd(), ".env.local") });
+dns.setServers(["8.8.8.8", "8.8.4.4"]);
 
 const DEFAULT_PRICES = [
   // ─── DEVELOPMENT ────────────────────────────────────────────────────────
@@ -324,6 +330,7 @@ const DEFAULT_PRICES = [
     category: "consulting",
     description: "Expert technical consulting for your digital projects",
     type: "hourly" as const,
+    basePrice: 175,
     hourlyRate: 175,
     features: ["Architecture review", "Technology selection", "Performance audit", "Security review", "Team mentoring"],
     technology: ["Various"],
@@ -340,6 +347,7 @@ const DEFAULT_PRICES = [
     category: "consulting",
     description: "Cloud infrastructure setup, CI/CD, and DevOps consulting",
     type: "hourly" as const,
+    basePrice: 150,
     hourlyRate: 150,
     features: ["AWS/GCP/Azure setup", "CI/CD pipelines", "Docker/Kubernetes", "Monitoring & alerting", "Security audit"],
     technology: ["AWS", "GCP", "Docker", "Kubernetes", "Terraform"],

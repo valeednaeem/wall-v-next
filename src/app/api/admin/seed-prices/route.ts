@@ -347,8 +347,11 @@ export async function POST() {
     } catch {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    if (!user || !["super-admin", "admin"].includes(user.role)) {
-      return NextResponse.json({ error: "Unauthorized", details: user ? `role: ${user.role}` : "no user" }, { status: 401 });
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (!["super-admin", "admin"].includes(user.role)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     await connectToDatabase();

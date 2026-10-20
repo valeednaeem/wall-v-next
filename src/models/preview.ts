@@ -43,7 +43,7 @@ const PreviewSchema = new Schema<IPreview>(
       enum: ["active", "expired", "revoked", "paid"],
       default: "active",
     },
-    expiresAt: { type: Date, required: true, index: true },
+    expiresAt: { type: Date, required: true },
     lastAccessedAt: Date,
     accessCount: { type: Number, default: 0 },
     maxAccesses: { type: Number, default: 10 },

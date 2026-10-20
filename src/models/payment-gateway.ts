@@ -79,7 +79,6 @@ const PaymentGatewaySchema = new Schema<IPaymentGateway>(
   { timestamps: true }
 );
 
-PaymentGatewaySchema.index({ slug: 1 });
 PaymentGatewaySchema.index({ enabled: 1 });
 
 export default mongoose.models.PaymentGateway ||

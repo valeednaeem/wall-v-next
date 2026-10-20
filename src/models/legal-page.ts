@@ -71,7 +71,6 @@ const LegalPageSchema = new Schema<ILegalPage>(
   { timestamps: true }
 );
 
-LegalPageSchema.index({ slug: 1 });
 LegalPageSchema.index({ type: 1 });
 LegalPageSchema.index({ status: 1 });
 LegalPageSchema.index({ isActive: 1 });

@@ -160,6 +160,11 @@ isMasterAgent: Boolean
 - Production: `nextjs.jxqvyor.mongodb.net/wallvnext`
 - Connection singleton in `src/lib/mongodb.ts`
 - 43 Mongoose models in `src/models/`
+- Local: `mongodb://localhost:27017/wallvnext`
+- **Env precedence warning:** `.env.production.local` (production Atlas URI) wins for
+  `npm run build` / `npm run start`. Before local production-server runs or tests, export
+  `MONGODB_URI=mongodb://localhost:27017/wallvnext`, otherwise writes go to the
+  production database (`connectToDatabase` also forces `dbName: "wallvnext"`).
 
 ## Verification
 
@@ -167,9 +172,12 @@ After every change, run:
 ```bash
 npm run lint
 npx tsc --noEmit
+npx jest --silent
 ```
 
-Both must pass before code is considered complete.
+All three must pass before code is considered complete.
+CI (`.github/workflows/ci.yml`) runs typecheck, lint, jest and a production build
+on every push/PR to `master` (MongoDB service container included).
 
 ## OpenCode Configuration
 

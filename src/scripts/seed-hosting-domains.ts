@@ -1,8 +1,14 @@
 import mongoose from "mongoose";
+import dotenv from "dotenv";
+import path from "path";
+import dns from "dns";
 import DomainTLD from "../models/domain-tld";
 import HostingPlan from "../models/hosting-plan";
 
-const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/wall-v";
+dotenv.config({ path: path.resolve(process.cwd(), ".env.local") });
+dns.setServers(["8.8.8.8", "8.8.4.4"]);
+
+const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/wallvnext";
 
 const MARGIN_GENERIC = 15;
 const MARGIN_CCTLD = 0;
@@ -38,7 +44,6 @@ const domainTLDs = [
   { tld: "site", registrationPrice: 6.99, renewalPrice: 33.00, category: "new", description: "Website projects", isPromo: true, promoDuration: 1 },
   { tld: "tech", registrationPrice: 10.99, renewalPrice: 56.50, category: "new", description: "Technology companies", isPromo: true, promoDuration: 1 },
   { tld: "store", registrationPrice: 10.99, renewalPrice: 49.00, category: "new", description: "E-commerce stores", isPromo: true, promoDuration: 1 },
-  { tld: "online", registrationPrice: 9.99, renewalPrice: 33.00, category: "new", description: "Online businesses", isPromo: true, promoDuration: 1 },
   { tld: "space", registrationPrice: 5.99, renewalPrice: 30.00, category: "new", description: "Creative portfolios", isPromo: true, promoDuration: 1 },
   { tld: "website", registrationPrice: 5.99, renewalPrice: 25.00, category: "new", description: "Websites", isPromo: true, promoDuration: 1 },
   { tld: "mobi", registrationPrice: 5.99, renewalPrice: 47.00, category: "new", description: "Mobile websites", isPromo: true, promoDuration: 1 },
@@ -363,14 +368,19 @@ const hostingPlans = [
 
 async function seed() {
   try {
-    await mongoose.connect(MONGODB_URI);
+    await mongoose.connect(MONGODB_URI, { dbName: "wallvnext" });
     console.log("Connected to MongoDB");
 
     // Seed Domain TLDs
     await DomainTLD.deleteMany({});
     console.log("Cleared existing domain TLDs");
 
-    const tldDocs = domainTLDs.map((tld, index) => {
+    const tldDocs = domainTLDs
+      .filter(
+        (tld, index, arr) =>
+          arr.findIndex((t) => t.tld === tld.tld) === index
+      )
+      .map((tld, index) => {
       const margin = isCCTLD(tld.tld) ? MARGIN_CCTLD : MARGIN_GENERIC;
       return {
         tld: tld.tld,

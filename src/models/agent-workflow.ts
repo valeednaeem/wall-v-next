@@ -81,7 +81,6 @@ const AgentWorkflowSchema = new Schema<IAgentWorkflow>(
   { timestamps: true }
 );
 
-AgentWorkflowSchema.index({ slug: 1 });
 AgentWorkflowSchema.index({ status: 1 });
 AgentWorkflowSchema.index({ createdBy: 1 });
 

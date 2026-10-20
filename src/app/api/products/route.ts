@@ -80,8 +80,11 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const user = await getAuthUser();
-    if (!user || !["super-admin", "admin", "manager", "staff"].includes(user.role)) {
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (!["super-admin", "admin", "manager", "staff"].includes(user.role)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     await connectToDatabase();

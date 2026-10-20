@@ -59,7 +59,6 @@ const RefundSchema = new Schema<IRefund>(
   { timestamps: true }
 );
 
-RefundSchema.index({ refundNumber: 1 });
 RefundSchema.index({ payment: 1 });
 RefundSchema.index({ status: 1 });
 RefundSchema.index({ createdAt: -1 });

@@ -50,6 +50,5 @@ const PmCapacitySchema = new Schema<IPmCapacity>(
 );
 
 PmCapacitySchema.index({ resource: 1, date: 1 }, { unique: true });
-PmCapacitySchema.index({ status: 1 });
 
 export default (mongoose.models.PmCapacity as Model<IPmCapacity>) || mongoose.model<IPmCapacity>("PmCapacity", PmCapacitySchema);

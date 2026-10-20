@@ -43,7 +43,6 @@ const CookieDefinitionSchema = new Schema<ICookieDefinition>(
   { timestamps: true }
 );
 
-CookieDefinitionSchema.index({ slug: 1 });
 CookieDefinitionSchema.index({ category: 1 });
 CookieDefinitionSchema.index({ isActive: 1 });
 

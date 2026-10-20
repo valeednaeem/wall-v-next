@@ -45,7 +45,6 @@ const RefundRuleSchema = new Schema<IRefundRule>(
   { timestamps: true }
 );
 
-RefundRuleSchema.index({ slug: 1 });
 RefundRuleSchema.index({ serviceType: 1 });
 RefundRuleSchema.index({ isActive: 1 });
 

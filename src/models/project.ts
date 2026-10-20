@@ -266,7 +266,6 @@ const ProjectSchema = new Schema<IProject>(
   { timestamps: true }
 );
 
-ProjectSchema.index({ slug: 1 });
 ProjectSchema.index({ client: 1 });
 ProjectSchema.index({ status: 1 });
 ProjectSchema.index({ lifecycleStatus: 1 });

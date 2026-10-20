@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import { connectToDatabase } from "@/lib/mongodb";
 import BlogPost from "@/models/blog-post";
 import { generateSEO, generateArticleSchema, resolveSocialImage } from "@/lib/seo";
@@ -10,23 +11,19 @@ interface PageParams {
 }
 
 async function getBlogPost(slug: string) {
-  try {
-    await connectToDatabase();
-    const post = await BlogPost.findOne({ slug, status: "published" })
-      .populate("author", "name avatar")
-      .populate("category", "name slug")
-      .lean();
-    return post;
-  } catch {
-    return null;
-  }
+  await connectToDatabase();
+  const post = await BlogPost.findOne({ slug, status: "published" })
+    .populate("author", "name avatar")
+    .populate("category", "name slug")
+    .lean();
+  return post;
 }
 
 export async function generateMetadata({ params }: PageParams): Promise<Metadata> {
   const { slug } = await params;
   const post = await getBlogPost(slug);
   if (!post) {
-    return { title: "Post Not Found", robots: { index: false } };
+    notFound();
   }
   return generateSEO({
     title: post.seo?.metaTitle || post.title,
@@ -42,6 +39,9 @@ export async function generateMetadata({ params }: PageParams): Promise<Metadata
 export default async function BlogPostPage({ params }: PageParams) {
   const { slug } = await params;
   const post = await getBlogPost(slug);
+  if (!post) {
+    notFound();
+  }
 
   const jsonLd = post
     ? generateArticleSchema({

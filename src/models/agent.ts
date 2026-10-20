@@ -209,7 +209,6 @@ const AgentSchema = new Schema<IAgent>(
   { timestamps: true }
 );
 
-AgentSchema.index({ slug: 1 });
 AgentSchema.index({ status: 1 });
 AgentSchema.index({ role: 1 });
 AgentSchema.index({ isClientFacing: 1 });

@@ -89,7 +89,6 @@ const AgentToolSchema = new Schema<IAgentTool>(
   { timestamps: true }
 );
 
-AgentToolSchema.index({ slug: 1 });
 AgentToolSchema.index({ category: 1 });
 AgentToolSchema.index({ status: 1 });
 AgentToolSchema.index({ createdBy: 1 });

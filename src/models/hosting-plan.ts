@@ -77,7 +77,6 @@ const hostingPlanSchema = new Schema<IHostingPlan>(
   { timestamps: true }
 );
 
-hostingPlanSchema.index({ slug: 1 });
 hostingPlanSchema.index({ isActive: 1 });
 hostingPlanSchema.index({ category: 1 });
 hostingPlanSchema.index({ provider: 1 });

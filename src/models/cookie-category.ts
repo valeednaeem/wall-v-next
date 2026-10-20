@@ -25,7 +25,6 @@ const CookieCategorySchema = new Schema<ICookieCategory>(
   { timestamps: true }
 );
 
-CookieCategorySchema.index({ slug: 1 });
 CookieCategorySchema.index({ sortOrder: 1 });
 
 export default mongoose.models.CookieCategory ||

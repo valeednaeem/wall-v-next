@@ -122,7 +122,6 @@ const ContentCampaignSchema = new Schema<IContentCampaign>(
   { timestamps: true }
 );
 
-ContentCampaignSchema.index({ slug: 1 });
 ContentCampaignSchema.index({ status: 1 });
 ContentCampaignSchema.index({ "dateRange.start": 1 });
 

@@ -70,7 +70,6 @@ const ServicePriceSchema = new Schema<IServicePrice>(
   { timestamps: true }
 );
 
-ServicePriceSchema.index({ serviceKey: 1 });
 ServicePriceSchema.index({ category: 1 });
 ServicePriceSchema.index({ active: 1 });
 

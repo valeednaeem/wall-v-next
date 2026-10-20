@@ -56,7 +56,6 @@ const GoogleServiceConfigSchema = new Schema<IGoogleServiceConfig>(
   { timestamps: true }
 );
 
-GoogleServiceConfigSchema.index({ serviceId: 1 });
 GoogleServiceConfigSchema.index({ enabled: 1 });
 
 export default mongoose.models.GoogleServiceConfig ||

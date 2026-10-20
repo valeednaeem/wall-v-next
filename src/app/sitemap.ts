@@ -25,6 +25,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.9,
     },
     {
+      url: `${baseUrl}/hosting`,
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 0.9,
+    },
+    {
       url: `${baseUrl}/hosting-domain`,
       lastModified: new Date(),
       changeFrequency: "weekly",
@@ -151,7 +157,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     const [posts, products, legalPages, aiTools] = await Promise.all([
       Post.find({ status: "published" }).select("slug updatedAt").limit(1000).lean(),
-      Product.find({ isActive: true }).select("slug updatedAt").limit(1000).lean(),
+      Product.find({ status: "published" }).select("slug updatedAt").limit(1000).lean(),
       LegalPage.find({ isActive: true, status: "published" }).select("slug updatedAt").lean(),
       AITool.find({ status: "published" }).select("slug updatedAt").limit(1000).lean(),
     ]);

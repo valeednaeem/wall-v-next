@@ -74,7 +74,6 @@ const DomainSchema = new Schema<IDomain>(
 );
 
 DomainSchema.index({ user: 1 });
-DomainSchema.index({ domain: 1 });
 DomainSchema.index({ status: 1 });
 
 export default mongoose.models.Domain ||

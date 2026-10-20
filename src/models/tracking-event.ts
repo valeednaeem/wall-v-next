@@ -61,7 +61,6 @@ const TrackingEventSchema = new Schema<ITrackingEvent>(
   { timestamps: true }
 );
 
-TrackingEventSchema.index({ eventName: 1 });
 TrackingEventSchema.index({ isSystem: 1 });
 TrackingEventSchema.index({ isActive: 1 });
 

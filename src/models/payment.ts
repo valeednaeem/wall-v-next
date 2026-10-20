@@ -138,7 +138,7 @@ const PaymentSchema = new Schema<IPayment>(
       interval: String,
     },
     metadata: { type: Schema.Types.Mixed },
-    idempotencyKey: { type: String, sparse: true },
+    idempotencyKey: { type: String },
     processedAt: Date,
     completedAt: Date,
     failedAt: Date,
@@ -149,10 +149,6 @@ const PaymentSchema = new Schema<IPayment>(
   { timestamps: true }
 );
 
-PaymentSchema.index({ paymentNumber: 1 });
-PaymentSchema.index({ internalId: 1 });
-PaymentSchema.index({ gatewayTransactionId: 1 });
-PaymentSchema.index({ gatewayOrderId: 1 });
 PaymentSchema.index({ idempotencyKey: 1 }, { unique: true, sparse: true });
 PaymentSchema.index({ customer: 1 });
 PaymentSchema.index({ invoice: 1 });

@@ -61,7 +61,6 @@ const SupportTicketSchema = new Schema<ISupportTicket>(
   { timestamps: true }
 );
 
-SupportTicketSchema.index({ ticketNumber: 1 });
 SupportTicketSchema.index({ user: 1 });
 SupportTicketSchema.index({ status: 1 });
 

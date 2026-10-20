@@ -47,7 +47,6 @@ const domainTLDSchema = new Schema<IDomainTLD>(
   { timestamps: true }
 );
 
-domainTLDSchema.index({ tld: 1 });
 domainTLDSchema.index({ isActive: 1 });
 domainTLDSchema.index({ category: 1 });
 

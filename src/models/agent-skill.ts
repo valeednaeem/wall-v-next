@@ -90,7 +90,6 @@ const AgentSkillSchema = new Schema<IAgentSkill>(
   { timestamps: true }
 );
 
-AgentSkillSchema.index({ slug: 1 });
 AgentSkillSchema.index({ category: 1 });
 AgentSkillSchema.index({ status: 1 });
 

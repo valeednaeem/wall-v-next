@@ -95,7 +95,6 @@ const InvoiceSchema = new Schema<IInvoice>(
   { timestamps: true }
 );
 
-InvoiceSchema.index({ invoiceNumber: 1 });
 InvoiceSchema.index({ client: 1 });
 InvoiceSchema.index({ project: 1 });
 InvoiceSchema.index({ status: 1 });

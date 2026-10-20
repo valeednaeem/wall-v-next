@@ -77,7 +77,6 @@ const QuoteSchema = new Schema<IQuote>(
   { timestamps: true }
 );
 
-QuoteSchema.index({ reference: 1 });
 QuoteSchema.index({ client: 1 });
 QuoteSchema.index({ project: 1 });
 QuoteSchema.index({ status: 1 });

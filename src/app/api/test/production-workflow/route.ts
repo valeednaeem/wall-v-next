@@ -108,8 +108,11 @@ const TEST_SCENARIOS: Record<string, ProductionRequirements> = {
 
 export async function GET(request: Request) {
   const user = await getAuthUser();
-  if (!user || !["super-admin", "admin"].includes(user.role)) {
+  if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if (!["super-admin", "admin"].includes(user.role)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const url = new URL(request.url);

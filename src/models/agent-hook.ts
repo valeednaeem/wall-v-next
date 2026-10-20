@@ -105,7 +105,6 @@ const AgentHookSchema = new Schema<IAgentHook>(
   { timestamps: true }
 );
 
-AgentHookSchema.index({ slug: 1 });
 AgentHookSchema.index({ agent: 1 });
 AgentHookSchema.index({ type: 1 });
 AgentHookSchema.index({ status: 1 });

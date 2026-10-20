@@ -37,7 +37,6 @@ const ProductCategorySchema = new Schema<IProductCategory>(
   { timestamps: true }
 );
 
-ProductCategorySchema.index({ slug: 1 });
 ProductCategorySchema.index({ parent: 1 });
 
 export default mongoose.models.ProductCategory ||
