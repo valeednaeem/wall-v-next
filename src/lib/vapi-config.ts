@@ -90,9 +90,16 @@ export function resolvePublicVoiceVapiConfig(
   return { provider, vapiAssistantId, vapiConfigured: true, vapiConfigError: "" };
 }
 
-/** Reads the browser-safe Vapi public key from the environment. */
+/**
+ * Reads the browser-safe Vapi public key from the environment.
+ *
+ * NOTE: this reads the literal `process.env.NEXT_PUBLIC_VAPI_PUBLIC_KEY`
+ * (not `process.env[VAPI_PUBLIC_KEY_ENV]`) so the Next.js build can inline
+ * the value into the browser bundle. Dynamic/computed access is only
+ * resolvable at runtime in Node — in the browser it is always undefined.
+ */
 export function getVapiPublicKey(): string {
-  return process.env[VAPI_PUBLIC_KEY_ENV]?.trim() ?? "";
+  return process.env.NEXT_PUBLIC_VAPI_PUBLIC_KEY?.trim() ?? "";
 }
 
 /**
