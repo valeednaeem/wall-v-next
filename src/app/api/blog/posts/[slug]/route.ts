@@ -1,0 +1,154 @@
+import { NextResponse } from "next/server";
+import { connectToDatabase } from "@/lib/mongodb";
+import BlogPost from "@/models/blog-post";
+import BlogTag from "@/models/blog-tag";
+import { getAuthUser } from "@/lib/auth";
+import { pickFields } from "@/lib/pick-fields";
+import { enqueuePublication, cancelOutstandingJobs } from "@/lib/social-publisher/enqueue";
+import { blogPostPayload } from "@/lib/social-publisher/payloads";
+import { makeRevision } from "@/lib/social-publisher/idempotency";
+
+const BLOG_POST_FIELDS = ["title", "content", "excerpt", "featuredImage", "category", "tags", "status", "isFeatured", "seo", "social"];
+
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ slug: string }> }
+) {
+  try {
+    await connectToDatabase();
+    const { slug } = await params;
+    const { searchParams } = new URL(request.url);
+    const allStatuses = searchParams.get("allStatuses") === "true";
+
+    const query: Record<string, unknown> = { slug };
+    if (!allStatuses) query.status = "published";
+
+    const post = await BlogPost.findOne(query)
+      .populate("author", "name avatar")
+      .populate("category", "name slug")
+      .populate("tags", "name slug")
+      .populate("relatedPosts", "title slug featuredImage excerpt")
+      .lean();
+
+    if (!post) {
+      return NextResponse.json({ error: "Post not found" }, { status: 404 });
+    }
+
+    if (!allStatuses) {
+      await BlogPost.findByIdAndUpdate(post._id, { $inc: { viewCount: 1 } });
+    }
+
+    return NextResponse.json({ success: true, data: post });
+  } catch (error) {
+    console.error("Blog post GET error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
+export async function PUT(
+  request: Request,
+  { params }: { params: Promise<{ slug: string }> }
+) {
+  try {
+    const user = await getAuthUser();
+    if (!user || !["super-admin", "admin", "manager"].includes(user.role)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    await connectToDatabase();
+    const { slug } = await params;
+    const body = await request.json();
+    const postData = pickFields(body, BLOG_POST_FIELDS);
+
+    if (body.content) {
+      postData.readTime = Math.ceil(body.content.split(/\s+/).filter(Boolean).length / 200);
+    }
+
+    if (body.category === "" || body.category === null || body.category === undefined) {
+      postData.category = undefined;
+    }
+
+    if (body.tags && Array.isArray(body.tags)) {
+      const tagObjIds: string[] = [];
+      for (const tagName of body.tags) {
+        if (!tagName || typeof tagName !== "string") continue;
+        const tagSlug = tagName.toLowerCase().replace(/[^\w\s-]/g, "").replace(/\s+/g, "-").trim();
+        if (!tagSlug) continue;
+        let tagDoc = await BlogTag.findOne({ slug: tagSlug });
+        if (!tagDoc) {
+          tagDoc = await BlogTag.create({ name: tagName.trim(), slug: tagSlug });
+        }
+        tagObjIds.push(tagDoc._id.toString());
+      }
+      postData.tags = tagObjIds;
+    }
+
+    const before = await BlogPost.findOne({ slug }).lean();
+    if (!before) {
+      return NextResponse.json({ error: "Post not found" }, { status: 404 });
+    }
+
+    if (body.status === "published" && before.status !== "published") {
+      postData.publishedAt = new Date();
+    }
+
+    const post = await BlogPost.findOneAndUpdate(
+      { slug },
+      { $set: postData },
+      { new: true }
+    );
+    if (!post) {
+      return NextResponse.json({ error: "Post not found" }, { status: 404 });
+    }
+
+    const wasPublished = before.status === "published";
+    const isPublished = post.status === "published";
+    const beforePayload = blogPostPayload(before);
+    const afterPayload = blogPostPayload(post);
+
+    if (isPublished && (!wasPublished || makeRevision(beforePayload) !== makeRevision(afterPayload))) {
+      await enqueuePublication({
+        type: wasPublished ? "updated" : "published",
+        contentType: "blog",
+        contentId: post._id.toString(),
+        payload: afterPayload,
+        actorId: user.userId,
+      });
+    } else if (wasPublished && !isPublished) {
+      await cancelOutstandingJobs("blog", post._id.toString());
+    }
+
+    return NextResponse.json({ success: true, data: post });
+  } catch (error) {
+    console.error("Blog post PUT error:", error);
+    const message = error instanceof Error ? error.message : "Unknown error";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ slug: string }> }
+) {
+  try {
+    const user = await getAuthUser();
+    if (!user || !["super-admin", "admin", "manager"].includes(user.role)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    await connectToDatabase();
+    const { slug } = await params;
+
+    const post = await BlogPost.findOneAndDelete({ slug });
+    if (!post) {
+      return NextResponse.json({ error: "Post not found" }, { status: 404 });
+    }
+
+    await cancelOutstandingJobs("blog", post._id.toString());
+
+    return NextResponse.json({ success: true, message: "Post deleted" });
+  } catch (error) {
+    console.error("Blog post DELETE error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}

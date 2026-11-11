@@ -1,0 +1,1946 @@
+{
+  "schema": "wall-v-qa-inventory/v1",
+  "generatedAt": "2026-09-30T12:30:39.093Z",
+  "app": {
+    "name": "Wall-V",
+    "domain": "https://www.wall-v.com",
+    "repo": "C:/xampp/htdocs/nextApp"
+  },
+  "environment": {
+    "node": "v24.14.1",
+    "server": "next start (production build) on localhost:3000",
+    "database": "runs 'final' + 'journey' against mongodb://localhost:27017/wallvnext; run 'prefix' against production Atlas via .env.production.local (read-mostly; see report residue note)",
+    "harness": "docs/qa/harness/harness2.mjs, docs/qa/harness/journey-db.mjs (QA_ROOT env overrides default path)",
+    "evidence": "docs/qa/evidence/"
+  },
+  "counts": {
+    "PASS": 73,
+    "FAIL": 2,
+    "NOT RUN": 6,
+    "BLOCKED": 1
+  },
+  "tests": [
+    {
+      "id": "QA-0001",
+      "module": "Static",
+      "title": "TypeScript typecheck (npx tsc --noEmit)",
+      "priority": "P0",
+      "expected": "0 errors",
+      "actual": "0 errors",
+      "status": "PASS",
+      "evidence": "exit 0",
+      "at": "2026-09-30T12:30:00.000Z"
+    },
+    {
+      "id": "QA-0002",
+      "module": "Static",
+      "title": "Unit tests (npx jest)",
+      "priority": "P0",
+      "expected": "all pass",
+      "actual": "73/73 in 6 suites",
+      "status": "PASS",
+      "evidence": "exit 0, 15.6s",
+      "at": "2026-09-30T12:32:00.000Z"
+    },
+    {
+      "id": "QA-0003",
+      "module": "Static",
+      "title": "Lint (npm run lint)",
+      "priority": "P1",
+      "expected": "0 errors",
+      "actual": "0 errors, 2 pre-existing warnings (src/__tests__/setup.ts unused vars)",
+      "status": "PASS",
+      "evidence": "exit 0",
+      "at": "2026-09-30T12:31:00.000Z"
+    },
+    {
+      "id": "QA-0004",
+      "module": "Static",
+      "title": "Production build (npm run build)",
+      "priority": "P0",
+      "expected": "success",
+      "actual": "Compiled successfully, 384/384 static pages, BUILD_ID fY5dmV1nclzuklXgPvzUw (post-fix build)",
+      "status": "PASS",
+      "evidence": "exit 0",
+      "at": "2026-09-30T12:22:00.000Z"
+    },
+    {
+      "id": "QA-0005",
+      "module": "Security",
+      "title": "Dependency audit (npm audit --omit=dev)",
+      "priority": "P1",
+      "expected": "0 critical/high",
+      "actual": "47 vulnerabilities (38 moderate, 6 high, 3 critical): next, next-auth/@auth/core, nodemailer, undici, sharp, postcss, @tiptap/core, nanoid",
+      "status": "FAIL",
+      "evidence": "npm audit exit 1; fix available via npm audit fix (not applied — dependency changes need approval)",
+      "at": "2026-09-30T11:50:00.000Z"
+    },
+    {
+      "id": "QA-0006",
+      "module": "Security",
+      "title": "Secret scan of tracked files (high-confidence key patterns)",
+      "priority": "P0",
+      "expected": "none found",
+      "actual": "no matches in tracked files (sk-, AKIA, AIza, ghp_, xox, PEM blocks)",
+      "status": "PASS",
+      "evidence": "git ls-files sweep",
+      "at": "2026-09-30T11:51:00.000Z"
+    },
+    {
+      "id": "QA-0007",
+      "module": "CI",
+      "title": "CI pipeline exists (.github/workflows etc.)",
+      "priority": "P2",
+      "expected": "pipeline running tests/build",
+      "actual": "none — no CI config in repo; only Vercel auto-deploy on master push",
+      "status": "FAIL",
+      "evidence": "no .github/, .gitlab-ci, Jenkinsfile, .circleci",
+      "at": "2026-09-30T12:35:00.000Z"
+    },
+    {
+      "id": "QA-0101",
+      "actual": "200",
+      "status": "PASS",
+      "evidence": "161ms",
+      "notes": "",
+      "resolution": "",
+      "runs": [
+        {
+          "run": "final(local-db,post-fix)",
+          "status": "PASS",
+          "actual": "200",
+          "evidence": "161ms",
+          "notes": "",
+          "at": "2026-09-30T12:23:53.526Z"
+        },
+        {
+          "run": "prefix(prod-db,pre-fix)",
+          "status": "PASS",
+          "actual": "200",
+          "evidence": "154ms",
+          "notes": "",
+          "at": "2026-09-30T12:09:09.439Z"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:23:53.526Z"
+    },
+    {
+      "id": "QA-0102",
+      "actual": "200",
+      "status": "PASS",
+      "evidence": "28ms",
+      "notes": "",
+      "resolution": "",
+      "runs": [
+        {
+          "run": "final(local-db,post-fix)",
+          "status": "PASS",
+          "actual": "200",
+          "evidence": "28ms",
+          "notes": "",
+          "at": "2026-09-30T12:23:53.558Z"
+        },
+        {
+          "run": "prefix(prod-db,pre-fix)",
+          "status": "PASS",
+          "actual": "200",
+          "evidence": "18ms",
+          "notes": "",
+          "at": "2026-09-30T12:09:09.459Z"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:23:53.558Z"
+    },
+    {
+      "id": "QA-0103",
+      "actual": "200",
+      "status": "PASS",
+      "evidence": "28ms",
+      "notes": "",
+      "resolution": "",
+      "runs": [
+        {
+          "run": "final(local-db,post-fix)",
+          "status": "PASS",
+          "actual": "200",
+          "evidence": "28ms",
+          "notes": "",
+          "at": "2026-09-30T12:23:53.586Z"
+        },
+        {
+          "run": "prefix(prod-db,pre-fix)",
+          "status": "PASS",
+          "actual": "200",
+          "evidence": "25ms",
+          "notes": "",
+          "at": "2026-09-30T12:09:09.485Z"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:23:53.586Z"
+    },
+    {
+      "id": "QA-0104",
+      "actual": "200",
+      "status": "PASS",
+      "evidence": "22ms",
+      "notes": "",
+      "resolution": "",
+      "runs": [
+        {
+          "run": "final(local-db,post-fix)",
+          "status": "PASS",
+          "actual": "200",
+          "evidence": "22ms",
+          "notes": "",
+          "at": "2026-09-30T12:23:53.609Z"
+        },
+        {
+          "run": "prefix(prod-db,pre-fix)",
+          "status": "PASS",
+          "actual": "200",
+          "evidence": "13ms",
+          "notes": "",
+          "at": "2026-09-30T12:09:09.498Z"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:23:53.609Z"
+    },
+    {
+      "id": "QA-0105",
+      "actual": "200",
+      "status": "PASS",
+      "evidence": "23ms",
+      "notes": "",
+      "resolution": "",
+      "runs": [
+        {
+          "run": "final(local-db,post-fix)",
+          "status": "PASS",
+          "actual": "200",
+          "evidence": "23ms",
+          "notes": "",
+          "at": "2026-09-30T12:23:53.632Z"
+        },
+        {
+          "run": "prefix(prod-db,pre-fix)",
+          "status": "PASS",
+          "actual": "200",
+          "evidence": "13ms",
+          "notes": "",
+          "at": "2026-09-30T12:09:09.512Z"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:23:53.632Z"
+    },
+    {
+      "id": "QA-0106",
+      "actual": "200",
+      "status": "PASS",
+      "evidence": "20ms",
+      "notes": "",
+      "resolution": "",
+      "runs": [
+        {
+          "run": "final(local-db,post-fix)",
+          "status": "PASS",
+          "actual": "200",
+          "evidence": "20ms",
+          "notes": "",
+          "at": "2026-09-30T12:23:53.652Z"
+        },
+        {
+          "run": "prefix(prod-db,pre-fix)",
+          "status": "PASS",
+          "actual": "200",
+          "evidence": "11ms",
+          "notes": "",
+          "at": "2026-09-30T12:09:09.523Z"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:23:53.652Z"
+    },
+    {
+      "id": "QA-0107",
+      "actual": "404",
+      "status": "PASS",
+      "evidence": "",
+      "notes": "",
+      "resolution": "",
+      "runs": [
+        {
+          "run": "final(local-db,post-fix)",
+          "status": "PASS",
+          "actual": "404",
+          "evidence": "",
+          "notes": "",
+          "at": "2026-09-30T12:23:53.684Z"
+        },
+        {
+          "run": "prefix(prod-db,pre-fix)",
+          "status": "PASS",
+          "actual": "404",
+          "evidence": "",
+          "notes": "",
+          "at": "2026-09-30T12:09:09.533Z"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:23:53.684Z"
+    },
+    {
+      "id": "QA-0108",
+      "actual": "200 len=7930",
+      "status": "PASS",
+      "evidence": "",
+      "notes": "",
+      "resolution": "",
+      "runs": [
+        {
+          "run": "final(local-db,post-fix)",
+          "status": "PASS",
+          "actual": "200 len=7930",
+          "evidence": "",
+          "notes": "",
+          "at": "2026-09-30T12:23:53.706Z"
+        },
+        {
+          "run": "prefix(prod-db,pre-fix)",
+          "status": "PASS",
+          "actual": "200 len=7930",
+          "evidence": "",
+          "notes": "",
+          "at": "2026-09-30T12:09:09.546Z"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:23:53.706Z"
+    },
+    {
+      "id": "QA-0109",
+      "actual": "200",
+      "status": "PASS",
+      "evidence": "User-Agent: *\nAllow: /\nDisallow: /dashboard\nDisallow: /api\nDisallow: /portal\nDis",
+      "notes": "",
+      "resolution": "",
+      "runs": [
+        {
+          "run": "final(local-db,post-fix)",
+          "status": "PASS",
+          "actual": "200",
+          "evidence": "User-Agent: *\nAllow: /\nDisallow: /dashboard\nDisallow: /api\nDisallow: /portal\nDis",
+          "notes": "",
+          "at": "2026-09-30T12:23:53.725Z"
+        },
+        {
+          "run": "prefix(prod-db,pre-fix)",
+          "status": "PASS",
+          "actual": "200",
+          "evidence": "User-Agent: *\nAllow: /\nDisallow: /dashboard\nDisallow: /api\nDisallow: /portal\nDis",
+          "notes": "",
+          "at": "2026-09-30T12:09:09.558Z"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:23:53.725Z"
+    },
+    {
+      "id": "QA-0110",
+      "actual": "200",
+      "status": "PASS",
+      "evidence": "",
+      "notes": "",
+      "resolution": "",
+      "runs": [
+        {
+          "run": "final(local-db,post-fix)",
+          "status": "PASS",
+          "actual": "200",
+          "evidence": "",
+          "notes": "",
+          "at": "2026-09-30T12:23:53.739Z"
+        },
+        {
+          "run": "prefix(prod-db,pre-fix)",
+          "status": "PASS",
+          "actual": "200",
+          "evidence": "",
+          "notes": "",
+          "at": "2026-09-30T12:09:09.565Z"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:23:53.739Z"
+    },
+    {
+      "id": "QA-0111",
+      "actual": "x-frame-options,x-content-type-options",
+      "status": "PASS",
+      "evidence": "csp=y hsts=y",
+      "notes": "",
+      "resolution": "",
+      "runs": [
+        {
+          "run": "final(local-db,post-fix)",
+          "status": "PASS",
+          "actual": "x-frame-options,x-content-type-options",
+          "evidence": "csp=y hsts=y",
+          "notes": "",
+          "at": "2026-09-30T12:23:53.756Z"
+        },
+        {
+          "run": "prefix(prod-db,pre-fix)",
+          "status": "PASS",
+          "actual": "x-frame-options,x-content-type-options",
+          "evidence": "csp=y hsts=y",
+          "notes": "",
+          "at": "2026-09-30T12:09:09.581Z"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:23:53.756Z"
+    },
+    {
+      "id": "QA-0112",
+      "actual": "acao=none creds=none",
+      "status": "PASS",
+      "evidence": "",
+      "notes": "",
+      "resolution": "",
+      "runs": [
+        {
+          "run": "final(local-db,post-fix)",
+          "status": "PASS",
+          "actual": "acao=none creds=none",
+          "evidence": "",
+          "notes": "",
+          "at": "2026-09-30T12:23:53.767Z"
+        },
+        {
+          "run": "prefix(prod-db,pre-fix)",
+          "status": "PASS",
+          "actual": "acao=none creds=none",
+          "evidence": "",
+          "notes": "",
+          "at": "2026-09-30T12:09:09.592Z"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:23:53.767Z"
+    },
+    {
+      "id": "QA-0113",
+      "actual": "present",
+      "status": "PASS",
+      "evidence": "",
+      "notes": "",
+      "resolution": "",
+      "runs": [
+        {
+          "run": "final(local-db,post-fix)",
+          "status": "PASS",
+          "actual": "present",
+          "evidence": "",
+          "notes": "",
+          "at": "2026-09-30T12:23:53.785Z"
+        },
+        {
+          "run": "prefix(prod-db,pre-fix)",
+          "status": "PASS",
+          "actual": "present",
+          "evidence": "",
+          "notes": "",
+          "at": "2026-09-30T12:09:09.607Z"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:23:53.785Z"
+    },
+    {
+      "id": "QA-0201",
+      "actual": "401",
+      "status": "PASS",
+      "evidence": "{\"error\":\"Not authenticated\"}",
+      "notes": "",
+      "resolution": "",
+      "runs": [
+        {
+          "run": "final(local-db,post-fix)",
+          "status": "PASS",
+          "actual": "401",
+          "evidence": "{\"error\":\"Not authenticated\"}",
+          "notes": "",
+          "at": "2026-09-30T12:23:53.798Z"
+        },
+        {
+          "run": "prefix(prod-db,pre-fix)",
+          "status": "PASS",
+          "actual": "401",
+          "evidence": "{\"error\":\"Not authenticated\"}",
+          "notes": "",
+          "at": "2026-09-30T12:09:09.616Z"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:23:53.798Z"
+    },
+    {
+      "id": "QA-0202",
+      "actual": "200 role=super-admin",
+      "status": "PASS",
+      "evidence": "{\"success\":true,\"data\":{\"_id\":\"6a1ea36ee593ecf60601bc20\",\"uuid\":\"82ddb872-1947-49b4-b896-4a173532dbb4\",\"role_id\":1,\"role",
+      "notes": "",
+      "resolution": "earlier run prefix(prod-db,pre-fix): FAIL — 404 role=? → final: PASS",
+      "runs": [
+        {
+          "run": "final(local-db,post-fix)",
+          "status": "PASS",
+          "actual": "200 role=super-admin",
+          "evidence": "{\"success\":true,\"data\":{\"_id\":\"6a1ea36ee593ecf60601bc20\",\"uuid\":\"82ddb872-1947-49b4-b896-4a173532dbb4\",\"role_id\":1,\"role",
+          "notes": "",
+          "at": "2026-09-30T12:23:53.989Z"
+        },
+        {
+          "run": "prefix(prod-db,pre-fix)",
+          "status": "FAIL",
+          "actual": "404 role=?",
+          "evidence": "{\"error\":\"User not found\"}",
+          "notes": "",
+          "at": "2026-09-30T12:09:09.846Z"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:23:53.989Z"
+    },
+    {
+      "id": "QA-0203",
+      "actual": "401",
+      "status": "PASS",
+      "evidence": "{\"error\":\"Unauthorized\"}",
+      "notes": "",
+      "resolution": "",
+      "runs": [
+        {
+          "run": "final(local-db,post-fix)",
+          "status": "PASS",
+          "actual": "401",
+          "evidence": "{\"error\":\"Unauthorized\"}",
+          "notes": "",
+          "at": "2026-09-30T12:23:53.828Z"
+        },
+        {
+          "run": "prefix(prod-db,pre-fix)",
+          "status": "PASS",
+          "actual": "401",
+          "evidence": "{\"error\":\"Unauthorized\"}",
+          "notes": "",
+          "at": "2026-09-30T12:09:09.627Z"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:23:53.828Z"
+    },
+    {
+      "id": "QA-0204",
+      "actual": "401",
+      "status": "PASS",
+      "evidence": "{\"success\":false,\"error\":\"Unauthorized\"}",
+      "notes": "",
+      "resolution": "",
+      "runs": [
+        {
+          "run": "final(local-db,post-fix)",
+          "status": "PASS",
+          "actual": "401",
+          "evidence": "{\"success\":false,\"error\":\"Unauthorized\"}",
+          "notes": "",
+          "at": "2026-09-30T12:23:53.844Z"
+        },
+        {
+          "run": "prefix(prod-db,pre-fix)",
+          "status": "PASS",
+          "actual": "401",
+          "evidence": "{\"success\":false,\"error\":\"Unauthorized\"}",
+          "notes": "",
+          "at": "2026-09-30T12:09:09.640Z"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:23:53.844Z"
+    },
+    {
+      "id": "QA-0205",
+      "actual": "401",
+      "status": "PASS",
+      "evidence": "{\"success\":false,\"error\":\"Unauthorized\"}",
+      "notes": "401 vs 403 semantics: deny works; 403 preferred (P3 nit)",
+      "resolution": "",
+      "runs": [
+        {
+          "run": "final(local-db,post-fix)",
+          "status": "PASS",
+          "actual": "401",
+          "evidence": "{\"success\":false,\"error\":\"Unauthorized\"}",
+          "notes": "401 vs 403 semantics: deny works; 403 preferred (P3 nit)",
+          "at": "2026-09-30T12:23:53.945Z"
+        },
+        {
+          "run": "prefix(prod-db,pre-fix)",
+          "status": "PASS",
+          "actual": "401",
+          "evidence": "{\"success\":false,\"error\":\"Unauthorized\"}",
+          "notes": "401 vs 403 semantics: deny works; 403 preferred (P3 nit)",
+          "at": "2026-09-30T12:09:09.722Z"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:23:53.945Z"
+    },
+    {
+      "id": "QA-0206",
+      "actual": "403",
+      "status": "PASS",
+      "evidence": "{\"error\":\"Forbidden\"}",
+      "notes": "",
+      "resolution": "",
+      "runs": [
+        {
+          "run": "final(local-db,post-fix)",
+          "status": "PASS",
+          "actual": "403",
+          "evidence": "{\"error\":\"Forbidden\"}",
+          "notes": "",
+          "at": "2026-09-30T12:23:53.861Z"
+        },
+        {
+          "run": "prefix(prod-db,pre-fix)",
+          "status": "PASS",
+          "actual": "403",
+          "evidence": "{\"error\":\"Forbidden\"}",
+          "notes": "",
+          "at": "2026-09-30T12:09:09.649Z"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:23:53.861Z"
+    },
+    {
+      "id": "QA-0207",
+      "actual": "401",
+      "status": "PASS",
+      "evidence": "{\"error\":\"Unauthorized\"}",
+      "notes": "",
+      "resolution": "",
+      "runs": [
+        {
+          "run": "final(local-db,post-fix)",
+          "status": "PASS",
+          "actual": "401",
+          "evidence": "{\"error\":\"Unauthorized\"}",
+          "notes": "",
+          "at": "2026-09-30T12:23:53.876Z"
+        },
+        {
+          "run": "prefix(prod-db,pre-fix)",
+          "status": "PASS",
+          "actual": "401",
+          "evidence": "{\"error\":\"Unauthorized\"}",
+          "notes": "",
+          "at": "2026-09-30T12:09:09.662Z"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:23:53.876Z"
+    },
+    {
+      "id": "QA-0208",
+      "actual": "401",
+      "status": "PASS",
+      "evidence": "{\"error\":\"Unauthorized\"}",
+      "notes": "",
+      "resolution": "",
+      "runs": [
+        {
+          "run": "final(local-db,post-fix)",
+          "status": "PASS",
+          "actual": "401",
+          "evidence": "{\"error\":\"Unauthorized\"}",
+          "notes": "",
+          "at": "2026-09-30T12:23:53.890Z"
+        },
+        {
+          "run": "prefix(prod-db,pre-fix)",
+          "status": "PASS",
+          "actual": "401",
+          "evidence": "{\"error\":\"Unauthorized\"}",
+          "notes": "",
+          "at": "2026-09-30T12:09:09.682Z"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:23:53.890Z"
+    },
+    {
+      "id": "QA-0209",
+      "actual": "307 loc=/login?callbackUrl=%2Fdashboard",
+      "status": "PASS",
+      "evidence": "",
+      "notes": "",
+      "resolution": "",
+      "runs": [
+        {
+          "run": "final(local-db,post-fix)",
+          "status": "PASS",
+          "actual": "307 loc=/login?callbackUrl=%2Fdashboard",
+          "evidence": "",
+          "notes": "",
+          "at": "2026-09-30T12:23:54.194Z"
+        },
+        {
+          "run": "prefix(prod-db,pre-fix)",
+          "status": "PASS",
+          "actual": "307 loc=/login?callbackUrl=%2Fdashboard",
+          "evidence": "",
+          "notes": "",
+          "at": "2026-09-30T12:09:09.860Z"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:23:54.194Z"
+    },
+    {
+      "id": "QA-0210",
+      "actual": "403",
+      "status": "PASS",
+      "evidence": "{\"error\":\"Forbidden\"}",
+      "notes": "",
+      "resolution": "",
+      "runs": [
+        {
+          "run": "final(local-db,post-fix)",
+          "status": "PASS",
+          "actual": "403",
+          "evidence": "{\"error\":\"Forbidden\"}",
+          "notes": "",
+          "at": "2026-09-30T12:23:53.963Z"
+        },
+        {
+          "run": "prefix(prod-db,pre-fix)",
+          "status": "PASS",
+          "actual": "403",
+          "evidence": "{\"error\":\"Forbidden\"}",
+          "notes": "",
+          "at": "2026-09-30T12:09:09.737Z"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:23:53.963Z"
+    },
+    {
+      "id": "QA-0211",
+      "actual": "401",
+      "status": "PASS",
+      "evidence": "{\"error\":\"Unauthorized\"}",
+      "notes": "",
+      "resolution": "",
+      "runs": [
+        {
+          "run": "final(local-db,post-fix)",
+          "status": "PASS",
+          "actual": "401",
+          "evidence": "{\"error\":\"Unauthorized\"}",
+          "notes": "",
+          "at": "2026-09-30T12:23:53.904Z"
+        },
+        {
+          "run": "prefix(prod-db,pre-fix)",
+          "status": "PASS",
+          "actual": "401",
+          "evidence": "{\"error\":\"Unauthorized\"}",
+          "notes": "",
+          "at": "2026-09-30T12:09:09.692Z"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:23:53.904Z"
+    },
+    {
+      "id": "QA-0212",
+      "actual": "403",
+      "status": "PASS",
+      "evidence": "{\"error\":\"Forbidden\"}",
+      "notes": "",
+      "resolution": "",
+      "runs": [
+        {
+          "run": "final(local-db,post-fix)",
+          "status": "PASS",
+          "actual": "403",
+          "evidence": "{\"error\":\"Forbidden\"}",
+          "notes": "",
+          "at": "2026-09-30T12:23:53.925Z"
+        },
+        {
+          "run": "prefix(prod-db,pre-fix)",
+          "status": "PASS",
+          "actual": "403",
+          "evidence": "{\"error\":\"Forbidden\"}",
+          "notes": "",
+          "at": "2026-09-30T12:09:09.711Z"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:23:53.925Z"
+    },
+    {
+      "id": "QA-0213",
+      "actual": "401 leak=false",
+      "status": "PASS",
+      "evidence": "{\"error\":\"Unauthorized\"}",
+      "notes": "",
+      "resolution": "",
+      "runs": [
+        {
+          "run": "final(local-db,post-fix)",
+          "status": "PASS",
+          "actual": "401 leak=false",
+          "evidence": "{\"error\":\"Unauthorized\"}",
+          "notes": "",
+          "at": "2026-09-30T12:23:54.227Z"
+        },
+        {
+          "run": "prefix(prod-db,pre-fix)",
+          "status": "PASS",
+          "actual": "401 leak=false",
+          "evidence": "{\"error\":\"Unauthorized\"}",
+          "notes": "",
+          "at": "2026-09-30T12:09:09.871Z"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:23:54.227Z"
+    },
+    {
+      "id": "QA-0301",
+      "actual": "401",
+      "status": "PASS",
+      "evidence": "",
+      "notes": "",
+      "resolution": "earlier run prefix(prod-db,pre-fix): FAIL — 429 → final: PASS",
+      "runs": [
+        {
+          "run": "final(local-db,post-fix)",
+          "status": "PASS",
+          "actual": "401",
+          "evidence": "",
+          "notes": "",
+          "at": "2026-09-30T12:23:54.258Z"
+        },
+        {
+          "run": "prefix(prod-db,pre-fix)",
+          "status": "FAIL",
+          "actual": "429",
+          "evidence": "",
+          "notes": "",
+          "at": "2026-09-30T12:09:10.027Z"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:23:54.258Z"
+    },
+    {
+      "id": "QA-0302",
+      "actual": "200 cookie=true",
+      "status": "PASS",
+      "evidence": "{\"success\":true,\"data\":{\"user\":{\"id\":\"6a5bb6bc663992960985043c\",\"name\":\"Admin\",\"email\":\"admin@wall-v.com\",\"role\":\"super-",
+      "notes": "",
+      "resolution": "earlier run prefix(prod-db,pre-fix): BLOCKED — admin@wall-v.com exists but password is not the seed default; no valid credentials available in this env — login endpoint itself covered by QA-0301/0303 → final: PASS",
+      "runs": [
+        {
+          "run": "final(local-db,post-fix)",
+          "status": "PASS",
+          "actual": "200 cookie=true",
+          "evidence": "{\"success\":true,\"data\":{\"user\":{\"id\":\"6a5bb6bc663992960985043c\",\"name\":\"Admin\",\"email\":\"admin@wall-v.com\",\"role\":\"super-",
+          "notes": "",
+          "at": "2026-09-30T12:23:55.290Z"
+        },
+        {
+          "run": "prefix(prod-db,pre-fix)",
+          "status": "BLOCKED",
+          "actual": "BLOCKED",
+          "evidence": "",
+          "notes": "admin@wall-v.com exists but password is not the seed default; no valid credentials available in this env — login endpoint itself covered by QA-0301/0303",
+          "at": "2026-09-30T12:09:10.027Z"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:23:55.290Z"
+    },
+    {
+      "id": "QA-0303",
+      "actual": "blocked=1 via 401,401,429",
+      "status": "PASS",
+      "evidence": "",
+      "notes": "",
+      "resolution": "",
+      "runs": [
+        {
+          "run": "final(local-db,post-fix)",
+          "status": "PASS",
+          "actual": "blocked=1 via 401,401,429",
+          "evidence": "",
+          "notes": "",
+          "at": "2026-09-30T12:23:55.350Z"
+        },
+        {
+          "run": "prefix(prod-db,pre-fix)",
+          "status": "PASS",
+          "actual": "blocked=1 via 429",
+          "evidence": "",
+          "notes": "",
+          "at": "2026-09-30T12:09:10.181Z"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:23:55.350Z"
+    },
+    {
+      "id": "QA-0401",
+      "actual": "201",
+      "status": "PASS",
+      "evidence": "{\"success\":true,\"saved\":true,\"notifications\":{\"admin\":\"failed\",\"user\":\"failed\"},\"warning\":\"Your message was saved, but email notifications could not be delivere",
+      "notes": "notifications field may report failed SMTP in local env — save must still succeed",
+      "resolution": "",
+      "runs": [
+        {
+          "run": "final(local-db,post-fix)",
+          "status": "PASS",
+          "actual": "201",
+          "evidence": "{\"success\":true,\"saved\":true,\"notifications\":{\"admin\":\"failed\",\"user\":\"failed\"},\"warning\":\"Your message was saved, but email notifications could not be delivere",
+          "notes": "notifications field may report failed SMTP in local env — save must still succeed",
+          "at": "2026-09-30T12:23:58.482Z"
+        },
+        {
+          "run": "prefix(prod-db,pre-fix)",
+          "status": "PASS",
+          "actual": "201",
+          "evidence": "{\"success\":true,\"saved\":true,\"notifications\":{\"admin\":\"failed\",\"user\":\"failed\"},\"warning\":\"Your message was saved, but email notifications could not be delivere",
+          "notes": "notifications field may report failed SMTP in local env — save must still succeed",
+          "at": "2026-09-30T12:09:17.651Z"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:23:58.482Z"
+    },
+    {
+      "id": "QA-0402",
+      "actual": "400",
+      "status": "PASS",
+      "evidence": "",
+      "notes": "",
+      "resolution": "",
+      "runs": [
+        {
+          "run": "final(local-db,post-fix)",
+          "status": "PASS",
+          "actual": "400",
+          "evidence": "",
+          "notes": "",
+          "at": "2026-09-30T12:23:58.497Z"
+        },
+        {
+          "run": "prefix(prod-db,pre-fix)",
+          "status": "PASS",
+          "actual": "400",
+          "evidence": "",
+          "notes": "",
+          "at": "2026-09-30T12:09:17.662Z"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:23:58.497Z"
+    },
+    {
+      "id": "QA-0403",
+      "actual": "403",
+      "status": "PASS",
+      "evidence": "",
+      "notes": "",
+      "resolution": "",
+      "runs": [
+        {
+          "run": "final(local-db,post-fix)",
+          "status": "PASS",
+          "actual": "403",
+          "evidence": "",
+          "notes": "",
+          "at": "2026-09-30T12:23:58.509Z"
+        },
+        {
+          "run": "prefix(prod-db,pre-fix)",
+          "status": "PASS",
+          "actual": "403",
+          "evidence": "",
+          "notes": "",
+          "at": "2026-09-30T12:09:17.672Z"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:23:58.509Z"
+    },
+    {
+      "id": "QA-0404",
+      "actual": "200 found=true",
+      "status": "PASS",
+      "evidence": "present",
+      "notes": "",
+      "resolution": "",
+      "runs": [
+        {
+          "run": "final(local-db,post-fix)",
+          "status": "PASS",
+          "actual": "200 found=true",
+          "evidence": "present",
+          "notes": "",
+          "at": "2026-09-30T12:23:58.538Z"
+        },
+        {
+          "run": "prefix(prod-db,pre-fix)",
+          "status": "PASS",
+          "actual": "200 found=true",
+          "evidence": "present",
+          "notes": "",
+          "at": "2026-09-30T12:09:17.887Z"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:23:58.538Z"
+    },
+    {
+      "id": "QA-0501",
+      "actual": "201 slug=qa-smoke-post-1790771035350",
+      "status": "PASS",
+      "evidence": "{\"success\":true,\"data\":{\"title\":\"QA Smoke Post 1790771035350\",\"slug\":\"qa-smoke-post-1790771035350\",\"content\":\"<h1>QA Hea",
+      "notes": "",
+      "resolution": "",
+      "runs": [
+        {
+          "run": "final(local-db,post-fix)",
+          "status": "PASS",
+          "actual": "201 slug=qa-smoke-post-1790771035350",
+          "evidence": "{\"success\":true,\"data\":{\"title\":\"QA Smoke Post 1790771035350\",\"slug\":\"qa-smoke-post-1790771035350\",\"content\":\"<h1>QA Hea",
+          "notes": "",
+          "at": "2026-09-30T12:23:58.611Z"
+        },
+        {
+          "run": "prefix(prod-db,pre-fix)",
+          "status": "PASS",
+          "actual": "201 slug=qa-smoke-post-1790770150181",
+          "evidence": "{\"success\":true,\"data\":{\"title\":\"QA Smoke Post 1790770150181\",\"slug\":\"qa-smoke-post-1790770150181\",\"content\":\"<h1>QA Hea",
+          "notes": "",
+          "at": "2026-09-30T12:09:18.102Z"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:23:58.611Z"
+    },
+    {
+      "id": "QA-0502",
+      "actual": "status=200 leaked=false",
+      "status": "PASS",
+      "evidence": "",
+      "notes": "status 200 = soft-404 (page shell, client fetch shows Post Not Found); P3 SEO nit: notFound() not called",
+      "resolution": "",
+      "runs": [
+        {
+          "run": "final(local-db,post-fix)",
+          "status": "PASS",
+          "actual": "status=200 leaked=false",
+          "evidence": "",
+          "notes": "status 200 = soft-404 (page shell, client fetch shows Post Not Found); P3 SEO nit: notFound() not called",
+          "at": "2026-09-30T12:23:58.877Z"
+        },
+        {
+          "run": "prefix(prod-db,pre-fix)",
+          "status": "PASS",
+          "actual": "status=200 leaked=false",
+          "evidence": "",
+          "notes": "status 200 = soft-404 (page shell, client fetch shows Post Not Found); P3 SEO nit: notFound() not called",
+          "at": "2026-09-30T12:09:18.354Z"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:23:58.877Z"
+    },
+    {
+      "id": "QA-0503",
+      "actual": "200 listed=false",
+      "status": "PASS",
+      "evidence": "",
+      "notes": "",
+      "resolution": "",
+      "runs": [
+        {
+          "run": "final(local-db,post-fix)",
+          "status": "PASS",
+          "actual": "200 listed=false",
+          "evidence": "",
+          "notes": "",
+          "at": "2026-09-30T12:23:58.894Z"
+        },
+        {
+          "run": "prefix(prod-db,pre-fix)",
+          "status": "PASS",
+          "actual": "200 listed=false",
+          "evidence": "",
+          "notes": "",
+          "at": "2026-09-30T12:09:21.200Z"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:23:58.894Z"
+    },
+    {
+      "id": "QA-0504",
+      "actual": "409",
+      "status": "PASS",
+      "evidence": "",
+      "notes": "",
+      "resolution": "",
+      "runs": [
+        {
+          "run": "final(local-db,post-fix)",
+          "status": "PASS",
+          "actual": "409",
+          "evidence": "",
+          "notes": "",
+          "at": "2026-09-30T12:23:58.932Z"
+        },
+        {
+          "run": "prefix(prod-db,pre-fix)",
+          "status": "PASS",
+          "actual": "409",
+          "evidence": "",
+          "notes": "",
+          "at": "2026-09-30T12:09:22.120Z"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:23:58.932Z"
+    },
+    {
+      "id": "QA-0505",
+      "actual": "200",
+      "status": "PASS",
+      "evidence": "{\"success\":true,\"data\":{\"seo\":{\"keywords\":[]},\"_id\":\"6abcff5ebe0cc61a8541892e\",\"title\":\"QA Smoke Pos",
+      "notes": "",
+      "resolution": "",
+      "runs": [
+        {
+          "run": "final(local-db,post-fix)",
+          "status": "PASS",
+          "actual": "200",
+          "evidence": "{\"success\":true,\"data\":{\"seo\":{\"keywords\":[]},\"_id\":\"6abcff5ebe0cc61a8541892e\",\"title\":\"QA Smoke Pos",
+          "notes": "",
+          "at": "2026-09-30T12:23:59.004Z"
+        },
+        {
+          "run": "prefix(prod-db,pre-fix)",
+          "status": "PASS",
+          "actual": "200",
+          "evidence": "{\"success\":true,\"data\":{\"seo\":{\"keywords\":[]},\"_id\":\"6abcfbeef241f951e01b4068\",\"title\":\"QA Smoke Pos",
+          "notes": "",
+          "at": "2026-09-30T12:09:22.891Z"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:23:59.004Z"
+    },
+    {
+      "id": "QA-0506",
+      "actual": "status=200 visible=true rawScript=false rawOnerror=false",
+      "status": "PASS",
+      "evidence": "no raw payload",
+      "notes": "payload source: JSON-LD description falls back to content.substring(0,160) when excerpt missing; JsonLd renders JSON.stringify without < escaping",
+      "resolution": "earlier run prefix(prod-db,pre-fix): FAIL — payload source: JSON-LD description falls back to content.substring(0,160) when excerpt missing; JsonLd renders JSON.stringify without < escaping → final: PASS",
+      "runs": [
+        {
+          "run": "final(local-db,post-fix)",
+          "status": "PASS",
+          "actual": "status=200 visible=true rawScript=false rawOnerror=false",
+          "evidence": "no raw payload",
+          "notes": "payload source: JSON-LD description falls back to content.substring(0,160) when excerpt missing; JsonLd renders JSON.stringify without < escaping",
+          "at": "2026-09-30T12:23:59.122Z"
+        },
+        {
+          "run": "prefix(prod-db,pre-fix)",
+          "status": "FAIL",
+          "actual": "status=200 visible=true rawScript=true rawOnerror=false",
+          "evidence": "raw <script> payload found in server HTML (see xss-evidence file)",
+          "notes": "payload source: JSON-LD description falls back to content.substring(0,160) when excerpt missing; JsonLd renders JSON.stringify without < escaping",
+          "at": "2026-09-30T12:09:23.376Z"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:23:59.122Z"
+    },
+    {
+      "id": "QA-0507",
+      "actual": "del=200 page=200 stillThere=false",
+      "status": "PASS",
+      "evidence": "",
+      "notes": "",
+      "resolution": "",
+      "runs": [
+        {
+          "run": "final(local-db,post-fix)",
+          "status": "PASS",
+          "actual": "del=200 page=200 stillThere=false",
+          "evidence": "",
+          "notes": "",
+          "at": "2026-09-30T12:23:59.311Z"
+        },
+        {
+          "run": "prefix(prod-db,pre-fix)",
+          "status": "PASS",
+          "actual": "del=200 page=200 stillThere=false",
+          "evidence": "",
+          "notes": "",
+          "at": "2026-09-30T12:09:25.902Z"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:23:59.311Z"
+    },
+    {
+      "id": "QA-0508",
+      "actual": "200",
+      "status": "PASS",
+      "evidence": "",
+      "notes": "client-side DOMPurify sanitization NOT verified in browser → marked NOT RUN for runtime sanitization claim",
+      "resolution": "",
+      "runs": [
+        {
+          "run": "final(local-db,post-fix)",
+          "status": "PASS",
+          "actual": "200",
+          "evidence": "",
+          "notes": "client-side DOMPurify sanitization NOT verified in browser → marked NOT RUN for runtime sanitization claim",
+          "at": "2026-09-30T12:23:59.147Z"
+        },
+        {
+          "run": "prefix(prod-db,pre-fix)",
+          "status": "PASS",
+          "actual": "200",
+          "evidence": "",
+          "notes": "client-side DOMPurify sanitization NOT verified in browser → marked NOT RUN for runtime sanitization claim",
+          "at": "2026-09-30T12:09:25.188Z"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:23:59.147Z"
+    },
+    {
+      "id": "QA-0509",
+      "actual": "404",
+      "status": "PASS",
+      "evidence": "{\"error\":\"Post not found\"}",
+      "notes": "",
+      "resolution": "",
+      "runs": [
+        {
+          "run": "final(local-db,post-fix)",
+          "status": "PASS",
+          "actual": "404",
+          "evidence": "{\"error\":\"Post not found\"}",
+          "notes": "",
+          "at": "2026-09-30T12:23:58.912Z"
+        },
+        {
+          "run": "prefix(prod-db,pre-fix)",
+          "status": "PASS",
+          "actual": "404",
+          "evidence": "{\"error\":\"Post not found\"}",
+          "notes": "",
+          "at": "2026-09-30T12:09:21.487Z"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:23:58.912Z"
+    },
+    {
+      "id": "QA-0601",
+      "actual": "200",
+      "status": "PASS",
+      "evidence": "",
+      "notes": "",
+      "resolution": "",
+      "runs": [
+        {
+          "run": "final(local-db,post-fix)",
+          "status": "PASS",
+          "actual": "200",
+          "evidence": "",
+          "notes": "",
+          "at": "2026-09-30T12:23:59.390Z"
+        },
+        {
+          "run": "prefix(prod-db,pre-fix)",
+          "status": "PASS",
+          "actual": "200",
+          "evidence": "",
+          "notes": "",
+          "at": "2026-09-30T12:09:28.184Z"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:23:59.390Z"
+    },
+    {
+      "id": "QA-0701",
+      "actual": "500 json=true leak=false",
+      "status": "PASS",
+      "evidence": "{\"error\":\"AI service error\"}",
+      "notes": "public chat widget endpoint (chat-interface.tsx); protected only by rate limit",
+      "resolution": "",
+      "runs": [
+        {
+          "run": "final(local-db,post-fix)",
+          "status": "PASS",
+          "actual": "500 json=true leak=false",
+          "evidence": "{\"error\":\"AI service error\"}",
+          "notes": "public chat widget endpoint (chat-interface.tsx); protected only by rate limit",
+          "at": "2026-09-30T12:24:01.143Z"
+        },
+        {
+          "run": "prefix(prod-db,pre-fix)",
+          "status": "PASS",
+          "actual": "500 json=true leak=false",
+          "evidence": "{\"error\":\"AI service error\"}",
+          "notes": "public chat widget endpoint (chat-interface.tsx); protected only by rate limit",
+          "at": "2026-09-30T12:09:30.606Z"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:24:01.143Z"
+    },
+    {
+      "id": "QA-0702",
+      "actual": "covered by QA-0701 request path",
+      "status": "NOT RUN",
+      "evidence": "",
+      "notes": "same code path as QA-0701 (no auth branch); provider creds unusable in env",
+      "resolution": "",
+      "runs": [
+        {
+          "run": "final(local-db,post-fix)",
+          "status": "NOT RUN",
+          "actual": "covered by QA-0701 request path",
+          "evidence": "",
+          "notes": "same code path as QA-0701 (no auth branch); provider creds unusable in env",
+          "at": "2026-09-30T12:24:01.144Z"
+        },
+        {
+          "run": "prefix(prod-db,pre-fix)",
+          "status": "NOT RUN",
+          "actual": "covered by QA-0701 request path",
+          "evidence": "",
+          "notes": "same code path as QA-0701 (no auth branch); provider creds unusable in env",
+          "at": "2026-09-30T12:09:30.606Z"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:24:01.144Z"
+    },
+    {
+      "id": "QA-0801",
+      "actual": "401",
+      "status": "PASS",
+      "evidence": "",
+      "notes": "",
+      "resolution": "",
+      "runs": [
+        {
+          "run": "final(local-db,post-fix)",
+          "status": "PASS",
+          "actual": "401",
+          "evidence": "",
+          "notes": "",
+          "at": "2026-09-30T12:24:01.156Z"
+        },
+        {
+          "run": "prefix(prod-db,pre-fix)",
+          "status": "PASS",
+          "actual": "401",
+          "evidence": "",
+          "notes": "",
+          "at": "2026-09-30T12:09:30.617Z"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:24:01.156Z"
+    },
+    {
+      "id": "QA-0802",
+      "actual": "400",
+      "status": "PASS",
+      "evidence": "{\"error\":\"File type not allowed\"}",
+      "notes": "",
+      "resolution": "",
+      "runs": [
+        {
+          "run": "final(local-db,post-fix)",
+          "status": "PASS",
+          "actual": "400",
+          "evidence": "{\"error\":\"File type not allowed\"}",
+          "notes": "",
+          "at": "2026-09-30T12:24:01.186Z"
+        },
+        {
+          "run": "prefix(prod-db,pre-fix)",
+          "status": "PASS",
+          "actual": "400",
+          "evidence": "{\"error\":\"File type not allowed\"}",
+          "notes": "",
+          "at": "2026-09-30T12:09:30.837Z"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:24:01.186Z"
+    },
+    {
+      "id": "QA-0901",
+      "actual": "400",
+      "status": "PASS",
+      "evidence": "<EPAYMENT />",
+      "notes": "",
+      "resolution": "",
+      "runs": [
+        {
+          "run": "final(local-db,post-fix)",
+          "status": "PASS",
+          "actual": "400",
+          "evidence": "<EPAYMENT />",
+          "notes": "",
+          "at": "2026-09-30T12:24:01.214Z"
+        },
+        {
+          "run": "prefix(prod-db,pre-fix)",
+          "status": "PASS",
+          "actual": "400",
+          "evidence": "<EPAYMENT />",
+          "notes": "",
+          "at": "2026-09-30T12:09:30.977Z"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:24:01.214Z"
+    },
+    {
+      "id": "QA-0902",
+      "actual": "200",
+      "status": "PASS",
+      "evidence": "",
+      "notes": "",
+      "resolution": "",
+      "runs": [
+        {
+          "run": "final(local-db,post-fix)",
+          "status": "PASS",
+          "actual": "200",
+          "evidence": "",
+          "notes": "",
+          "at": "2026-09-30T12:24:01.238Z"
+        },
+        {
+          "run": "prefix(prod-db,pre-fix)",
+          "status": "PASS",
+          "actual": "200",
+          "evidence": "",
+          "notes": "",
+          "at": "2026-09-30T12:09:31.223Z"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:24:01.238Z"
+    },
+    {
+      "id": "QA-0903",
+      "actual": "200",
+      "status": "PASS",
+      "evidence": "",
+      "notes": "",
+      "resolution": "",
+      "runs": [
+        {
+          "run": "final(local-db,post-fix)",
+          "status": "PASS",
+          "actual": "200",
+          "evidence": "",
+          "notes": "",
+          "at": "2026-09-30T12:24:01.282Z"
+        },
+        {
+          "run": "prefix(prod-db,pre-fix)",
+          "status": "PASS",
+          "actual": "200",
+          "evidence": "",
+          "notes": "",
+          "at": "2026-09-30T12:09:31.360Z"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:24:01.282Z"
+    },
+    {
+      "id": "QA-1001",
+      "actual": "200 data=0",
+      "status": "PASS",
+      "evidence": "",
+      "notes": "",
+      "resolution": "",
+      "runs": [
+        {
+          "run": "final(local-db,post-fix)",
+          "status": "PASS",
+          "actual": "200 data=0",
+          "evidence": "",
+          "notes": "",
+          "at": "2026-09-30T12:24:01.299Z"
+        },
+        {
+          "run": "prefix(prod-db,pre-fix)",
+          "status": "PASS",
+          "actual": "200 data=0",
+          "evidence": "",
+          "notes": "",
+          "at": "2026-09-30T12:09:31.483Z"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:24:01.299Z"
+    },
+    {
+      "id": "QA-1002",
+      "actual": "405",
+      "status": "PASS",
+      "evidence": "",
+      "notes": "enqueue path is /api/content/publish (covered by prior smoke)",
+      "resolution": "",
+      "runs": [
+        {
+          "run": "final(local-db,post-fix)",
+          "status": "PASS",
+          "actual": "405",
+          "evidence": "",
+          "notes": "enqueue path is /api/content/publish (covered by prior smoke)",
+          "at": "2026-09-30T12:24:01.307Z"
+        },
+        {
+          "run": "prefix(prod-db,pre-fix)",
+          "status": "PASS",
+          "actual": "405",
+          "evidence": "",
+          "notes": "enqueue path is /api/content/publish (covered by prior smoke)",
+          "at": "2026-09-30T12:09:31.493Z"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:24:01.307Z"
+    },
+    {
+      "id": "QA-1101",
+      "actual": "200 connected",
+      "status": "PASS",
+      "evidence": "",
+      "notes": "",
+      "resolution": "",
+      "runs": [
+        {
+          "run": "final(local-db,post-fix)",
+          "status": "PASS",
+          "actual": "200 connected",
+          "evidence": "",
+          "notes": "",
+          "at": "2026-09-30T12:24:01.314Z"
+        },
+        {
+          "run": "prefix(prod-db,pre-fix)",
+          "status": "PASS",
+          "actual": "200 connected",
+          "evidence": "",
+          "notes": "",
+          "at": "2026-09-30T12:09:31.500Z"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:24:01.314Z"
+    },
+    {
+      "id": "QA-1102",
+      "actual": "404",
+      "status": "PASS",
+      "evidence": "",
+      "notes": "",
+      "resolution": "",
+      "runs": [
+        {
+          "run": "final(local-db,post-fix)",
+          "status": "PASS",
+          "actual": "404",
+          "evidence": "",
+          "notes": "",
+          "at": "2026-09-30T12:24:01.325Z"
+        },
+        {
+          "run": "prefix(prod-db,pre-fix)",
+          "status": "PASS",
+          "actual": "404",
+          "evidence": "",
+          "notes": "",
+          "at": "2026-09-30T12:09:31.512Z"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:24:01.325Z"
+    },
+    {
+      "id": "QA-1103",
+      "actual": "405",
+      "status": "PASS",
+      "evidence": "",
+      "notes": "",
+      "resolution": "",
+      "runs": [
+        {
+          "run": "final(local-db,post-fix)",
+          "status": "PASS",
+          "actual": "405",
+          "evidence": "",
+          "notes": "",
+          "at": "2026-09-30T12:24:01.333Z"
+        },
+        {
+          "run": "prefix(prod-db,pre-fix)",
+          "status": "PASS",
+          "actual": "405",
+          "evidence": "",
+          "notes": "",
+          "at": "2026-09-30T12:09:31.520Z"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:24:01.333Z"
+    },
+    {
+      "id": "QA-1104",
+      "actual": "404",
+      "status": "PASS",
+      "evidence": "{\"error\":\"Invalid preview link\"}",
+      "notes": "/preview page itself returns 200 shell (client-side fetch); P3 soft-404",
+      "resolution": "",
+      "runs": [
+        {
+          "run": "final(local-db,post-fix)",
+          "status": "PASS",
+          "actual": "404",
+          "evidence": "{\"error\":\"Invalid preview link\"}",
+          "notes": "/preview page itself returns 200 shell (client-side fetch); P3 soft-404",
+          "at": "2026-09-30T12:24:01.405Z"
+        },
+        {
+          "run": "prefix(prod-db,pre-fix)",
+          "status": "PASS",
+          "actual": "404",
+          "evidence": "{\"error\":\"Preview not found\"}",
+          "notes": "/preview page itself returns 200 shell (client-side fetch); P3 soft-404",
+          "at": "2026-09-30T12:09:31.709Z"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:24:01.405Z"
+    },
+    {
+      "id": "QA-1201",
+      "actual": "200 / 401",
+      "status": "PASS",
+      "evidence": "",
+      "notes": "",
+      "resolution": "",
+      "runs": [
+        {
+          "run": "final(local-db,post-fix)",
+          "status": "PASS",
+          "actual": "200 / 401",
+          "evidence": "",
+          "notes": "",
+          "at": "2026-09-30T12:24:01.480Z"
+        },
+        {
+          "run": "prefix(prod-db,pre-fix)",
+          "status": "PASS",
+          "actual": "200 / 401",
+          "evidence": "",
+          "notes": "",
+          "at": "2026-09-30T12:09:31.969Z"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:24:01.480Z"
+    },
+    {
+      "id": "QA-1301",
+      "actual": "no published posts in list (len=0)",
+      "status": "PASS",
+      "evidence": "",
+      "notes": "no published post available in local DB",
+      "resolution": "verified PASS in run \"prefix(prod-db,pre-fix)\"; final local run NOT RUN (empty local dataset)",
+      "runs": [
+        {
+          "run": "final(local-db,post-fix)",
+          "status": "NOT RUN",
+          "actual": "no published posts in list (len=0)",
+          "evidence": "",
+          "notes": "no published post available in local DB",
+          "at": "2026-09-30T12:24:01.496Z"
+        },
+        {
+          "run": "prefix(prod-db,pre-fix)",
+          "status": "PASS",
+          "actual": "200 (slug=building-a-modern-crm-workflow-for-small-and-medium-businesses)",
+          "evidence": "",
+          "notes": "",
+          "at": "2026-09-30T12:09:33.545Z"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:24:01.496Z"
+    },
+    {
+      "id": "QA-1302",
+      "actual": "-",
+      "status": "PASS",
+      "evidence": "",
+      "notes": "depends on QA-1301",
+      "resolution": "verified PASS in run \"prefix(prod-db,pre-fix)\"; final local run NOT RUN (empty local dataset)",
+      "runs": [
+        {
+          "run": "final(local-db,post-fix)",
+          "status": "NOT RUN",
+          "actual": "-",
+          "evidence": "",
+          "notes": "depends on QA-1301",
+          "at": "2026-09-30T12:24:01.496Z"
+        },
+        {
+          "run": "prefix(prod-db,pre-fix)",
+          "status": "PASS",
+          "actual": "200",
+          "evidence": "",
+          "notes": "",
+          "at": "2026-09-30T12:09:33.545Z"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:24:01.496Z"
+    },
+    {
+      "id": "QA-1303",
+      "actual": "home200=true link=true form=true",
+      "status": "PASS",
+      "evidence": "",
+      "notes": "",
+      "resolution": "",
+      "runs": [
+        {
+          "run": "final(local-db,post-fix)",
+          "status": "PASS",
+          "actual": "home200=true link=true form=true",
+          "evidence": "",
+          "notes": "",
+          "at": "2026-09-30T12:24:01.525Z"
+        },
+        {
+          "run": "prefix(prod-db,pre-fix)",
+          "status": "PASS",
+          "actual": "home200=true link=true form=true",
+          "evidence": "",
+          "notes": "",
+          "at": "2026-09-30T12:09:33.569Z"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:24:01.525Z"
+    },
+    {
+      "id": "QA-1304a",
+      "actual": "201 id=6abcffb8be0cc61a85418934",
+      "status": "PASS",
+      "evidence": "{\"success\":true,\"data\":{\"name\":\"QA Lead\",\"email\":\"qa-lead-1790771127905@localhost.invalid\",\"source\":\"qa-test\",\"status\":\"",
+      "notes": "",
+      "resolution": "",
+      "runs": [
+        {
+          "run": "journey+integrity",
+          "status": "PASS",
+          "actual": "201 id=6abcffb8be0cc61a85418934",
+          "evidence": "{\"success\":true,\"data\":{\"name\":\"QA Lead\",\"email\":\"qa-lead-1790771127905@localhost.invalid\",\"source\":\"qa-test\",\"status\":\"",
+          "notes": "",
+          "at": "2026-09-30T12:25:28.225Z"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:25:28.225Z"
+    },
+    {
+      "id": "QA-1304b",
+      "actual": "200 found=true",
+      "status": "PASS",
+      "evidence": "",
+      "notes": "",
+      "resolution": "",
+      "runs": [
+        {
+          "run": "journey+integrity",
+          "status": "PASS",
+          "actual": "200 found=true",
+          "evidence": "",
+          "notes": "",
+          "at": "2026-09-30T12:25:28.252Z"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:25:28.252Z"
+    },
+    {
+      "id": "QA-1304c",
+      "actual": "200",
+      "status": "PASS",
+      "evidence": "{\"success\":true,\"data\":{\"_id\":\"6abcffb8be0cc61a85418934\",\"name\":\"QA Lead\",\"email\":\"qa-lead-179077112",
+      "notes": "",
+      "resolution": "",
+      "runs": [
+        {
+          "run": "journey+integrity",
+          "status": "PASS",
+          "actual": "200",
+          "evidence": "{\"success\":true,\"data\":{\"_id\":\"6abcffb8be0cc61a85418934\",\"name\":\"QA Lead\",\"email\":\"qa-lead-179077112",
+          "notes": "",
+          "at": "2026-09-30T12:25:28.278Z"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:25:28.278Z"
+    },
+    {
+      "id": "QA-1304d",
+      "actual": "del=200 get=404",
+      "status": "PASS",
+      "evidence": "",
+      "notes": "",
+      "resolution": "",
+      "runs": [
+        {
+          "run": "journey+integrity",
+          "status": "PASS",
+          "actual": "del=200 get=404",
+          "evidence": "",
+          "notes": "",
+          "at": "2026-09-30T12:25:28.314Z"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:25:28.314Z"
+    },
+    {
+      "id": "QA-1401",
+      "actual": "unique=true",
+      "status": "PASS",
+      "evidence": "",
+      "notes": "",
+      "resolution": "",
+      "runs": [
+        {
+          "run": "journey+integrity",
+          "status": "PASS",
+          "actual": "unique=true",
+          "evidence": "",
+          "notes": "",
+          "at": "2026-09-30T12:25:28.415Z"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:25:28.415Z"
+    },
+    {
+      "id": "QA-1402",
+      "actual": "unique=true",
+      "status": "PASS",
+      "evidence": "",
+      "notes": "",
+      "resolution": "",
+      "runs": [
+        {
+          "run": "journey+integrity",
+          "status": "PASS",
+          "actual": "unique=true",
+          "evidence": "",
+          "notes": "",
+          "at": "2026-09-30T12:25:28.418Z"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:25:28.418Z"
+    },
+    {
+      "id": "QA-1403",
+      "actual": "first=ok second=11000",
+      "status": "PASS",
+      "evidence": "",
+      "notes": "",
+      "resolution": "",
+      "runs": [
+        {
+          "run": "journey+integrity",
+          "status": "PASS",
+          "actual": "first=ok second=11000",
+          "evidence": "",
+          "notes": "",
+          "at": "2026-09-30T12:25:28.438Z"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:25:28.438Z"
+    },
+    {
+      "id": "QA-1404",
+      "actual": "unique=true",
+      "status": "PASS",
+      "evidence": "",
+      "notes": "",
+      "resolution": "",
+      "runs": [
+        {
+          "run": "journey+integrity",
+          "status": "PASS",
+          "actual": "unique=true",
+          "evidence": "",
+          "notes": "",
+          "at": "2026-09-30T12:25:28.461Z"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:25:28.461Z"
+    },
+    {
+      "id": "QA-1405",
+      "actual": "{\"contacts\":0,\"blogposts\":0,\"leads\":0}",
+      "status": "PASS",
+      "evidence": "{\"contacts\":1,\"blogposts\":0,\"leads\":0,\"securityevents\":3}",
+      "notes": "",
+      "resolution": "",
+      "runs": [
+        {
+          "run": "journey+integrity",
+          "status": "PASS",
+          "actual": "{\"contacts\":0,\"blogposts\":0,\"leads\":0}",
+          "evidence": "{\"contacts\":1,\"blogposts\":0,\"leads\":0,\"securityevents\":3}",
+          "notes": "",
+          "at": "2026-09-30T12:25:28.764Z"
+        }
+      ],
+      "updatedAt": "2026-09-30T12:25:28.764Z"
+    },
+    {
+      "id": "QA-1501",
+      "module": "E2E Dashboard",
+      "title": "Authenticated dashboard UI flows (admin pages)",
+      "priority": "P1",
+      "expected": "pages render with session",
+      "status": "NOT RUN",
+      "notes": "requires NextAuth v5 session cookie which cannot be minted offline; legacy cookie is redirected by middleware (QA-0209). Manual/scripted-browser run needed."
+    },
+    {
+      "id": "QA-1502",
+      "module": "AI",
+      "title": "AI provider success paths (chat/discovery/content)",
+      "priority": "P1",
+      "expected": "200 model response",
+      "status": "BLOCKED",
+      "notes": "OPENAI_API_KEY has no credits and AI_API_KEY invalid in this environment; error path verified controlled (QA-0701)."
+    },
+    {
+      "id": "QA-1503",
+      "module": "Payments",
+      "title": "Real payment transactions / checkout e2e",
+      "priority": "P1",
+      "expected": "test-mode transaction",
+      "status": "NOT RUN",
+      "notes": "policy: only test credentials permitted; no test gateway credentials present. Webhook signature rejection verified (QA-0901)."
+    },
+    {
+      "id": "QA-1504",
+      "module": "E2E Client",
+      "title": "Client portal journeys (orders/invoices/projects as client)",
+      "priority": "P2",
+      "expected": "client sees own data",
+      "status": "NOT RUN",
+      "notes": "no client account credentials available; anon-deny verified (QA-0211/QA-1201)."
+    },
+    {
+      "id": "QA-1505",
+      "module": "Blog/Security",
+      "title": "Browser-level DOMPurify render verification",
+      "priority": "P2",
+      "expected": "payload stripped in DOM",
+      "status": "NOT RUN",
+      "notes": "no browser automation in this pass; DOMPurify.sanitize call inspected in blog-post-content.tsx:161 but inspection is not a test."
+    },
+    {
+      "id": "QA-1506",
+      "module": "Performance",
+      "title": "Load/concurrency testing",
+      "priority": "P3",
+      "expected": "-",
+      "status": "NOT RUN",
+      "notes": "out of scope for this pass; outbox/lease concurrency covered by publication-queue unit tests."
+    }
+  ]
+}

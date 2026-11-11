@@ -1,0 +1,143 @@
+{
+  "name": "Website Structure",
+  "type": "website-structure",
+  "content": {
+    "publicPages": [
+      { "route": "/", "description": "Homepage" },
+      { "route": "/about", "description": "About page" },
+      { "route": "/services", "description": "Service catalog" },
+      { "route": "/products", "description": "Product marketplace" },
+      { "route": "/hosting", "description": "Hosting plans" },
+      { "route": "/pricing", "description": "Pricing page" },
+      { "route": "/portfolio", "description": "Portfolio showcase" },
+      { "route": "/blog", "description": "Blog listing and posts" },
+      { "route": "/voice-agent", "description": "Voice agent demo" },
+      { "route": "/contact", "description": "Contact form" },
+      { "route": "/cart", "description": "Shopping cart" },
+      { "route": "/checkout", "description": "Payment checkout" },
+      { "route": "/client-portal/[id]", "description": "Client portal" },
+      { "route": "/preview/[id]", "description": "Project preview" },
+      { "route": "/sitemap", "description": "HTML sitemap" }
+    ],
+    "legalPages": [
+      { "route": "/privacy", "description": "Privacy policy" },
+      { "route": "/terms", "description": "Terms of service" },
+      { "route": "/refund", "description": "Refund policy" },
+      { "route": "/cookie-policy", "description": "Cookie policy" },
+      { "route": "/disclaimer", "description": "Disclaimer" },
+      { "route": "/accessibility", "description": "Accessibility statement" },
+      { "route": "/acceptable-use", "description": "Acceptable use policy" },
+      { "route": "/ai-usage", "description": "AI usage policy" },
+      { "route": "/data-processing", "description": "Data processing agreement" },
+      { "route": "/copyright", "description": "Copyright notice" },
+      { "route": "/legal-notices", "description": "Legal notices" }
+    ],
+    "authPages": [
+      { "route": "/login", "description": "User login" },
+      { "route": "/signup", "description": "User registration" },
+      { "route": "/forgot-password", "description": "Password recovery" },
+      { "route": "/reset-password", "description": "Password reset" }
+    ],
+    "dashboardSections": [
+      { "route": "/dashboard", "description": "Dashboard home" },
+      { "route": "/dashboard/projects", "description": "Project management" },
+      { "route": "/dashboard/blog", "description": "Blog management" },
+      { "route": "/dashboard/ecommerce/products", "description": "Product management" },
+      { "route": "/dashboard/crm", "description": "CRM module" },
+      { "route": "/dashboard/invoices", "description": "Invoice management" },
+      { "route": "/dashboard/orders", "description": "Order management" },
+      { "route": "/dashboard/hosting", "description": "Hosting management" },
+      { "route": "/dashboard/domains", "description": "Domain management" },
+      { "route": "/dashboard/support", "description": "Support tickets" },
+      { "route": "/dashboard/users", "description": "User management" },
+      { "route": "/dashboard/settings", "description": "General settings" },
+      { "route": "/dashboard/settings/pricing", "description": "Pricing configuration" },
+      { "route": "/dashboard/marketing", "description": "Marketing tools" },
+      { "route": "/dashboard/gdpr", "description": "GDPR compliance" }
+    ],
+    "apiRouteGroups": [
+      {
+        "group": "Auth",
+        "routes": [
+          { "endpoint": "/api/auth/[...nextauth]", "methods": ["GET", "POST"], "description": "NextAuth v5 handlers" },
+          { "endpoint": "/api/auth/login", "methods": ["POST"], "description": "Custom login" },
+          { "endpoint": "/api/auth/signup", "methods": ["POST"], "description": "User registration" },
+          { "endpoint": "/api/auth/logout", "methods": ["POST"], "description": "Session termination" },
+          { "endpoint": "/api/auth/forgot-password", "methods": ["POST"], "description": "Password recovery" },
+          { "endpoint": "/api/auth/reset-password", "methods": ["POST"], "description": "Password reset" },
+          { "endpoint": "/api/auth/google", "methods": ["GET"], "description": "Google OAuth callback" },
+          { "endpoint": "/api/auth/github", "methods": ["GET"], "description": "GitHub OAuth callback" },
+          { "endpoint": "/api/auth/facebook", "methods": ["GET"], "description": "Facebook OAuth callback" },
+          { "endpoint": "/api/auth/linkedin", "methods": ["GET"], "description": "LinkedIn OAuth callback" }
+        ]
+      },
+      {
+        "group": "AI",
+        "routes": [
+          { "endpoint": "/api/ai/chat", "methods": ["POST"], "description": "AI chat assistant" },
+          { "endpoint": "/api/ai/discover", "methods": ["POST"], "description": "AI discovery" },
+          { "endpoint": "/api/ai/estimate", "methods": ["POST"], "description": "Cost estimation" },
+          { "endpoint": "/api/ai/demo", "methods": ["POST"], "description": "AI demo generation" },
+          { "endpoint": "/api/ai/content", "methods": ["POST"], "description": "Content generation" }
+        ]
+      },
+      {
+        "group": "Blog",
+        "routes": [
+          { "endpoint": "/api/blog/posts", "methods": ["GET", "POST"], "description": "List and create posts" },
+          { "endpoint": "/api/blog/posts/[id]", "methods": ["GET", "PUT", "DELETE"], "description": "Single post CRUD" },
+          { "endpoint": "/api/blog/categories", "methods": ["GET", "POST"], "description": "Category management" },
+          { "endpoint": "/api/blog/comments", "methods": ["GET", "POST"], "description": "Comment system" }
+        ]
+      },
+      {
+        "group": "Products",
+        "routes": [
+          { "endpoint": "/api/products", "methods": ["GET", "POST"], "description": "List and create products" },
+          { "endpoint": "/api/products/[id]", "methods": ["GET", "PUT", "DELETE"], "description": "Single product CRUD" },
+          { "endpoint": "/api/products/categories", "methods": ["GET", "POST"], "description": "Product categories" }
+        ]
+      },
+      {
+        "group": "Projects",
+        "routes": [
+          { "endpoint": "/api/projects", "methods": ["GET", "POST"], "description": "List and create projects" },
+          { "endpoint": "/api/projects/[id]", "methods": ["GET", "PUT", "DELETE"], "description": "Single project CRUD" },
+          { "endpoint": "/api/projects/checkout", "methods": ["POST"], "description": "Project checkout" },
+          { "endpoint": "/api/projects/preview", "methods": ["GET"], "description": "Project preview" }
+        ]
+      },
+      {
+        "group": "Orders",
+        "routes": [
+          { "endpoint": "/api/orders", "methods": ["GET", "POST"], "description": "List and create orders" },
+          { "endpoint": "/api/orders/[id]", "methods": ["GET", "PUT", "DELETE"], "description": "Single order CRUD" }
+        ]
+      },
+      {
+        "group": "Settings",
+        "routes": [
+          { "endpoint": "/api/settings/general", "methods": ["GET", "PUT"], "description": "General settings" },
+          { "endpoint": "/api/settings/pricing", "methods": ["GET", "PUT"], "description": "Pricing rules" },
+          { "endpoint": "/api/settings/profile", "methods": ["GET", "PUT"], "description": "User profile" },
+          { "endpoint": "/api/settings/security", "methods": ["GET", "PUT"], "description": "Security settings" }
+        ]
+      },
+      {
+        "group": "Voice Agent",
+        "routes": [
+          { "endpoint": "/api/voice-agent/billing", "methods": ["GET"], "description": "Voice billing" },
+          { "endpoint": "/api/voice-agent/call-ended", "methods": ["POST"], "description": "Call completion webhook" },
+          { "endpoint": "/api/voice-agent/generate-demo", "methods": ["POST"], "description": "Demo generation" }
+        ]
+      },
+      {
+        "group": "Webhooks",
+        "routes": [
+          { "endpoint": "/api/webhooks/2checkout", "methods": ["POST"], "description": "2Checkout payment webhook" },
+          { "endpoint": "/api/webhooks/dograh", "methods": ["POST"], "description": "Dograh voice agent webhook" }
+        ]
+      }
+    ]
+  }
+}

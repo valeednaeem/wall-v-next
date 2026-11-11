@@ -1,0 +1,103 @@
+import { NextResponse } from "next/server";
+import { connectToDatabase } from "@/lib/mongodb";
+import Product from "@/models/product";
+import ProductCategory from "@/models/product-category";
+import { generateSlug } from "@/lib/generate-slug";
+import { getAuthUser } from "@/lib/auth";
+import { escapeRegex } from "@/lib/escape-regex";
+import { pickFields } from "@/lib/pick-fields";
+
+const PRODUCT_CREATE_FIELDS = [
+  "name", "type", "description", "shortDescription", "content",
+  "featuredImage", "gallery", "files", "price", "salePrice", "currency",
+  "category", "subcategory", "badges", "features", "specifications",
+  "status", "isFeatured", "isPromotional", "sku",
+  "seo", "social", "variants",
+];
+
+export async function GET(request: Request) {
+  try {
+    await connectToDatabase();
+    const { searchParams } = new URL(request.url);
+
+    const page = parseInt(searchParams.get("page") || "1");
+    const limit = parseInt(searchParams.get("limit") || "12");
+    const category = searchParams.get("category");
+    const type = searchParams.get("type");
+    const search = searchParams.get("search");
+    const featured = searchParams.get("featured");
+    const status = searchParams.get("status");
+    const sort = searchParams.get("sort") || "createdAt";
+    const order = searchParams.get("order") || "desc";
+    const allStatuses = searchParams.get("allStatuses") === "true";
+
+    const query: Record<string, unknown> = {};
+
+    if (allStatuses) {
+      if (status) query.status = status;
+    } else {
+      query.status = "published";
+    }
+
+    if (category) {
+      const cat = await ProductCategory.findOne({ slug: category });
+      if (cat) query.category = cat._id;
+    }
+    if (type) query.type = type;
+    if (featured === "true") query.isFeatured = true;
+    if (search) {
+      const safeSearch = escapeRegex(search);
+      query.$or = [
+        { name: { $regex: safeSearch, $options: "i" } },
+        { description: { $regex: safeSearch, $options: "i" } },
+      ];
+    }
+
+    const total = await Product.countDocuments(query);
+    const products = await Product.find(query)
+      .populate("category", "name slug")
+      .sort({ [sort]: order === "desc" ? -1 : 1 })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .lean();
+
+    return NextResponse.json({
+      success: true,
+      data: products,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    });
+  } catch (error) {
+    console.error("Products GET error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const user = await getAuthUser();
+    if (!user || !["super-admin", "admin", "manager", "staff"].includes(user.role)) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    await connectToDatabase();
+    const body = await request.json();
+
+    const slug = generateSlug(body.name);
+    const existingProduct = await Product.findOne({ slug });
+    if (existingProduct) {
+      return NextResponse.json({ error: "Product with this name already exists" }, { status: 409 });
+    }
+
+    const productData = pickFields(body, PRODUCT_CREATE_FIELDS);
+    const product = await Product.create({ ...productData, slug, createdBy: user.userId });
+    return NextResponse.json({ success: true, data: product }, { status: 201 });
+  } catch (error) {
+    console.error("Products POST error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}

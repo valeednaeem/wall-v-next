@@ -1,0 +1,11 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "provider": {
+    "openai": {
+      "options": {
+        "baseURL": "http://localhost:20128/v1",
+        "apiKey": "sk-f4d4d8e7f60d778e-e95d29-fc8aa102"
+      }
+    }
+  }
+}

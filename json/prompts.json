@@ -1,0 +1,90 @@
+{
+  "name": "Prompts",
+  "type": "prompts",
+  "content": {
+    "voiceAgent": {
+      "greeting": "Welcome to Wall-V! I'm your AI assistant. How can I help you today?",
+      "informationCollection": [
+        { "field": "Full Name", "description": "Caller's complete name" },
+        { "field": "Email", "description": "Contact email address" },
+        { "field": "Phone", "description": "Phone number" },
+        { "field": "Company", "description": "Company or organization name" },
+        { "field": "Project Type", "description": "Nature of the project (website, app, ERP, etc.)" },
+        { "field": "Budget Range", "description": "Estimated budget bracket" },
+        { "field": "Timeline", "description": "Desired completion date" }
+      ],
+      "capabilities": [
+        "Guide callers to relevant pages on the Wall-V website",
+        "Explain available services and pricing tiers",
+        "Share specific pricing when asked",
+        "Help callers initiate a project engagement"
+      ],
+      "behavior": [
+        "Friendly, warm, and professional tone",
+        "Keep responses to 2-3 sentences maximum for voice delivery",
+        "Speak naturally without robotic phrasing",
+        "Avoid jargon unless the caller uses it first",
+        "Use the caller's name 1-2 times throughout the conversation naturally"
+      ],
+      "summaryProtocol": [
+        "Confirm name, email, phone, and company",
+        "Restate the project type and budget discussed",
+        "Verify timeline expectations",
+        "Ask if anything needs correction"
+      ]
+    },
+    "salesChatAgent": {
+      "discoveryStages": [
+        { "stage": 1, "name": "Initial Greeting", "description": "Welcome and identify the visitor" },
+        { "stage": 2, "name": "Need Identification", "description": "Understand what the visitor is looking for" },
+        { "stage": 3, "name": "Service Matching", "description": "Map needs to Wall-V service offerings" },
+        { "stage": 4, "name": "Budget Discovery", "description": "Determine budget range" },
+        { "stage": 5, "name": "Timeline Assessment", "description": "Establish project timeline" },
+        { "stage": 6, "name": "Decision Maker", "description": "Identify who makes purchasing decisions" },
+        { "stage": 7, "name": "Competition Check", "description": "Learn if they are evaluating alternatives" },
+        { "stage": 8, "name": "Objection Handling", "description": "Address concerns and hesitations" },
+        { "stage": 9, "name": "Proposal Generation", "description": "Create a tailored proposal" },
+        { "stage": 10, "name": "Call to Action", "description": "Guide toward the next step" },
+        { "stage": 11, "name": "Follow-Up Scheduling", "description": "Set up follow-up contact" }
+      ],
+      "budgetDetection": [
+        "Direct statements (Our budget is $10,000)",
+        "Comparative references (We used to pay $500/month)",
+        "Constraint language (We need something under $5,000)"
+      ],
+      "serviceMatching": [
+        "Starter websites for basic needs and lower budgets",
+        "Professional websites for growing businesses",
+        "Enterprise solutions for complex requirements",
+        "Mobile apps when cross-platform or native presence is needed",
+        "ERP/CRM systems for operational management"
+      ],
+      "demoGeneration": {
+        "outputs": ["A live demo link with pre-populated content", "A summary of recommended features", "A preliminary cost estimate"],
+        "trigger": "When requirements are sufficient"
+      },
+      "crmIntegration": {
+        "inquiryRecord": ["Visitor contact information", "Stated requirements and preferences", "Budget and timeline details", "Recommended service tier", "Next steps and follow-up date"]
+      },
+      "languageSupport": ["English", "Urdu", "Arabic", "French", "Spanish", "German", "Turkish", "Bahasa Indonesia", "Bahasa Malay", "Portuguese", "Italian", "Dutch", "Chinese"]
+    },
+    "projectDiscoveryEngine": {
+      "overview": "Comprehensive conversation system spanning 1076+ lines of logic guiding prospects from initial interest through detailed requirement gathering to a final solution recommendation",
+      "serviceKnowledgeBase": ["Service descriptions and use cases", "Pricing tiers and included features", "Add-on options and custom pricing rules", "Delivery timelines per service type"],
+      "featureDetection": {
+        "totalCategories": 21,
+        "categories": ["Authentication and user management", "Payment processing and subscriptions", "Content management systems", "E-commerce functionality", "Booking and scheduling", "Multi-language support", "Analytics and reporting", "Third-party integrations", "Mobile responsiveness", "Accessibility compliance", "And 12 additional categories"]
+      },
+      "budgetRangeEstimation": ["Minimum viable budget for core features", "Recommended budget for full feature set", "Premium budget for advanced integrations and scale"],
+      "timelineCalculation": ["Number of detected features", "Complexity of integrations", "Design requirements", "Testing and QA needs", "Client review cycles"],
+      "riskAssessment": ["Scope creep potential", "Integration complexity", "Timeline feasibility", "Budget alignment", "Technical debt concerns"],
+      "solutionRecommendation": ["Recommended service tier", "Feature priority list", "Estimated timeline and cost", "Risk mitigation suggestions", "Next steps for engagement"]
+    },
+    "contentWriter": {
+      "blogPostGeneration": ["SEO-optimized headlines and subheadings", "Structured formatting with headers and lists", "Internal and external link suggestions", "Meta descriptions and title tags", "Call-to-action placement"],
+      "productDescriptions": ["Feature highlights with benefit framing", "Specification tables", "Comparison language for competitive positioning", "Social proof integration points", "Purchase funnel alignment"],
+      "seoContent": ["Keyword research integration", "On-page optimization (headers, meta, alt text)", "Content length and depth calibration", "Schema markup suggestions", "Internal linking strategy"],
+      "socialMediaContent": ["Platform-specific formatting (LinkedIn, Twitter, Facebook)", "Hashtag research and suggestions", "Engagement-driven copywriting", "Content calendar alignment", "Brand voice consistency"]
+    }
+  }
+}

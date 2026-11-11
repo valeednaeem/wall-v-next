@@ -1,0 +1,1185 @@
+import { connectToDatabase } from "@/lib/mongodb";
+import ContentCampaign from "@/models/content-campaign";
+import ContentPlan from "@/models/content-plan";
+import ContentTopic from "@/models/content-topic";
+import ContentItem from "@/models/content-item";
+import ContentSettings from "@/models/content-settings";
+import ContentExecution from "@/models/content-execution";
+import BlogPost from "@/models/blog-post";
+import BlogCategory from "@/models/blog-category";
+import BlogTag from "@/models/blog-tag";
+import User from "@/models/user";
+import type { IContentCampaign } from "@/models/content-campaign";
+import type { IContentPlan } from "@/models/content-plan";
+import type { IContentTopic } from "@/models/content-topic";
+import type { IContentItem } from "@/models/content-item";
+import { generateSlug } from "@/lib/generate-slug";
+import { slugify, normalizeBaseUrl } from "@/lib/utils";
+import { discoverTopics, scoreTopics, selectBestTopics } from "@/lib/topic-discovery";
+import {
+  generateArticle,
+  generateSocialVariants,
+  generateImagePrompt,
+} from "@/lib/content-generator";
+import { runQualityPipeline } from "@/lib/content-quality";
+import { findInternalLinks } from "@/lib/content-linking";
+import { checkForDuplicates } from "@/lib/content-analytics";
+import { enqueuePublication } from "@/lib/social-publisher/enqueue";
+import { contentItemPayload, blogPostPayload } from "@/lib/social-publisher/payloads";
+import { normalizePlatform } from "@/lib/social-publisher/platforms";
+import { insertInternalLinks, runSEOAudit, enhanceSEOMetadata, generateArticleSchema, addFreshnessSignal, generateSEOStrategy } from "@/lib/seo-content-engine";
+import { marked } from "marked";
+
+// ─── Execution Tracking Helpers ──────────────────────────────────────────────
+
+async function createExecutionRecord(data: {
+  campaign: string;
+  plan: string;
+  planVersion: number;
+  type: string;
+  stage: string;
+  agent?: string;
+  input?: Record<string, unknown>;
+  contentItem?: string;
+  topic?: string;
+}) {
+  return ContentExecution.create({
+    campaign: data.campaign,
+    plan: data.plan,
+    planVersion: data.planVersion,
+    type: data.type,
+    stage: data.stage,
+    agent: data.agent || "content-orchestrator",
+    status: "running",
+    startedAt: new Date(),
+    input: data.input || {},
+    contentItem: data.contentItem || undefined,
+    topic: data.topic || undefined,
+    auditTrail: [{
+      stage: data.stage,
+      status: "running",
+      timestamp: new Date(),
+    }],
+  });
+}
+
+async function updateExecutionStage(
+  executionId: string,
+  stage: string,
+  status: string,
+  message?: string,
+  extra?: Record<string, unknown>
+) {
+  const update: Record<string, unknown> = {
+    stage,
+    $push: {
+      auditTrail: { stage, status, timestamp: new Date(), message },
+    },
+  };
+  if (status === "completed" || status === "failed") {
+    update.completedAt = new Date();
+    update.status = status;
+  }
+  if (extra) {
+    Object.assign(update, extra);
+  }
+  const doc = await ContentExecution.findByIdAndUpdate(executionId, update, { new: true });
+  if (doc && status === "completed" && doc.startedAt) {
+    const duration = Date.now() - new Date(doc.startedAt).getTime();
+    await ContentExecution.findByIdAndUpdate(executionId, { duration });
+  }
+}
+
+// ─── Campaign Management ─────────────────────────────────────────────────────
+
+export async function createCampaign(data: {
+  name: string;
+  description?: string;
+  businessObjectives: string[];
+  targetAudience: string[];
+  contentPillars: { name: string; description: string; keywords: string[] }[];
+  dateRange: { start: string; end: string };
+  productServicePriorities?: { type: string; name: string; slug: string; priority: number }[];
+}): Promise<IContentCampaign> {
+  await connectToDatabase();
+
+  const slug = generateSlug(data.name);
+  const existing = await ContentCampaign.findOne({ slug });
+  if (existing) {
+    throw new Error("Campaign with this name already exists");
+  }
+
+  const campaign = await ContentCampaign.create({
+    name: data.name,
+    slug,
+    description: data.description,
+    status: "draft",
+    dateRange: {
+      start: new Date(data.dateRange.start),
+      end: new Date(data.dateRange.end),
+    },
+    businessObjectives: data.businessObjectives,
+    targetAudience: data.targetAudience,
+    contentPillars: data.contentPillars,
+    productServicePriorities: data.productServicePriorities || [],
+    planVersion: 1,
+    completionPercentage: 0,
+    stats: {
+      totalTopics: 0,
+      totalArticles: 0,
+      totalPublished: 0,
+      totalSocialPosts: 0,
+      totalMediaAssets: 0,
+      avgQualityScore: 0,
+    },
+    createdBy: "000000000000000000000000",
+  });
+
+  return campaign;
+}
+
+export async function getCampaign(campaignId: string): Promise<IContentCampaign> {
+  await connectToDatabase();
+
+  const campaign = await ContentCampaign.findById(campaignId)
+    .populate("approvedBy", "name email")
+    .populate("createdBy", "name email")
+    .lean();
+
+  if (!campaign) {
+    throw new Error("Campaign not found");
+  }
+
+  return campaign as unknown as IContentCampaign;
+}
+
+export async function listCampaigns(status?: string): Promise<IContentCampaign[]> {
+  await connectToDatabase();
+
+  const query: Record<string, unknown> = {};
+  if (status) {
+    query.status = status;
+  }
+
+  const campaigns = await ContentCampaign.find(query)
+    .populate("createdBy", "name email")
+    .sort({ createdAt: -1 })
+    .lean();
+
+  return campaigns as unknown as IContentCampaign[];
+}
+
+// ─── Plan Management ─────────────────────────────────────────────────────────
+
+export async function generateWeeklyPlan(
+  campaignId: string,
+  weekNumber: number,
+  startDate: string,
+  endDate: string
+): Promise<IContentPlan> {
+  await connectToDatabase();
+
+  const campaign = await ContentCampaign.findById(campaignId).lean() as unknown as IContentCampaign | null;
+  if (!campaign) {
+    throw new Error("Campaign not found");
+  }
+
+  const topics = await discoverTopics(campaignId, {
+    count: 14,
+    focusAreas: campaign.contentPillars.map(
+      (p: { name: string; description: string; keywords: string[] }) => p.name
+    ),
+    productServicePriorities: campaign.productServicePriorities.map(
+      (p: { type: string; name: string; slug: string; priority: number }) => ({
+        type: p.type,
+        name: p.name,
+      })
+    ),
+  });
+
+  const scoredTopics = await scoreTopics(topics);
+  const selectedTopics = await selectBestTopics(scoredTopics, 7);
+
+  // ─── SEO Strategy Generation (before plan creation) ────────────────────
+  // Generate SEO strategy for each topic so article generation is SEO-informed
+  const topicsWithSEO = await Promise.all(
+    selectedTopics.map(async (t) => {
+      try {
+        const strategy = await generateSEOStrategy({
+          topic: t.title,
+          primaryKeyword: t.primaryKeyword || t.title,
+          secondaryKeywords: t.secondaryKeywords,
+          campaignGoal: campaign.contentPillars?.[0]?.description || "Drive organic traffic",
+        });
+        return {
+          ...t,
+          seoStrategy: {
+            optimizedKeyword: strategy.primaryKeyword,
+            secondaryKeywords: strategy.secondaryKeywords,
+            longTailKeywords: strategy.longTailKeywords,
+            searchIntent: strategy.searchIntent,
+            competitorGaps: strategy.competitorGap,
+            suggestedHeadings: strategy.contentStructure.suggestedHeadings,
+            wordCountTarget: strategy.contentStructure.wordCountTarget,
+            schemaType: strategy.schemaType,
+            internalLinkTargets: strategy.internalLinkTargets,
+          },
+        };
+      } catch {
+        // Fallback: use original topic data without SEO enhancement
+        return {
+          ...t,
+          seoStrategy: undefined,
+        };
+      }
+    })
+  );
+
+  const topicDocs = await ContentTopic.insertMany(
+    topicsWithSEO.map((t) => ({
+      campaign: campaignId,
+      title: t.title,
+      slug: generateSlug(t.title),
+      description: t.description,
+      primaryKeyword: t.seoStrategy?.optimizedKeyword || t.primaryKeyword,
+      secondaryKeywords: t.seoStrategy?.secondaryKeywords || t.secondaryKeywords,
+      searchIntent: (t.seoStrategy?.searchIntent || t.searchIntent) as IContentTopic["searchIntent"],
+      contentType: t.contentType as IContentTopic["contentType"],
+      businessRelevance: t.businessRelevance,
+      trendMomentum: t.trendMomentum,
+      seoOpportunity: t.seoOpportunity,
+      competition: t.competition,
+      conversionPotential: t.conversionPotential,
+      socialPotential: t.socialPotential,
+      videoPotential: t.videoPotential,
+      contentDifferentiation: 5,
+      factualUncertainty: 5,
+      saturation: 5,
+      overallScore: t.overallScore || 0,
+      sources: t.sources,
+      status: "planned",
+      assignedDayOfWeek: topicsWithSEO.indexOf(t),
+      plannedChannels: ["blog", "linkedin"],
+      plannedMedia: { image: true, video: false, social: true },
+      seoStrategy: t.seoStrategy,
+    }))
+  );
+
+  const dayOfWeekMap: Record<number, { dow: number; date: Date }> = {};
+  const start = new Date(startDate);
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(start);
+    d.setDate(start.getDate() + i);
+    dayOfWeekMap[i] = { dow: i, date: d };
+  }
+
+  for (let i = 0; i < topicDocs.length; i++) {
+    const dow = i;
+    if (dayOfWeekMap[dow]) {
+      await ContentTopic.findByIdAndUpdate(topicDocs[i]._id, {
+        assignedDate: dayOfWeekMap[dow].date,
+        assignedDayOfWeek: dow,
+      });
+    }
+  }
+
+  const version = (campaign.planVersion || 0) + 1;
+  await ContentCampaign.findByIdAndUpdate(campaignId, {
+    status: "pending_approval",
+    planVersion: version,
+  });
+
+  const plan = await ContentPlan.create({
+    campaign: campaignId,
+    weekNumber,
+    startDate: new Date(startDate),
+    endDate: new Date(endDate),
+    version,
+    status: "pending_approval",
+    topics: topicDocs.map((t) => t._id),
+    items: [],
+    changeRequests: [],
+    auditTrail: [
+      {
+        action: "plan_generated",
+        timestamp: new Date(),
+        actor: "000000000000000000000000",
+        details: `Week ${weekNumber} plan generated with ${topicDocs.length} topics`,
+      },
+    ],
+  });
+
+  return plan;
+}
+
+export async function approvePlan(
+  planId: string,
+  userId: string
+): Promise<IContentPlan> {
+  await connectToDatabase();
+
+  const plan = await ContentPlan.findById(planId).lean();
+  if (!plan) {
+    throw new Error("Plan not found");
+  }
+
+  if (plan.status !== "pending_approval" && plan.status !== "changes_requested") {
+    throw new Error(`Cannot approve plan in status "${plan.status}". Must be "pending_approval" or "changes_requested".`);
+  }
+
+  const updated = await ContentPlan.findByIdAndUpdate(
+    planId,
+    {
+      status: "approved",
+      approvedBy: userId,
+      approvedAt: new Date(),
+      $push: {
+        auditTrail: {
+          action: "plan_approved",
+          timestamp: new Date(),
+          actor: userId,
+          details: "Plan approved for execution",
+        },
+      },
+    },
+    { new: true }
+  ).lean();
+
+  await ContentCampaign.findByIdAndUpdate(plan.campaign, {
+    status: "approved",
+    approvedBy: userId,
+    approvedAt: new Date(),
+  });
+
+  return updated as unknown as IContentPlan;
+}
+
+export async function rejectPlan(
+  planId: string,
+  userId: string,
+  reason: string
+): Promise<IContentPlan> {
+  await connectToDatabase();
+
+  const plan = await ContentPlan.findById(planId).lean();
+  if (!plan) {
+    throw new Error("Plan not found");
+  }
+
+  if (plan.status !== "pending_approval" && plan.status !== "changes_requested") {
+    throw new Error(`Cannot reject plan in status "${plan.status}".`);
+  }
+
+  const updated = await ContentPlan.findByIdAndUpdate(
+    planId,
+    {
+      status: "cancelled",
+      rejectionReason: reason,
+      $push: {
+        auditTrail: {
+          action: "plan_rejected",
+          timestamp: new Date(),
+          actor: userId,
+          details: `Rejected: ${reason}`,
+        },
+      },
+    },
+    { new: true }
+  ).lean();
+
+  await ContentCampaign.findByIdAndUpdate(plan.campaign, {
+    status: "rejected",
+  });
+
+  return updated as unknown as IContentPlan;
+}
+
+export async function requestPlanChanges(
+  planId: string,
+  userId: string,
+  message: string
+): Promise<IContentPlan> {
+  await connectToDatabase();
+
+  const plan = await ContentPlan.findById(planId).lean();
+  if (!plan) {
+    throw new Error("Plan not found");
+  }
+
+  if (plan.status !== "pending_approval" && plan.status !== "approved") {
+    throw new Error(`Cannot request changes on plan in status "${plan.status}".`);
+  }
+
+  const updated = await ContentPlan.findByIdAndUpdate(
+    planId,
+    {
+      status: "changes_requested",
+      $push: {
+        changeRequests: {
+          message,
+          requestedBy: userId,
+          requestedAt: new Date(),
+        },
+        auditTrail: {
+          action: "changes_requested",
+          timestamp: new Date(),
+          actor: userId,
+          details: message,
+        },
+      },
+    },
+    { new: true }
+  ).lean();
+
+  await ContentCampaign.findByIdAndUpdate(plan.campaign, {
+    status: "changes_requested",
+  });
+
+  return updated as unknown as IContentPlan;
+}
+
+export async function pauseCampaign(
+  campaignId: string
+): Promise<IContentCampaign> {
+  await connectToDatabase();
+
+  const campaign = await ContentCampaign.findById(campaignId).lean();
+  if (!campaign) {
+    throw new Error("Campaign not found");
+  }
+
+  const activeStatuses = ["approved", "executing", "partially_completed", "planned"];
+  if (!activeStatuses.includes(campaign.status)) {
+    throw new Error(`Cannot pause campaign in status "${campaign.status}".`);
+  }
+
+  const updated = await ContentCampaign.findByIdAndUpdate(
+    campaignId,
+    {
+      status: "paused",
+      pausedAt: new Date(),
+    },
+    { new: true }
+  ).lean();
+
+  return updated as unknown as IContentCampaign;
+}
+
+export async function cancelCampaign(
+  campaignId: string
+): Promise<IContentCampaign> {
+  await connectToDatabase();
+
+  const campaign = await ContentCampaign.findById(campaignId).lean();
+  if (!campaign) {
+    throw new Error("Campaign not found");
+  }
+
+  if (campaign.status === "completed" || campaign.status === "cancelled") {
+    throw new Error(`Cannot cancel campaign in status "${campaign.status}".`);
+  }
+
+  const updated = await ContentCampaign.findByIdAndUpdate(
+    campaignId,
+    {
+      status: "cancelled",
+      cancelledAt: new Date(),
+    },
+    { new: true }
+  ).lean();
+
+  return updated as unknown as IContentCampaign;
+}
+
+// ─── Execution ───────────────────────────────────────────────────────────────
+
+export async function executePlan(
+  planId: string
+): Promise<{ itemsCreated: number; errors: string[] }> {
+  await connectToDatabase();
+
+  const plan = await ContentPlan.findById(planId).lean() as unknown as IContentPlan | null;
+  if (!plan) {
+    throw new Error("Plan not found");
+  }
+
+  // Allow execution for approved plans OR resume partially failed executing plans
+  const executableStatuses = ["approved", "executing"];
+  if (!executableStatuses.includes(plan.status)) {
+    throw new Error(`Plan cannot be executed. Current status: "${plan.status}".`);
+  }
+
+  // Find which topics already have content items (skip them for resume support)
+  const existingItems = await ContentItem.find({ plan: planId }).select("topic").lean();
+  const existingTopicIds = new Set(existingItems.map((item) => item.topic?.toString()));
+  const topicsToProcess = (plan.topics || []).filter(
+    (tid) => !existingTopicIds.has(tid.toString())
+  );
+
+  if (topicsToProcess.length === 0 && existingItems.length > 0) {
+    console.log(`[ContentOrchestrator] PLAN_ALREADY_EXECUTED planId=${planId} existingItems=${existingItems.length}`);
+    return { itemsCreated: 0, errors: [`Plan already executed with ${existingItems.length} items — all topics covered`] };
+  }
+
+  console.log(`[ContentOrchestrator] CONTENT_EXECUTION_STARTED planId=${planId} topicCount=${plan.topics.length}`);
+
+  // Create plan-level execution record
+  const planExecution = await createExecutionRecord({
+    campaign: plan.campaign.toString(),
+    plan: planId,
+    planVersion: plan.version,
+    type: "plan_execution",
+    stage: "starting",
+    agent: "content-orchestrator",
+    input: { topicCount: topicsToProcess.length, skipped: existingTopicIds.size },
+  });
+
+  await ContentPlan.findByIdAndUpdate(planId, {
+    status: "executing",
+    $push: {
+      auditTrail: {
+        action: "execution_started",
+        timestamp: new Date(),
+        actor: "000000000000000000000000",
+        details: "Plan execution initiated",
+      },
+    },
+  });
+
+  await ContentCampaign.findByIdAndUpdate(plan.campaign, {
+    status: "executing",
+  });
+
+  let itemsCreated = 0;
+  const errors: string[] = [];
+
+  for (const topicId of topicsToProcess) {
+    try {
+      const topic = await ContentTopic.findById(topicId).lean() as unknown as IContentTopic | null;
+      if (!topic) {
+        errors.push(`Topic ${topicId} not found`);
+        continue;
+      }
+
+      const campaign = await ContentCampaign.findById(plan.campaign).lean() as unknown as IContentCampaign | null;
+      if (!campaign) {
+        errors.push("Campaign not found");
+        break;
+      }
+
+      const duplicateCheck = await checkForDuplicates(
+        topic.title,
+        topic.primaryKeyword || topic.title,
+        plan.campaign.toString()
+      );
+      if (duplicateCheck.isDuplicate) {
+        errors.push(
+          `Topic "${topic.title}" is a duplicate of existing content: ${duplicateCheck.similarItems[0]?.title || "unknown"}`
+        );
+        continue;
+      }
+
+      const articleItem = await ContentItem.create({
+        campaign: plan.campaign,
+        plan: planId,
+        topic: topicId,
+        type: "article",
+        platform: "blog",
+        title: topic.title,
+        slug: generateSlug(topic.title),
+        status: "draft",
+        approvalRequired: true,
+      });
+
+      console.log(`[ContentOrchestrator] ARTICLE_GENERATION_STARTED topicId=${topicId} title="${topic.title}"`);
+
+      // Create article generation execution record
+      const articleExec = await createExecutionRecord({
+        campaign: plan.campaign.toString(),
+        plan: planId,
+        planVersion: plan.version,
+        type: "article_generation",
+        stage: "generating_article",
+        agent: "content-generator",
+        input: { title: topic.title, keyword: topic.primaryKeyword },
+        topic: topicId.toString(),
+      });
+
+      const articleData = await generateArticle(articleItem, topic, campaign);
+      console.log(`[ContentOrchestrator] ARTICLE_GENERATION_COMPLETED topicId=${topicId} contentLength=${(articleData.content || "").length}`);
+
+      await updateExecutionStage(articleExec._id.toString(), "article_generated", "completed", `Generated ${(articleData.content || "").length} chars`, {
+        contentItem: articleItem._id.toString(),
+        output: { contentLength: (articleData.content || "").length, excerptLength: (articleData.excerpt || "").length },
+      });
+
+      // Update with generated content before quality check
+      await ContentItem.findByIdAndUpdate(articleItem._id, {
+        content: articleData.content,
+        excerpt: articleData.excerpt,
+        seo: articleData.seo,
+        internalLinks: articleData.internalLinks || [],
+      });
+
+      // Run quality pipeline
+      let qualityResults;
+      const qualityExec = await createExecutionRecord({
+        campaign: plan.campaign.toString(),
+        plan: planId,
+        planVersion: plan.version,
+        type: "quality_check",
+        stage: "running_quality_checks",
+        agent: "content-quality",
+        input: { itemId: articleItem._id.toString() },
+        topic: topicId.toString(),
+        contentItem: articleItem._id.toString(),
+      });
+
+      try {
+        qualityResults = await runQualityPipeline(
+          articleItem._id.toString(),
+          ["factCheck", "seoReview", "brandReview", "conversionReview"]
+        );
+        await updateExecutionStage(qualityExec._id.toString(), "quality_completed", "completed", `Score: ${qualityResults.overallScore}`, {
+          output: { overallScore: qualityResults.overallScore },
+        });
+      } catch {
+        qualityResults = null;
+        await updateExecutionStage(qualityExec._id.toString(), "quality_failed", "failed", "Quality pipeline error");
+      }
+
+      // Find enhanced internal links after quality check
+      const linkSuggestions = await findInternalLinks(
+        articleData.content || "",
+        topic.primaryKeyword || topic.title
+      );
+
+      // Merge AI-suggested links with discovered links
+      const aiLinks = articleData.internalLinks || [];
+      const discoveredLinks = linkSuggestions.slice(0, 5).map((s) => ({
+        text: s.anchorText,
+        url: s.url,
+      }));
+
+      const mergedLinks = [...aiLinks];
+      for (const dl of discoveredLinks) {
+        if (!mergedLinks.some((l) => l.url === dl.url)) {
+          mergedLinks.push(dl);
+        }
+      }
+
+      // ─── SEO: Insert internal links into content ────────────────────────
+      const contentWithLinks = insertInternalLinks(
+        articleData.content || "",
+        mergedLinks,
+        5
+      );
+
+      // ─── SEO: Run audit and enhance metadata ────────────────────────────
+      await ContentItem.findByIdAndUpdate(articleItem._id, {
+        content: contentWithLinks,
+        internalLinks: mergedLinks,
+      });
+
+      try {
+        await enhanceSEOMetadata(articleItem._id.toString());
+      } catch {
+        // SEO enhancement is best-effort
+      }
+
+      let seoAuditResult: { score: number } | null = null;
+      try {
+        seoAuditResult = await runSEOAudit(articleItem._id.toString());
+      } catch {
+        // SEO audit is best-effort
+      }
+
+      // Update status based on quality + SEO scores
+      const qualityScore = qualityResults?.overallScore || 0;
+      const seoScore = seoAuditResult?.score || 50;
+      const combinedScore = qualityScore * 0.7 + (seoScore / 10) * 0.3;
+
+      const newStatus = combinedScore >= 7
+        ? "approved"
+        : combinedScore >= 4
+          ? "review"
+          : "fact_check";
+
+      await ContentItem.findByIdAndUpdate(articleItem._id, {
+        status: newStatus,
+      });
+
+      // ─── Bridge: Create BlogPost from ContentItem ──────────────────────────
+      let blogPostId: string | null = null;
+      let blogExec: { _id: { toString(): string } } | null = null;
+
+      try {
+        // Find or create default category
+        let category = await BlogCategory.findOne({ slug: "ai-insights" }).lean();
+        if (!category) {
+          category = await BlogCategory.create({
+            name: "AI Insights",
+            slug: "ai-insights",
+            description: "Articles about AI, technology, and digital innovation",
+            postCount: 0,
+            sortOrder: 0,
+            isActive: true,
+          });
+        }
+
+        // Find or create tags from keywords
+        const tagNames: string[] = [];
+        if (topic.primaryKeyword) tagNames.push(topic.primaryKeyword);
+        if (topic.secondaryKeywords?.length) {
+          tagNames.push(...topic.secondaryKeywords.slice(0, 5));
+        }
+        if (tagNames.length === 0) {
+          tagNames.push(topic.title.split(" ").slice(0, 3).join(" "));
+        }
+
+        const tagIds: string[] = [];
+        for (const tagName of tagNames) {
+          const tagSlug = slugify(tagName);
+          let tag = await BlogTag.findOne({ slug: tagSlug }).lean();
+          if (!tag) {
+            tag = await BlogTag.create({
+              name: tagName,
+              slug: tagSlug,
+              postCount: 0,
+            });
+          }
+          tagIds.push(tag._id.toString());
+        }
+
+        // Find a default author (admin or first user)
+        const adminUser = await User.findOne({ role: { $in: ["super-admin", "admin"] } })
+          .select("_id")
+          .lean();
+        const authorId = adminUser?._id || campaign.createdBy || "000000000000000000000000";
+
+        // Read the updated content item to get final content
+        const finalItem = await ContentItem.findById(articleItem._id).lean() as unknown as IContentItem;
+
+        // Create blog execution record (after finalItem is available)
+        blogExec = await createExecutionRecord({
+          campaign: plan.campaign.toString(),
+          plan: planId,
+          planVersion: plan.version,
+          type: "blog_creation",
+          stage: "creating_blog_post",
+          agent: "content-orchestrator",
+          input: { title: finalItem.title },
+          topic: topicId.toString(),
+          contentItem: articleItem._id.toString(),
+        });
+
+        const blogSlug = generateSlug(finalItem.title);
+
+        // Check for existing blog post with same slug
+        const existingPost = await BlogPost.findOne({ slug: blogSlug }).lean();
+        if (!existingPost) {
+          // Convert markdown content to HTML for blog rendering
+          const markdownContent = finalItem.content || "";
+          const contentWithFreshness = addFreshnessSignal(markdownContent, new Date());
+          const htmlContent = await marked.parse(contentWithFreshness) as string;
+
+          // Generate JSON-LD schema for the article
+          const baseUrl = normalizeBaseUrl(process.env.NEXT_PUBLIC_APP_URL || "https://www.wall-v.com");
+          const articleSchema = generateArticleSchema(finalItem, baseUrl);
+
+          const blogPost = await BlogPost.create({
+            title: finalItem.title,
+            slug: blogSlug,
+            content: htmlContent,
+            excerpt: finalItem.excerpt || finalItem.content?.substring(0, 200) || "",
+            category: category._id,
+            tags: tagIds,
+            author: authorId,
+            status: "published",
+            featuredImage: finalItem.featuredImage || "",
+            seo: {
+              metaTitle: finalItem.seo?.metaTitle || finalItem.title,
+              metaDescription: finalItem.seo?.metaDescription || finalItem.excerpt || "",
+              keywords: finalItem.seo?.keywords || tagNames,
+              schema: articleSchema,
+            },
+            publishedAt: new Date(),
+            readTime: Math.max(1, Math.ceil((finalItem.content?.split(/\s+/).length || 0) / 200)),
+            createdBy: authorId,
+          });
+
+          blogPostId = blogPost._id.toString();
+          console.log(`[ContentOrchestrator] BLOG_CREATE_COMPLETED blogPostId=${blogPostId} slug="${blogSlug}"`);
+          if (blogExec) {
+            await updateExecutionStage(blogExec._id.toString(), "blog_created", "completed", `Blog post created: ${blogSlug}`, {
+              blogPost: blogPostId,
+              output: { slug: blogSlug, status: "published" },
+            });
+          }
+
+          // Update ContentItem with the related blog post reference
+          await ContentItem.findByIdAndUpdate(articleItem._id, {
+            relatedBlogPost: blogPost._id,
+          });
+
+          // Update category post count
+          await BlogCategory.findByIdAndUpdate(category._id, {
+            $inc: { postCount: 1 },
+          });
+
+          // Update tag post counts
+          for (const tid of tagIds) {
+            await BlogTag.findByIdAndUpdate(tid, { $inc: { postCount: 1 } });
+          }
+
+          await enqueuePublication({
+            type: "published",
+            contentType: "blog",
+            contentId: blogPost._id.toString(),
+            payload: blogPostPayload(blogPost),
+            actorId: String(authorId),
+          });
+        }
+      } catch (blogErr) {
+        const msg = blogErr instanceof Error ? blogErr.message : "BlogPost creation failed";
+        console.error(`[ContentOrchestrator] BlogPost bridge failed: ${msg}`);
+        if (blogExec) {
+          await updateExecutionStage(blogExec._id.toString(), "blog_failed", "failed", msg);
+        }
+      }
+
+      // Record in audit trail
+      if (blogPostId) {
+        await ContentItem.findByIdAndUpdate(articleItem._id, {
+          $push: {
+            revisions: {
+              content: articleData.content || "",
+              revisedAt: new Date(),
+              revisedBy: "000000000000000000000000",
+              reason: `BlogPost created: ${blogPostId}`,
+            },
+          },
+        });
+      }
+
+      const socials = await generateSocialVariants(
+        { ...articleItem.toObject(), ...articleData } as IContentItem,
+        ["linkedin", "facebook", "instagram", "x"]
+      );
+
+      const socialExec = await createExecutionRecord({
+        campaign: plan.campaign.toString(),
+        plan: planId,
+        planVersion: plan.version,
+        type: "social_generation",
+        stage: "generating_social_content",
+        agent: "content-generator",
+        input: { platforms: ["linkedin", "facebook", "instagram", "x"] },
+        topic: topicId.toString(),
+        contentItem: articleItem._id.toString(),
+      });
+
+      const socialItems = await Promise.all(
+        socials.map(async (s) => {
+          return ContentItem.create({
+            campaign: plan.campaign,
+            plan: planId,
+            topic: topicId,
+            type: "social_post",
+            platform: s.platform as IContentItem["platform"],
+            title: `${topic.title} - ${s.platform}`,
+            content: s.content,
+            slug: generateSlug(`${topic.title}-${s.platform}`),
+            status: "draft",
+            approvalRequired: true,
+          });
+        })
+      );
+
+      const heroPrompt = await generateImagePrompt(
+        articleItem as unknown as IContentItem,
+        "hero"
+      );
+      await ContentItem.findByIdAndUpdate(articleItem._id, {
+        featuredImage: heroPrompt,
+      });
+
+      await updateExecutionStage(socialExec._id.toString(), "social_generated", "completed", `Generated ${socials.length} social variants`, {
+        output: { platformCount: socials.length, platforms: socials.map((s) => s.platform) },
+      });
+
+      // ─── Social publication enqueue (event-driven queue) ────────────────────
+      for (const socialItem of socialItems) {
+        let socialPublishExec: Awaited<ReturnType<typeof createExecutionRecord>> | null = null;
+        try {
+          const platform = socialItem.platform || "linkedin";
+
+          socialPublishExec = await createExecutionRecord({
+            campaign: plan.campaign.toString(),
+            plan: planId,
+            planVersion: plan.version,
+            type: "social_publish",
+            stage: `publishing_to_${platform}`,
+            agent: "social-adapter",
+            input: { platform, contentLength: (socialItem.content || "").length },
+            topic: topicId.toString(),
+            contentItem: socialItem._id.toString(),
+          });
+
+          await updateExecutionStage(
+            socialPublishExec._id.toString(),
+            "enqueued",
+            "running",
+            `Queuing publication for ${platform}`
+          );
+
+          const payload = contentItemPayload(socialItem);
+          payload.relatedContentItem = socialItem._id.toString();
+          payload.executionId = socialPublishExec._id.toString();
+
+          const enqueueResult = await enqueuePublication({
+            type: "published",
+            contentType: "content-item",
+            contentId: socialItem._id.toString(),
+            payload,
+            platforms: [platform],
+          });
+
+          console.log(
+            `[ContentOrchestrator] SOCIAL_ENQUEUE platform=${platform} postId=${socialItem._id} created=${enqueueResult.created} existing=${enqueueResult.existing}`
+          );
+
+          if (enqueueResult.created > 0) {
+            await ContentItem.findByIdAndUpdate(socialItem._id, {
+              status: "publishing",
+            });
+          } else {
+            await updateExecutionStage(
+              socialPublishExec._id.toString(),
+              "publish_skipped",
+              "completed",
+              enqueueResult.skippedReason || "No jobs queued",
+              { output: { skippedReason: enqueueResult.skippedReason } }
+            );
+          }
+          // Terminal states (published/retrying/failed/needs_review) are
+          // applied later by the social queue worker via payload.executionId.
+        } catch (socialErr) {
+          const msg = socialErr instanceof Error ? socialErr.message : "Social publish failed";
+          console.error(`[ContentOrchestrator] Social enqueue failed for ${socialItem.platform}: ${msg}`);
+          if (socialPublishExec) {
+            await updateExecutionStage(socialPublishExec._id.toString(), "publish_error", "failed", msg);
+          }
+        }
+      }
+
+      itemsCreated += 1 + socialItems.length;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      errors.push(`Topic ${topicId}: ${msg}`);
+    }
+  }
+
+  const finalStatus = errors.length === 0 ? "completed" : "partially_completed";
+  console.log(`[ContentOrchestrator] CONTENT_EXECUTION_COMPLETED planId=${planId} status=${finalStatus} itemsCreated=${itemsCreated} errors=${errors.length}`);
+
+  // Update plan-level execution record
+  await updateExecutionStage(planExecution._id.toString(), "plan_completed", finalStatus === "completed" ? "completed" : "failed", `${itemsCreated} items, ${errors.length} errors`, {
+    output: { itemsCreated, errorCount: errors.length, errors: errors.slice(0, 10) },
+  });
+
+  await ContentPlan.findByIdAndUpdate(planId, {
+    status: finalStatus,
+    $push: {
+      auditTrail: {
+        action: "execution_completed",
+        timestamp: new Date(),
+        actor: "000000000000000000000000",
+        details: `Created ${itemsCreated} items. ${errors.length} errors.`,
+      },
+    },
+  });
+
+  await ContentCampaign.findByIdAndUpdate(plan.campaign, {
+    status: finalStatus,
+    $inc: {
+      "stats.totalArticles": itemsCreated,
+    },
+  });
+
+  return { itemsCreated, errors };
+}
+
+// ─── Content Item Management ─────────────────────────────────────────────────
+
+export async function createContentItem(data: {
+  campaignId: string;
+  topicId?: string;
+  type: "article" | "social_post" | "video_script" | "carousel" | "newsletter";
+  platform?: string;
+  title: string;
+  content?: string;
+}): Promise<IContentItem> {
+  await connectToDatabase();
+
+  const slug = generateSlug(data.title);
+  const existing = await ContentItem.findOne({ slug, campaign: data.campaignId });
+  if (existing) {
+    throw new Error("Content item with this title already exists in this campaign");
+  }
+
+  const item = await ContentItem.create({
+    campaign: data.campaignId,
+    topic: data.topicId || undefined,
+    type: data.type,
+    platform: data.platform || undefined,
+    title: data.title,
+    slug,
+    content: data.content || undefined,
+    status: "draft",
+    approvalRequired: true,
+  });
+
+  return item;
+}
+
+export async function updateContentItem(
+  itemId: string,
+  updates: Partial<IContentItem>
+): Promise<IContentItem> {
+  await connectToDatabase();
+
+  const item = await ContentItem.findByIdAndUpdate(itemId, updates, {
+    new: true,
+  }).lean();
+
+  if (!item) {
+    throw new Error("Content item not found");
+  }
+
+  return item as unknown as IContentItem;
+}
+
+export async function approveContentItem(
+  itemId: string,
+  userId: string
+): Promise<IContentItem> {
+  await connectToDatabase();
+
+  const item = await ContentItem.findById(itemId).lean();
+  if (!item) {
+    throw new Error("Content item not found");
+  }
+
+  if (item.status !== "review" && item.status !== "fact_check" && item.status !== "seo_review" && item.status !== "brand_review") {
+    throw new Error(`Cannot approve item in status "${item.status}".`);
+  }
+
+  const updated = await ContentItem.findByIdAndUpdate(
+    itemId,
+    {
+      status: "approved",
+      approvedBy: userId,
+      approvedAt: new Date(),
+    },
+    { new: true }
+  ).lean();
+
+  return updated as unknown as IContentItem;
+}
+
+export async function publishContentItem(
+  itemId: string,
+  actorId?: string
+): Promise<IContentItem> {
+  await connectToDatabase();
+
+  const item = await ContentItem.findById(itemId).lean();
+  if (!item) {
+    throw new Error("Content item not found");
+  }
+
+  if (item.status !== "approved" && item.status !== "scheduled") {
+    throw new Error(`Cannot publish item in status "${item.status}". Must be "approved" or "scheduled".`);
+  }
+
+  const updated = await ContentItem.findByIdAndUpdate(
+    itemId,
+    {
+      status: "published",
+      publishedAt: new Date(),
+    },
+    { new: true }
+  ).lean();
+
+  if (updated && item.type === "article") {
+    await ContentCampaign.findByIdAndUpdate(item.campaign, {
+      $inc: { "stats.totalPublished": 1 },
+    });
+  }
+
+  if (updated && item.type === "social_post") {
+    await ContentCampaign.findByIdAndUpdate(item.campaign, {
+      $inc: { "stats.totalSocialPosts": 1 },
+    });
+  }
+
+  if (updated) {
+    const rawPlatform = updated.platform;
+    const socialPlatform =
+      rawPlatform && rawPlatform !== "blog" && rawPlatform !== "email"
+        ? normalizePlatform(rawPlatform)
+        : null;
+
+    if (updated.type === "social_post" || socialPlatform) {
+      const payload = contentItemPayload(updated);
+      payload.relatedContentItem = itemId;
+      await enqueuePublication({
+        type: "published",
+        contentType: "content-item",
+        contentId: itemId,
+        payload,
+        platforms: socialPlatform ? [socialPlatform] : undefined,
+        actorId,
+      });
+    }
+  }
+
+  return updated as unknown as IContentItem;
+}
+
+// ─── Settings ────────────────────────────────────────────────────────────────
+
+export async function getContentSettings(
+  category?: string
+): Promise<Record<string, unknown>> {
+  await connectToDatabase();
+
+  const query: Record<string, unknown> = {};
+  if (category) {
+    query.category = category;
+  }
+
+  const settings = await ContentSettings.find(query).lean();
+
+  const result: Record<string, unknown> = {};
+  for (const setting of settings) {
+    result[setting.key] = setting.value;
+  }
+
+  return result;
+}
+
+export async function updateContentSetting(
+  key: string,
+  value: unknown,
+  category: string
+): Promise<void> {
+  await connectToDatabase();
+
+  await ContentSettings.findOneAndUpdate(
+    { key, category },
+    { key, value, category },
+    { upsert: true, new: true }
+  );
+}

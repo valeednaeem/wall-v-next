@@ -1,0 +1,105 @@
+{
+  "name": "Policies",
+  "type": "policies",
+  "content": {
+    "moneyBackGuarantee": {
+      "period": "14 days",
+      "description": "Full refund available on all plans within 14 days of purchase",
+      "appliesTo": ["New subscriptions", "Renewals"],
+      "conditions": [
+        "Request must be made within 14-day window",
+        "Applicable to all subscription plans",
+        "Includes both monthly and annual billing cycles",
+        "Covers all paid features and services"
+      ]
+    },
+    "upgradePolicy": {
+      "description": "Upgrade your plan at any time with remaining value credited toward upgrade",
+      "process": [
+        "Select desired upgrade plan",
+        "System calculates credit for remaining billing period",
+        "Pay the difference between plans",
+        "Access to upgraded features activates immediately"
+      ],
+      "features": ["Pro-rated billing for mid-cycle upgrades", "Immediate access to new plan features"]
+    },
+    "annualBilling": {
+      "savings": "20% compared to monthly billing",
+      "availableFor": "All plan tiers",
+      "billingCycle": "Billed annually in advance",
+      "renewal": "Automatic renewal with notification",
+      "customPlans": {
+        "description": "Available for specific business needs with tailored feature sets and pricing",
+        "contact": "Contact Sales for consultation",
+        "flexibility": "Flexible contract terms available"
+      }
+    },
+    "paymentMethods": [
+      { "method": "Bank Transfers", "description": "Direct bank payments" },
+      { "method": "JazzCash", "description": "Mobile wallet payments" },
+      { "method": "EasyPaisa", "description": "Mobile wallet payments" },
+      { "method": "Stripe", "description": "Credit/debit card processing" },
+      { "method": "PayPal", "description": "Online payment platform" },
+      { "method": "NET-30", "description": "Net-30 terms for Enterprise customers" }
+    ],
+    "refundPolicy": {
+      "window": "14-day full refund from purchase date",
+      "processingTime": "5-10 business days",
+      "method": "Refunds issued to original payment method",
+      "confirmation": "Email confirmation sent upon refund processing",
+      "howToRequest": [
+        "Contact refunds@wall-v.com",
+        "Include your account email and purchase details",
+        "Reference your order or transaction ID",
+        "Specify reason for refund (optional but appreciated)"
+      ],
+      "eligibility": [
+        "Full refund within 14-day window",
+        "Partial refunds may be available in certain circumstances",
+        "Refund decisions are final",
+        "Processing times may vary by payment method"
+      ]
+    },
+    "privacyPolicy": {
+      "dataCollection": ["Collection of personal information for service provision", "Usage data for service improvement", "Analytics data for platform optimization", "Third-party data sharing limitations"],
+      "cookieConsent": {
+        "banner": "Cookie consent banner for EU visitors",
+        "detection": "Automatic EU country detection",
+        "preferences": "Granular cookie preferences",
+        "management": "Easy consent management"
+      },
+      "gdprCompliance": {
+        "description": "Full compliance with General Data Protection Regulation",
+        "userRights": ["Access", "Rectification", "Erasure", "Portability"],
+        "features": ["Data processing agreements available", "Privacy by design principles"]
+      },
+      "dataProcessing": ["Clear data processing purposes", "Data retention policies", "Security measures for data protection", "Regular security audits"],
+      "contact": {
+        "privacyInquiries": "privacy@wall-v.com",
+        "dataSubjectRequests": "privacy@wall-v.com",
+        "responseTime": "Within 30 days for GDPR requests"
+      }
+    },
+    "termsOfService": {
+      "serviceAgreement": ["Terms govern use of Wall-V platform", "User responsibilities and obligations", "Platform responsibilities and limitations", "Acceptable use policies"],
+      "intellectualProperty": ["Platform content and code ownership", "User content rights and licenses", "Trademark and branding usage", "Open source component attributions"],
+      "liabilityLimitation": ["Service availability not guaranteed", "Data loss protection recommendations", "Third-party service dependencies", "Liability caps and exclusions"],
+      "contact": {
+        "legalInquiries": "legal@wall-v.com",
+        "responseTime": "Within 5 business days"
+      }
+    },
+    "security": {
+      "technicalMeasures": {
+        "csrfProtection": "Cross-Site Request Forgery protection on all forms with token-based validation",
+        "rateLimiting": "API rate limiting per endpoint, IP-based for public endpoints, user-based for authenticated requests",
+        "inputValidation": "Zod schema validation for all inputs with type checking and sanitization",
+        "htmlSanitization": "DOMPurify for HTML content sanitization with whitelist-based tag filtering",
+        "contentSecurityPolicy": "Strict CSP headers with script, style, frame, and object restrictions",
+        "hstsHeaders": "HTTP Strict Transport Security enforcement with long max-age"
+      },
+      "practices": ["Regular security assessments", "Vulnerability scanning and patching", "Security incident response procedures", "Employee security training"],
+      "dataSecurity": ["Encryption at rest and in transit", "Secure key management", "Access control and authentication", "Audit logging for sensitive operations"]
+    }
+  }
+}

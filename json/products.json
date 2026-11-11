@@ -1,0 +1,140 @@
+{
+  "name": "Products",
+  "type": "products",
+  "content": {
+    "productTypes": [
+      {
+        "type": "Product",
+        "description": "Physical or tangible goods shipped to customers"
+      },
+      {
+        "type": "Service",
+        "description": "Professional services delivered by the Wall-V team"
+      },
+      {
+        "type": "Digital",
+        "description": "Downloadable files such as ebooks, guides, or design assets"
+      },
+      {
+        "type": "Hosting",
+        "description": "Cloud hosting plans including VPS, shared, and dedicated servers"
+      },
+      {
+        "type": "Domain",
+        "description": "Domain name registration, transfer, and renewal services"
+      },
+      {
+        "type": "SaaS",
+        "description": "Software-as-a-service subscriptions with recurring billing"
+      },
+      {
+        "type": "AI-Service",
+        "description": "AI-powered solutions such as chatbots, voice agents, and automation tools"
+      }
+    ],
+    "features": [
+      {
+        "name": "Variants",
+        "description": "Multiple versions of a product (e.g., size, color, tier) with independent pricing and inventory"
+      },
+      {
+        "name": "Badges",
+        "description": "Visual labels such as \"New\", \"Best Seller\", or \"Limited Offer\" displayed on product listings"
+      },
+      {
+        "name": "Ratings",
+        "description": "Star-based rating system (1-5 stars) aggregated from customer reviews"
+      },
+      {
+        "name": "Reviews",
+        "description": "Written customer reviews with optional images and verified purchase badges"
+      },
+      {
+        "name": "Specifications",
+        "description": "Structured key-value attributes (e.g., \"Storage: 256GB\", \"Framework: React\")"
+      },
+      {
+        "name": "SEO Metadata",
+        "description": "Custom title, description, and Open Graph tags for search engine optimization"
+      }
+    ],
+    "statuses": [
+      {
+        "status": "Draft",
+        "description": "Product is being created or edited. Not visible to customers."
+      },
+      {
+        "status": "Published",
+        "description": "Product is live and available for purchase. Visible in the store."
+      },
+      {
+        "status": "Archived",
+        "description": "Product has been removed from the store. Historical orders are preserved."
+      }
+    ],
+    "categories": [
+      {
+        "name": "UI Kits",
+        "description": "Pre-built user interface component libraries and design kits",
+        "examples": [
+          "React component libraries",
+          "Tailwind UI kits",
+          "Figma design systems"
+        ]
+      },
+      {
+        "name": "Templates",
+        "description": "Ready-to-use website and application templates",
+        "examples": [
+          "Next.js starters",
+          "Admin dashboards",
+          "Landing pages",
+          "E-commerce themes"
+        ]
+      },
+      {
+        "name": "Plugins",
+        "description": "Extendable add-ons for existing platforms and frameworks",
+        "examples": [
+          "WordPress plugins",
+          "VS Code extensions",
+          "Chrome extensions"
+        ]
+      },
+      {
+        "name": "APIs",
+        "description": "Accessible API products and integrations",
+        "examples": [
+          "REST API access",
+          "Webhook services",
+          "Third-party API wrappers"
+        ]
+      }
+    ],
+    "cart": {
+      "taxRate": 0.08,
+      "currencies": [
+        {
+          "name": "US Dollar",
+          "code": "USD",
+          "symbol": "$"
+        },
+        {
+          "name": "Euro",
+          "code": "EUR",
+          "symbol": "EUR"
+        },
+        {
+          "name": "British Pound",
+          "code": "GBP",
+          "symbol": "GBP"
+        },
+        {
+          "name": "Pakistani Rupee",
+          "code": "PKR",
+          "symbol": "PKR"
+        }
+      ]
+    }
+  }
+}

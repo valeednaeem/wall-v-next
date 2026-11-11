@@ -1,0 +1,158 @@
+# Dograh Voice Agent - SIP/WebRTC Development Stack
+# For local development and testing of the Voice Agent feature
+#
+# Usage:
+#   docker compose -f docker-compose.sip.yaml up -d
+#
+# Dashboard: http://localhost:3010
+# API: http://localhost:8000
+
+services:
+  coturn:
+    image: coturn/coturn:4.8.0
+    container_name: dograh-coturn
+    restart: unless-stopped
+    ports:
+      - "3478:3478/udp"
+      - "3478:3478/tcp"
+      - "5349:5349/udp"
+      - "5349:5349/tcp"
+      - "49152-49200:49152-49200/udp"
+    volumes:
+      - ./turnserver.conf:/etc/coturn/turnserver.conf:ro
+    command:
+      - -c
+      - /etc/coturn/turnserver.conf
+    networks:
+      - dograh-network
+  postgres:
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-postgres}"
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - dograh_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+    networks:
+      - dograh-network
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+    command: --requirepass ${REDIS_PASSWORD:-redissecret}
+    volumes:
+      - dograh_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-redissecret}", "ping"]
+      interval: 3s
+      timeout: 10s
+      retries: 10
+    networks:
+      - dograh-network
+
+  minio:
+    image: minio/minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: "${MINIO_ROOT_USER:-minioadmin}"
+      MINIO_ROOT_PASSWORD: "${MINIO_ROOT_PASSWORD:-minioadmin}"
+      MINIO_API_CORS_ALLOW_ORIGIN: "*"
+    ports:
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
+    volumes:
+      - dograh_minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - dograh-network
+
+  api:
+    image: ${REGISTRY:-dograhai}/dograh-api:latest
+    environment:
+      ENVIRONMENT: local
+      LOG_LEVEL: "INFO"
+      ENABLE_SIGNUP: "true"
+      PUBLIC_BASE_URL: "http://localhost:8000"
+      PUBLIC_HOST: "localhost"
+      BACKEND_API_ENDPOINT: "http://localhost:8000"
+      DATABASE_URL: "postgresql+asyncpg://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/postgres"
+      REDIS_URL: "redis://:${REDIS_PASSWORD:-redissecret}@redis:6379"
+      ENABLE_AWS_S3: "false"
+      MINIO_ENDPOINT: "minio:9000"
+      MINIO_PUBLIC_ENDPOINT: "http://localhost:9000"
+      MINIO_ACCESS_KEY: "${MINIO_ROOT_USER:-minioadmin}"
+      MINIO_SECRET_KEY: "${MINIO_ROOT_PASSWORD:-minioadmin}"
+      MINIO_BUCKET: "voice-audio"
+      MINIO_SECURE: "false"
+      FASTAPI_WORKERS: "1"
+      FORWARDED_ALLOW_IPS: "*"
+      ENABLE_TELEMETRY: "${ENABLE_TELEMETRY:-true}"
+      OSS_JWT_SECRET: "${OSS_JWT_SECRET:-change-me-in-production-use-strong-secret}"
+      TURN_HOST: "localhost"
+      TURN_SECRET: "${TURN_SECRET:-dograh-turn-secret}"
+      FORCE_TURN_RELAY: "false"
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      coturn:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/venv/bin/python3 -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')\""]
+      interval: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 240s
+    networks:
+      - dograh-network
+
+  ui:
+    image: ${REGISTRY:-dograhai}/dograh-ui:latest
+    environment:
+      HOSTNAME: "0.0.0.0"
+      BACKEND_URL: "http://api:8000"
+      NODE_ENV: "oss"
+      ENABLE_TELEMETRY: "${ENABLE_TELEMETRY:-true}"
+    ports:
+      - "3010:3010"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget --no-verbose --tries=1 --spider http://127.0.0.1:3010 || exit 1",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - dograh-network
+
+volumes:
+  dograh_postgres_data:
+  dograh_redis_data:
+  dograh_minio_data:
+
+networks:
+  dograh-network:
+    driver: bridge

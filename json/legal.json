@@ -1,0 +1,66 @@
+{
+  "name": "Legal",
+  "type": "legal",
+  "content": {
+    "pageTypes": [
+      { "type": "privacy", "name": "Privacy Policy", "category": "Core Legal" },
+      { "type": "terms", "name": "Terms of Service", "category": "Core Legal" },
+      { "type": "refund", "name": "Refund Policy", "category": "Core Legal" },
+      { "type": "cookie-policy", "name": "Cookie Policy", "category": "Core Legal" },
+      { "type": "disclaimer", "name": "Disclaimer", "category": "Compliance" },
+      { "type": "sitemap", "name": "HTML Sitemap", "category": "Utility" },
+      { "type": "accessibility", "name": "Accessibility Statement", "category": "Compliance" },
+      { "type": "acceptable-use", "name": "Acceptable Use Policy", "category": "Compliance" },
+      { "type": "ai-usage", "name": "AI Usage Policy", "category": "Compliance" },
+      { "type": "data-processing", "name": "Data Processing Agreement", "category": "Data and Legal Framework" },
+      { "type": "copyright", "name": "Copyright Notice", "category": "Data and Legal Framework" },
+      { "type": "contact-legal", "name": "Legal Contact Info", "category": "Data and Legal Framework" },
+      { "type": "other", "name": "Other Legal Pages", "category": "Utility" }
+    ],
+    "features": {
+      "contentManagement": {
+        "dynamicContent": ["Rich text content editing", "HTML content support", "Media embedding capabilities", "Structured content organization"],
+        "dashboardIntegration": ["Legal page editor in admin dashboard", "Real-time content preview", "Draft and published states", "Bulk operations for page management"]
+      },
+      "versionControl": {
+        "versionHistory": ["Complete revision tracking for all legal pages", "Timestamp and author tracking for changes", "Change notes and descriptions", "Ability to view and restore previous versions"],
+        "changeManagement": ["Detailed change logs", "Version comparison tools", "Approval workflows for changes", "Publication scheduling"]
+      },
+      "seoOptimization": {
+        "metadataManagement": ["Custom title tags per legal page", "Meta descriptions for search engines", "URL slug management", "Open Graph and social media metadata"],
+        "seoFeatures": ["Canonical URL management", "XML sitemap integration", "Search engine indexing controls", "Rich snippet markup"]
+      },
+      "pageManagement": {
+        "statusControl": ["Active - Published and accessible", "Inactive - Draft or archived", "Status toggle for easy management", "Bulk status changes"],
+        "organization": ["Categorization by page type", "Tagging for internal organization", "Search and filter capabilities", "Ordering and prioritization"]
+      },
+      "securityFeatures": {
+        "contentSanitization": ["DOMPurify integration for HTML content", "XSS attack prevention", "Safe rendering of user-generated content", "Whitelist-based tag filtering"],
+        "accessControl": ["Role-based access to legal page management", "Audit logging for content changes", "Permission-based editing capabilities", "Change approval workflows"]
+      }
+    },
+    "gdpr": {
+      "cookieConsent": {
+        "consentFramework": ["Cookie consent banner for EU visitors", "Granular consent options per cookie category", "Easy consent withdrawal mechanism", "Consent record keeping"],
+        "cookieCategories": [
+          { "category": "Necessary", "description": "Essential cookies for platform functionality" },
+          { "category": "Analytics", "description": "Usage analytics and performance monitoring" },
+          { "category": "Marketing", "description": "Advertising and marketing cookies" },
+          { "category": "Preferences", "description": "User preference and customization cookies" }
+        ],
+        "cookieDefinitions": ["Detailed cookie descriptions", "Purpose and duration information", "Third-party cookie disclosure", "Cookie provider identification"]
+      },
+      "categories": ["Necessary", "Analytics", "Marketing", "Preferences"],
+      "dataProcessing": {
+        "consentRecording": {
+          "perUserConsent": ["Individual consent records per user", "Consent timestamp tracking", "Consent version management", "Consent history and audit trail"],
+          "sessionBasedConsent": ["Anonymous visitor consent tracking", "Session-based consent storage", "Consent renewal mechanisms", "Cross-session consent persistence"]
+        },
+        "euCompliance": {
+          "countryDetection": ["Automatic EU country detection", "GeoIP-based compliance triggering", "Regional compliance variations", "IP-based location identification"],
+          "dataRights": ["GDPR-compliant data processing", "Data subject rights implementation", "Data portability support", "Right to erasure implementation"]
+        }
+      }
+    }
+  }
+}

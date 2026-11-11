@@ -1,0 +1,115 @@
+{
+  "name": "Voice Agent",
+  "type": "voice-agent",
+  "content": {
+    "provider": "Dograh",
+    "architecture": "Docker-based voice AI platform with browser widget, Dograh server, and Wall-V API integration. Data flow: Browser loads Dograh widget script, widget establishes connection to Dograh server, Dograh server processes voice via speech-to-text and LLM, Wall-V API receives webhooks for call events, call data and transcripts stored in CRM.",
+    "features": [
+      "Real-time voice conversations with visitors",
+      "Speech-to-text transcription",
+      "LLM-powered conversation processing",
+      "CRM integration for call data and transcripts",
+      "Post-call demo generation from transcripts",
+      "Pre-call client detail collection",
+      "Call lifecycle management with state machine",
+      "Billing tracking (minutes, calls, costs)",
+      "Multi-language support",
+      "Custom voice cloning (Enterprise tier)"
+    ],
+    "callStates": [
+      { "state": "idle", "description": "No active call" },
+      { "state": "connecting", "description": "Establishing connection to Dograh" },
+      { "state": "connected", "description": "Active call in progress" },
+      { "state": "failed", "description": "Connection failed or call dropped" }
+    ],
+    "preCallFields": [
+      { "field": "Name", "required": true, "description": "Caller's full name" },
+      { "field": "Email", "required": true, "description": "Caller's email address" },
+      { "field": "Phone", "required": true, "description": "Caller's phone number" }
+    ],
+    "webhookEvents": [
+      { "endpoint": "/api/voice-agent/call-ended", "event": "Call completion", "description": "Stores transcript and call data" },
+      { "endpoint": "/api/voice-agent/pre-call", "event": "Pre-call setup", "description": "Validates caller and prepares session" },
+      { "endpoint": "/api/voice-agent/generate-demo", "event": "Post-call", "description": "Generates project demo from transcript" }
+    ],
+    "tiers": [
+      {
+        "name": "Starter",
+        "price": 3999,
+        "features": {
+          "agentCount": "Single agent",
+          "phoneAnswering": true,
+          "basicRouting": true,
+          "transcripts": true,
+          "crmIntegration": false,
+          "appointmentBooking": false,
+          "customVoice": false,
+          "supportLevel": "Email"
+        }
+      },
+      {
+        "name": "Professional",
+        "price": 7999,
+        "features": {
+          "agentCount": "Multi-agent",
+          "phoneAnswering": true,
+          "basicRouting": true,
+          "transcripts": true,
+          "crmIntegration": true,
+          "appointmentBooking": true,
+          "callAnalytics": true,
+          "supportLevel": "Priority email + chat"
+        }
+      },
+      {
+        "name": "Enterprise",
+        "price": 14999,
+        "features": {
+          "agentCount": "Unlimited",
+          "phoneAnswering": true,
+          "basicRouting": true,
+          "transcripts": true,
+          "crmIntegration": true,
+          "appointmentBooking": true,
+          "callAnalytics": true,
+          "customVoiceCloning": true,
+          "multiLanguage": true,
+          "complexWorkflows": true,
+          "apiAccess": true,
+          "supportLevel": "Dedicated account manager"
+        }
+      }
+    ],
+    "setup": {
+      "prerequisites": [
+        "Docker and Docker Compose installed",
+        "Port 3010 available for Dograh dashboard",
+        "Port 8000 available for Dograh API"
+      ],
+      "installation": [
+        "Start the Dograh services: docker compose -f docker-compose.sip.yaml up -d",
+        "Open the Dograh dashboard at http://localhost:3010",
+        "Create a new agent in the dashboard",
+        "Navigate to Agent Settings > 'Add to website'",
+        "Copy the widget script URL"
+      ],
+      "components": [
+        "useDograh hook",
+        "FloatingVoiceWidget",
+        "InlineVoicePanel"
+      ]
+    },
+    "environmentVariables": [
+      { "variable": "NEXT_PUBLIC_DOGRAH_WIDGET_URL", "required": true, "description": "Widget script URL from Dograh dashboard" },
+      { "variable": "DOGRAH_API_URL", "required": true, "description": "Dograh dashboard and API base URL" },
+      { "variable": "DOGRAH_API_KEY", "required": false, "description": "API key for server-side management" }
+    ],
+    "apiEndpoints": [
+      { "endpoint": "/api/voice-agent/billing", "method": "GET", "description": "Retrieve billing and usage data" },
+      { "endpoint": "/api/voice-agent/call-ended", "method": "POST", "description": "Handle call completion webhook" },
+      { "endpoint": "/api/voice-agent/check-account", "method": "GET", "description": "Verify Dograh account status" },
+      { "endpoint": "/api/voice-agent/pre-call", "method": "POST", "description": "Initialize pre-call session" },
+      { "endpoint": "/api/voice-agent/generate-demo", "method": "POST", "description": "Generate demo from transcript" }
+    ]
+  }
+}

@@ -1,0 +1,431 @@
+/**
+ * Tool Registry — defines tools available to the conversation agent.
+ *
+ * Each tool schema matches the backend API contract exactly.
+ * No field name mismatches. No phantom tools.
+ */
+
+import type { ConversationToolDefinition } from "./types";
+
+/**
+ * Tools available to the conversation agent.
+ * These are passed to the LLM so it can make structured tool calls.
+ */
+export const CONVERSATION_TOOLS: ConversationToolDefinition[] = [
+  {
+    name: "lookup_user",
+    description: "Look up an existing user by email or phone. Use this BEFORE creating a new user to prevent duplicates.",
+    parameters: {
+      type: "object",
+      properties: {
+        email: { type: "string", description: "User's email address" },
+        phone: { type: "string", description: "User's phone number" },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "create_user",
+    description: "Create a new Wall-V user account. Only call this AFTER lookup_user confirms no existing account. Requires name AND (email OR phone).",
+    parameters: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "Full name of the user" },
+        email: { type: "string", description: "Email address" },
+        phone: { type: "string", description: "Phone number" },
+        company: { type: "string", description: "Company name if provided" },
+        source: { type: "string", description: "How they found us (chat, voice, website)" },
+      },
+      required: ["name"],
+    },
+  },
+  {
+    name: "lookup_client",
+    description: "Look up an existing client record by email or phone.",
+    parameters: {
+      type: "object",
+      properties: {
+        email: { type: "string", description: "Client's email address" },
+        phone: { type: "string", description: "Client's phone number" },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "create_client",
+    description: "Create a new client record. Only call AFTER lookup_client confirms no existing record.",
+    parameters: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "Client's full name" },
+        email: { type: "string", description: "Client's email" },
+        phone: { type: "string", description: "Client's phone" },
+        company: { type: "string", description: "Company name" },
+        source: { type: "string", description: "Source channel (chat, voice, website)" },
+        userId: { type: "string", description: "Linked User ID if available" },
+      },
+      required: ["name", "email"],
+    },
+  },
+  {
+    name: "create_inquiry",
+    description: "Create a sales/support inquiry from the conversation. Use when the user has described what they need but isn't ready for a full project.",
+    parameters: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "Contact name" },
+        email: { type: "string", description: "Contact email" },
+        phone: { type: "string", description: "Contact phone" },
+        company: { type: "string", description: "Company name" },
+        subject: { type: "string", description: "Brief subject line" },
+        message: { type: "string", description: "Summary of what they need" },
+        type: { type: "string", description: "Type of inquiry", enum: ["contact", "support", "sales", "partnership", "other"] },
+        source: { type: "string", description: "Source channel" },
+        estimatedBudget: { type: "string", description: "Budget range if mentioned" },
+        estimatedTimeline: { type: "string", description: "Timeline if mentioned" },
+      },
+      required: ["name", "email", "subject", "message"],
+    },
+  },
+  {
+    name: "create_lead",
+    description: "Create a sales lead from the conversation.",
+    parameters: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "Lead name" },
+        email: { type: "string", description: "Lead email" },
+        phone: { type: "string", description: "Lead phone" },
+        company: { type: "string", description: "Company" },
+        source: { type: "string", description: "Source channel" },
+        budget: { type: "string", description: "Budget range" },
+        requirements: { type: "string", description: "Summary of requirements" },
+        serviceInterest: { type: "string", description: "Services they're interested in" },
+      },
+      required: ["name", "email", "source"],
+    },
+  },
+  {
+    name: "create_project_request",
+    description: "Create a structured project request with requirements. Use when the user has clearly described a project they want built.",
+    parameters: {
+      type: "object",
+      properties: {
+        clientName: { type: "string", description: "Client's full name" },
+        clientEmail: { type: "string", description: "Client's email" },
+        clientPhone: { type: "string", description: "Client's phone" },
+        clientCompany: { type: "string", description: "Client's company" },
+        projectType: { type: "string", description: "Type of project (website, e-commerce, mobile-app, ai-solution, etc.)" },
+        objective: { type: "string", description: "What the project should achieve" },
+        features: { type: "string", description: "Comma-separated list of features" },
+        budget: { type: "string", description: "Budget range" },
+        timeline: { type: "string", description: "Timeline" },
+        industry: { type: "string", description: "Industry sector" },
+        targetAudience: { type: "string", description: "Target audience" },
+        designStyle: { type: "string", description: "Design preferences" },
+        integrations: { type: "string", description: "Comma-separated integrations needed" },
+      },
+      required: ["clientName", "clientEmail", "projectType", "objective"],
+    },
+  },
+  {
+    name: "get_service_info",
+    description: "Get information about Wall-V services and pricing. Use when the user asks about what we offer.",
+    parameters: {
+      type: "object",
+      properties: {
+        service: { type: "string", description: "Specific service to get info about (website, ecommerce, mobile, ai, hosting, marketing)" },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "create_notification",
+    description: "Create a notification for admin users. Use this to alert staff about new inquiries, project requests, or important events.",
+    parameters: {
+      type: "object",
+      properties: {
+        userId: { type: "string", description: "Target user ID (optional, defaults to all admins)" },
+        title: { type: "string", description: "Notification title" },
+        message: { type: "string", description: "Notification message" },
+        type: { type: "string", description: "Notification type", enum: ["info", "success", "warning", "error"] },
+        link: { type: "string", description: "Link to related page" },
+      },
+      required: ["title", "message"],
+    },
+  },
+  {
+    name: "create_invoice",
+    description: "Create an invoice for a billable project or service. Use when a project has been confirmed and billing is required. Creates milestone-based invoice and sends email to client.",
+    parameters: {
+      type: "object",
+      properties: {
+        clientEmail: { type: "string", description: "Client's email address" },
+        clientName: { type: "string", description: "Client's name" },
+        projectId: { type: "string", description: "Related project ID if available" },
+        amount: { type: "number", description: "Total invoice amount in USD" },
+        description: { type: "string", description: "Description of what the invoice covers" },
+        projectName: { type: "string", description: "Name of the project" },
+      },
+      required: ["clientEmail", "clientName", "amount", "description"],
+    },
+  },
+  {
+    name: "delegate_to_agent",
+    description: "Delegate a task to a specialized AI agent. Use when a task requires domain-specific expertise beyond your capabilities. The delegated agent will execute the task and return a result.",
+    parameters: {
+      type: "object",
+      properties: {
+        agentId: { type: "string", description: "The target agent's ID or slug" },
+        message: { type: "string", description: "The task or question to delegate" },
+        context: { type: "object", description: "Additional context to pass (projectId, clientId, etc.)" },
+      },
+      required: ["agentId", "message"],
+    },
+  },
+  // ─── Internal / Master Agent Tools ────────────────────────────────────────
+  {
+    name: "get_workforce_overview",
+    description: "Get a summary of the AI workforce: total agents, active, client-facing, internal, by division, current workload. Use when asked about workforce status.",
+    parameters: {
+      type: "object",
+      properties: {},
+      required: [],
+    },
+  },
+  {
+    name: "get_agent_status",
+    description: "Get detailed status of a specific agent including stats, conversations, executions, and health.",
+    parameters: {
+      type: "object",
+      properties: {
+        agentId: { type: "string", description: "Agent ID or slug" },
+      },
+      required: ["agentId"],
+    },
+  },
+  {
+    name: "get_project_overview",
+    description: "Get an overview of projects: total, by status, at risk, recently updated. Use for operational awareness.",
+    parameters: {
+      type: "object",
+      properties: {
+        status: { type: "string", description: "Filter by status" },
+        limit: { type: "number", description: "Max results (default 10)" },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "create_internal_task",
+    description: "Create an internal task for the workforce. Use when Admin requests work to be done.",
+    parameters: {
+      type: "object",
+      properties: {
+        title: { type: "string", description: "Task title" },
+        description: { type: "string", description: "Task description" },
+        projectId: { type: "string", description: "Related project ID" },
+        priority: { type: "string", description: "Priority level", enum: ["low", "medium", "high", "urgent"] },
+        assigneeId: { type: "string", description: "User or Agent ID to assign to" },
+        dueDate: { type: "string", description: "Due date (ISO)" },
+      },
+      required: ["title", "description"],
+    },
+  },
+  {
+    name: "get_pending_approvals",
+    description: "Get pending approval requests that need Admin attention.",
+    parameters: {
+      type: "object",
+      properties: {},
+      required: [],
+    },
+  },
+  {
+    name: "get_system_health",
+    description: "Check application system health: recent errors, failed workflows, agent failures, build status.",
+    parameters: {
+      type: "object",
+      properties: {},
+      required: [],
+    },
+  },
+  {
+    name: "get_task_list",
+    description: "List internal tasks with optional filters. Use to check what work is in progress.",
+    parameters: {
+      type: "object",
+      properties: {
+        status: { type: "string", description: "Filter by status (todo, in-progress, review, done)" },
+        projectId: { type: "string", description: "Filter by project" },
+        limit: { type: "number", description: "Max results (default 20)" },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "generate_report",
+    description: "Generate an operational report: daily ops, workforce utilization, project status, financial summary.",
+    parameters: {
+      type: "object",
+      properties: {
+        type: { type: "string", description: "Report type", enum: ["daily-ops", "workforce", "projects", "financial", "health"] },
+        dateRange: { type: "string", description: "Date range (today, week, month)" },
+      },
+      required: ["type"],
+    },
+  },
+  // ─── Management Tools (Blog, Product, SEO, Security, Logging) ────────────
+  {
+    name: "get_blog_posts",
+    description: "List blog posts. Clients can browse published articles. Admin can see all statuses.",
+    parameters: {
+      type: "object",
+      properties: {
+        status: { type: "string", description: "Filter: draft, review, published, archived" },
+        search: { type: "string", description: "Search in title" },
+        limit: { type: "number", description: "Max results (default 10)" },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "get_products",
+    description: "List products. Clients can browse the catalog. Admin can see all statuses.",
+    parameters: {
+      type: "object",
+      properties: {
+        status: { type: "string", description: "Filter: draft, published, archived" },
+        type: { type: "string", description: "Filter by type" },
+        search: { type: "string", description: "Search in name" },
+        limit: { type: "number", description: "Max results (default 10)" },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "create_blog_post",
+    description: "Create a new blog post. Requires admin/manager role.",
+    parameters: {
+      type: "object",
+      properties: {
+        title: { type: "string", description: "Blog post title" },
+        content: { type: "string", description: "Full HTML content" },
+        excerpt: { type: "string", description: "Brief summary" },
+        status: { type: "string", description: "Status: draft, review, published" },
+        seoMetaTitle: { type: "string", description: "SEO meta title" },
+        seoMetaDescription: { type: "string", description: "SEO meta description" },
+      },
+      required: ["title", "content"],
+    },
+  },
+  {
+    name: "create_product",
+    description: "Create a new product. Requires admin/manager role.",
+    parameters: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "Product name" },
+        description: { type: "string", description: "Product description" },
+        price: { type: "number", description: "Price in USD" },
+        type: { type: "string", description: "Type: product, service, digital" },
+        status: { type: "string", description: "Status: draft, published" },
+      },
+      required: ["name", "price"],
+    },
+  },
+  {
+    name: "run_seo_audit",
+    description: "Run an SEO audit on a page. Returns score and recommendations.",
+    parameters: {
+      type: "object",
+      properties: {
+        url: { type: "string", description: "Page URL or path" },
+        pageType: { type: "string", description: "Page type: blog, product" },
+      },
+      required: ["url"],
+    },
+  },
+  {
+    name: "generate_seo_meta",
+    description: "Generate optimized SEO meta tags for a page.",
+    parameters: {
+      type: "object",
+      properties: {
+        title: { type: "string", description: "Page title" },
+        content: { type: "string", description: "Page content" },
+        targetKeyword: { type: "string", description: "Target keyword" },
+      },
+      required: ["title"],
+    },
+  },
+  {
+    name: "get_error_logs",
+    description: "Query error logs. Admin only.",
+    parameters: {
+      type: "object",
+      properties: {
+        level: { type: "string", description: "Filter: error, warning, critical" },
+        limit: { type: "number", description: "Max results (default 20)" },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "get_error_summary",
+    description: "Get error summary by level and source. Admin only.",
+    parameters: {
+      type: "object",
+      properties: {
+        hours: { type: "number", description: "Hours to look back (default 24)" },
+      },
+      required: [],
+    },
+  },
+];
+
+/**
+ * Get tool definitions as OpenAI function-calling format.
+ */
+export function getOpenAITools(): { type: "function"; function: { name: string; description: string; parameters: Record<string, unknown> } }[] {
+  return CONVERSATION_TOOLS.map((tool) => ({
+    type: "function" as const,
+    function: {
+      name: tool.name,
+      description: tool.description,
+      parameters: tool.parameters,
+    },
+  }));
+}
+
+/**
+ * Validate that a tool call has all required parameters.
+ */
+export function validateToolArgs(
+  toolName: string,
+  args: Record<string, unknown>
+): { valid: boolean; missing: string[]; sanitized: Record<string, unknown> } {
+  const tool = CONVERSATION_TOOLS.find((t) => t.name === toolName);
+  if (!tool) {
+    return { valid: false, missing: [`Unknown tool: ${toolName}`], sanitized: {} };
+  }
+
+  const missing: string[] = [];
+  for (const required of tool.parameters.required) {
+    if (!args[required] || (typeof args[required] === "string" && !(args[required] as string).trim())) {
+      missing.push(required);
+    }
+  }
+
+  // Sanitize string inputs
+  const sanitized: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(args)) {
+    if (typeof value === "string") {
+      sanitized[key] = value.trim().slice(0, 1000);
+    } else {
+      sanitized[key] = value;
+    }
+  }
+
+  return { valid: missing.length === 0, missing, sanitized };
+}

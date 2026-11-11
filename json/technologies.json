@@ -1,0 +1,63 @@
+{
+  "name": "Technologies",
+  "type": "technologies",
+  "content": {
+    "core": [
+      { "technology": "Next.js", "version": "15.3.4", "purpose": "React framework, App Router, API routes, middleware" },
+      { "technology": "React", "version": "19", "purpose": "UI library" },
+      { "technology": "TypeScript", "version": "5.8 (strict)", "purpose": "Type safety, static analysis" },
+      { "technology": "Tailwind CSS", "version": "4.1", "purpose": "Utility-first styling, CSS-based config via @theme" }
+    ],
+    "database": [
+      { "technology": "MongoDB", "version": "-", "purpose": "Primary database" },
+      { "technology": "Mongoose", "version": "9.7.4", "purpose": "ODM, schema validation, query building" }
+    ],
+    "authentication": [
+      { "technology": "NextAuth v5", "purpose": "JWT-based session auth for dashboard pages" },
+      { "technology": "bcryptjs", "purpose": "Password hashing" },
+      { "technology": "jsonwebtoken", "purpose": "Custom JWT token creation and verification" }
+    ],
+    "ui": [
+      { "technology": "lucide-react", "purpose": "Icon library" },
+      { "technology": "framer-motion", "purpose": "Animations and transitions" },
+      { "technology": "recharts", "purpose": "Chart and data visualization" },
+      { "technology": "TipTap", "purpose": "Rich text editor" },
+      { "technology": "sonner", "purpose": "Toast notifications" },
+      { "technology": "next-themes", "purpose": "Dark/light theme switching" }
+    ],
+    "forms": [
+      { "technology": "react-hook-form", "purpose": "Form state management and validation" },
+      { "technology": "Zod 4", "purpose": "Schema validation (schemas in src/lib/validations/)" },
+      { "technology": "@hookform/resolvers", "purpose": "Zod-to-React Hook Form integration" }
+    ],
+    "email": [
+      { "technology": "Nodemailer", "purpose": "SMTP email sending" }
+    ],
+    "analytics": [
+      { "technology": "Vercel Analytics", "purpose": "Traffic and usage analytics" },
+      { "technology": "Vercel Speed Insights", "purpose": "Core Web Vitals and performance metrics" }
+    ],
+    "security": [
+      { "technology": "DOMPurify", "purpose": "HTML sanitization for user-generated content" },
+      { "technology": "CSRF protection", "purpose": "Cross-site request forgery prevention" },
+      { "technology": "Rate limiting", "purpose": "API abuse prevention" }
+    ],
+    "ai": [
+      { "technology": "OpenAI", "model": "gpt-4o-mini", "purpose": "Chatbot conversation, requirement discovery" },
+      { "technology": "Anthropic", "model": "claude-sonnet-4-20250514", "purpose": "Technical content, blog generation, SEO" },
+      { "technology": "Dograh", "purpose": "Docker-based voice AI platform" }
+    ],
+    "payments": [
+      { "technology": "2Checkout", "status": "Implemented", "purpose": "Buy links, HMAC verification, IPN webhooks" },
+      { "technology": "Stripe", "status": "Stub", "purpose": "CSP configured, env vars ready" },
+      { "technology": "PayPal", "status": "Stub", "purpose": "Env vars ready" }
+    ],
+    "hosting": [
+      { "technology": "Vercel", "purpose": "Frontend hosting, auto-deploy from GitHub master branch" },
+      { "technology": "MongoDB Atlas", "purpose": "Cloud database hosting" },
+      { "technology": "GitHub", "purpose": "Version control (valeednaeem/wall-v-next)" },
+      { "technology": "Docker", "purpose": "Dograh voice agent containerization" },
+      { "technology": "docker-compose", "purpose": "Multi-container orchestration for Dograh" }
+    ]
+  }
+}

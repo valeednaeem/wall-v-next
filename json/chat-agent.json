@@ -1,0 +1,127 @@
+{
+  "name": "Chat Agent",
+  "type": "chat-agent",
+  "content": {
+    "features": [
+      "Floating widget with position control (bottom-left or bottom-right)",
+      "AI-powered project discovery with 11 conversation stages",
+      "Budget detection and parsing from natural language",
+      "Service recommendation based on detected requirements",
+      "Demo generation from conversation context",
+      "Automatic CRM inquiry creation",
+      "13 language support with auto-detection",
+      "Timezone-based auto-detection for scheduling"
+    ],
+    "tiers": [
+      {
+        "name": "Basic",
+        "price": 2499,
+        "features": {
+          "architecture": "Rule-based + AI hybrid",
+          "knowledgeBase": "FAQ training",
+          "widget": true,
+          "analytics": "Basic",
+          "multiLanguage": false,
+          "crmIntegration": false,
+          "customWorkflows": false,
+          "supportLevel": "Email"
+        }
+      },
+      {
+        "name": "Professional",
+        "price": 4999,
+        "features": {
+          "architecture": "RAG (Retrieval-Augmented Generation)",
+          "knowledgeBase": "Custom knowledge base",
+          "widget": true,
+          "analytics": "Advanced",
+          "multiLanguage": true,
+          "crmIntegration": true,
+          "customWorkflows": false,
+          "supportLevel": "Priority email + chat"
+        }
+      },
+      {
+        "name": "Enterprise",
+        "price": 9999,
+        "features": {
+          "architecture": "Fine-tuned LLM",
+          "knowledgeBase": "Custom knowledge base",
+          "widget": true,
+          "analytics": "Advanced + custom reports",
+          "multiLanguage": true,
+          "crmIntegration": "Multi-system",
+          "customWorkflows": "Human-in-the-loop",
+          "supportLevel": "Dedicated account manager"
+        }
+      }
+    ],
+    "components": [
+      {
+        "name": "SalesChatbot",
+        "description": "Main chatbot component managing the overall conversation state and UI rendering",
+        "props": [
+          { "name": "position", "type": "bottom-left | bottom-right", "description": "Widget position on viewport" },
+          { "name": "theme", "type": "light | dark", "description": "Color scheme" }
+        ]
+      },
+      {
+        "name": "ChatInterface",
+        "description": "Renders the conversation messages, input field, and quick replies. Manages message history and streaming responses."
+      },
+      {
+        "name": "FloatingVoiceWidget",
+        "description": "Optional voice input component integrated into the chat interface. Enables voice-to-text for hands-free interaction."
+      }
+    ],
+    "apiEndpoints": [
+      { "endpoint": "/api/ai/chat", "method": "POST", "description": "Send message and receive AI response" },
+      { "endpoint": "/api/ai/discover", "method": "POST", "description": "Process discovery stage transitions" },
+      { "endpoint": "/api/ai/inquiry", "method": "POST", "description": "Create CRM inquiry from conversation" },
+      { "endpoint": "/api/ai/demo", "method": "POST", "description": "Generate project demo" },
+      { "endpoint": "/api/ai/create-project", "method": "POST", "description": "Create project record from inquiry" },
+      { "endpoint": "/api/ai/estimate", "method": "POST", "description": "Generate cost estimate" }
+    ],
+    "aiProviders": [
+      {
+        "provider": "OpenAI",
+        "model": "gpt-4o-mini",
+        "usage": "General chat and conversation, discovery, and response generation"
+      },
+      {
+        "provider": "Anthropic",
+        "model": "claude-sonnet-4-20250514",
+        "usage": "Technical content and analysis, requirements analysis, architecture recommendations, and code-related content"
+      }
+    ],
+    "budgetDetection": [
+      { "inputPattern": "around 10k", "detectedValue": "$10,000" },
+      { "inputPattern": "budget is $25,000", "detectedValue": "$25,000" },
+      { "inputPattern": "50k to 75k", "detectedValue": "$50,000 - $75,000" },
+      { "inputPattern": "less than 5k", "detectedValue": "Under $5,000" },
+      { "inputPattern": "enterprise budget", "detectedValue": "$50,000+" }
+    ],
+    "serviceRecommendations": [
+      { "service": "Website Development", "trigger": "Static or informational site needs" },
+      { "service": "Web Application", "trigger": "Interactive application requirements" },
+      { "service": "E-commerce", "trigger": "Product catalog and checkout needs" },
+      { "service": "Mobile App", "trigger": "iOS/Android application requirements" },
+      { "service": "AI Integration", "trigger": "Machine learning or automation needs" },
+      { "service": "CRM/ERP", "trigger": "Business process management" },
+      { "service": "Hosting", "trigger": "Infrastructure and deployment" },
+      { "service": "SEO/Marketing", "trigger": "Digital marketing requirements" },
+      { "service": "Consulting", "trigger": "Technical guidance and strategy" }
+    ],
+    "analytics": {
+      "tracked": [
+        "Conversation count and completion rate",
+        "Average conversation duration",
+        "Stage progression and drop-off points",
+        "Budget ranges detected",
+        "Project types identified",
+        "Inquiry conversion rate",
+        "Language distribution"
+      ]
+    }
+  }
+}

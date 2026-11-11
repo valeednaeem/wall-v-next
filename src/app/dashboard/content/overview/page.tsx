@@ -1,0 +1,734 @@
+"use client";
+
+import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
+import {
+  Megaphone,
+  CalendarDays,
+  FileText,
+  Share2,
+  Plus,
+  TrendingUp,
+  CheckCircle2,
+  Clock,
+  Circle,
+  Play,
+  Zap,
+  Loader2,
+  Activity,
+  Settings,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
+interface Campaign {
+  _id: string;
+  name: string;
+  status: string;
+  dateRange: { start: string; end: string };
+  progress: number;
+}
+
+interface ContentItem {
+  _id: string;
+  title: string;
+  type: string;
+  platform?: string;
+  status: string;
+  scheduledAt?: string;
+  publishedAt?: string;
+  createdAt: string;
+}
+
+interface ConnectionStatus {
+  connected: boolean;
+  lastPublish?: string;
+  error?: string;
+}
+
+interface GA4Status {
+  configured: boolean;
+  realtime?: {
+    activeUsers: number;
+    pageViews: number;
+  };
+}
+
+interface OverviewData {
+  campaigns: Campaign[];
+  todayItems: ContentItem[];
+  upcomingItems: ContentItem[];
+  recentPublished: ContentItem[];
+  connections: Record<string, ConnectionStatus>;
+  ga4Status: GA4Status;
+  metrics: {
+    totalArticles: number;
+    published: number;
+    pendingApproval: number;
+    totalSocialPosts: number;
+  };
+  nextScheduled: ContentItem | null;
+  lastExecution: {
+    executedAt: string;
+    executed: number;
+    published: number;
+    pendingApproval: number;
+    errors: string[];
+  } | null;
+}
+
+const PLATFORM_ICONS: Record<string, string> = {
+  linkedin: "Li",
+  facebook: "Fb",
+  x: "X",
+  instagram: "Ig",
+  tiktok: "Tk",
+  youtube: "Yt",
+};
+
+const STATUS_COLORS: Record<string, string> = {
+  published: "bg-green-100 text-green-800",
+  scheduled: "bg-blue-100 text-blue-800",
+  approved: "bg-purple-100 text-purple-800",
+  review: "bg-yellow-100 text-yellow-800",
+  draft: "bg-gray-100 text-gray-800",
+};
+
+export default function ContentOverviewPage() {
+  const [data, setData] = useState<OverviewData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [executing, setExecuting] = useState(false);
+  const [executionResult, setExecutionResult] = useState<string | null>(null);
+
+  const fetchOverview = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [campaignsRes, itemsRes, connectionsRes, scheduleRes, ga4Res] = await Promise.allSettled([
+        fetch("/api/content/campaigns"),
+        fetch("/api/content/items?limit=50"),
+        fetch("/api/content/connections"),
+        fetch("/api/content/schedule?days=7"),
+        fetch("/api/content/analytics/ga4-status"),
+      ]);
+
+      const campaigns =
+        campaignsRes.status === "fulfilled" ? await campaignsRes.value.json() : { data: [] };
+      const items =
+        itemsRes.status === "fulfilled" ? await itemsRes.value.json() : { data: [] };
+      const connections =
+        connectionsRes.status === "fulfilled" ? await connectionsRes.value.json() : { connections: {} };
+      const schedule =
+        scheduleRes.status === "fulfilled" ? await scheduleRes.value.json() : { data: [] };
+      const ga4 =
+        ga4Res.status === "fulfilled" ? await ga4Res.value.json() : { configured: false };
+
+      const allItems: ContentItem[] = items.data || [];
+      const now = new Date();
+      const today = now.toISOString().split("T")[0];
+
+      const todayItems = allItems.filter(
+        (i) =>
+          (i.scheduledAt && i.scheduledAt.startsWith(today)) ||
+          (i.publishedAt && i.publishedAt.startsWith(today))
+      );
+
+      const upcomingItems = allItems
+        .filter((i) => i.scheduledAt && new Date(i.scheduledAt) > now)
+        .sort(
+          (a, b) =>
+            new Date(a.scheduledAt!).getTime() - new Date(b.scheduledAt!).getTime()
+        )
+        .slice(0, 7);
+
+      const recentPublished = allItems
+        .filter((i) => i.status === "published")
+        .sort(
+          (a, b) =>
+            new Date(b.publishedAt || b.createdAt).getTime() -
+            new Date(a.publishedAt || a.createdAt).getTime()
+        )
+        .slice(0, 5);
+
+      const metrics = {
+        totalArticles: allItems.filter((i) => i.type === "article").length,
+        published: allItems.filter((i) => i.status === "published").length,
+        pendingApproval: allItems.filter(
+          (i) => i.status === "review" || i.status === "pending"
+        ).length,
+        totalSocialPosts: allItems.filter(
+          (i) => i.type === "social" || i.type === "post"
+        ).length,
+      };
+
+      const allScheduled = allItems
+        .filter((i) => i.scheduledAt && new Date(i.scheduledAt) > new Date())
+        .sort(
+          (a, b) =>
+            new Date(a.scheduledAt!).getTime() - new Date(b.scheduledAt!).getTime()
+        );
+      const nextScheduled = allScheduled[0] || null;
+
+      const savedExecution = typeof window !== "undefined"
+        ? localStorage.getItem("lastContentExecution")
+        : null;
+      const lastExecution = savedExecution ? JSON.parse(savedExecution) : null;
+
+      setData({
+        campaigns: campaigns.data || [],
+        todayItems,
+        upcomingItems,
+        recentPublished,
+        connections: connections.connections || {},
+        ga4Status: ga4,
+        metrics,
+        nextScheduled,
+        lastExecution,
+      });
+    } catch (error) {
+      console.error("Failed to fetch overview:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchOverview();
+  }, [fetchOverview]);
+
+  const executeDaily = async () => {
+    setExecuting(true);
+    setExecutionResult(null);
+    try {
+      const res = await fetch("/api/content/execute-daily", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const data = await res.json();
+      if (data.success) {
+        const r = data.data;
+        const result = {
+          executedAt: new Date().toISOString(),
+          executed: r.executed,
+          published: r.published,
+          pendingApproval: r.pendingApproval,
+          errors: r.errors,
+        };
+        localStorage.setItem("lastContentExecution", JSON.stringify(result));
+        setExecutionResult(
+          `Executed: ${r.executed} items | Published: ${r.published} | Pending approval: ${r.pendingApproval}`
+        );
+        fetchOverview();
+      } else {
+        setExecutionResult(`Error: ${data.error}`);
+      }
+    } catch {
+      setExecutionResult("Failed to execute daily content");
+    } finally {
+      setExecuting(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="rounded-xl border p-6 animate-pulse">
+              <div className="h-4 bg-muted rounded w-24 mb-3" />
+              <div className="h-8 bg-muted rounded w-16" />
+            </div>
+          ))}
+        </div>
+        <div className="grid gap-6 lg:grid-cols-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="rounded-xl border p-6 animate-pulse">
+              <div className="h-5 bg-muted rounded w-32 mb-4" />
+              <div className="space-y-3">
+                {[1, 2, 3].map((j) => (
+                  <div key={j} className="h-10 bg-muted rounded" />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (!data) return null;
+
+  const activeCampaign = data.campaigns.find(
+    (c) => c.status === "active" || c.status === "running"
+  );
+
+  const connectedPlatforms = Object.entries(data.connections).filter(
+    ([, v]) => v.connected
+  ).length;
+
+  return (
+    <div className="space-y-6">
+      {/* Metrics */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {[
+          {
+            label: "Total Articles",
+            value: data.metrics.totalArticles,
+            icon: FileText,
+            bg: "bg-blue-50",
+            color: "text-blue-500",
+            href: "/dashboard/content/articles",
+          },
+          {
+            label: "Published",
+            value: data.metrics.published,
+            icon: CheckCircle2,
+            bg: "bg-green-50",
+            color: "text-green-500",
+            href: "/dashboard/content/articles?status=published",
+          },
+          {
+            label: "Pending Approval",
+            value: data.metrics.pendingApproval,
+            icon: Clock,
+            bg: "bg-yellow-50",
+            color: "text-yellow-500",
+            href: "/dashboard/content/articles?status=review",
+          },
+          {
+            label: "Social Posts",
+            value: data.metrics.totalSocialPosts,
+            icon: Share2,
+            bg: "bg-purple-50",
+            color: "text-purple-500",
+            href: "/dashboard/content/social",
+          },
+        ].map((card) => (
+          <Link key={card.label} href={card.href}>
+            <div className="rounded-xl border p-5 hover:shadow-md transition-shadow cursor-pointer">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">{card.label}</p>
+                  <p className="mt-1 text-3xl font-bold">{card.value}</p>
+                </div>
+                <div
+                  className={cn(
+                    "h-10 w-10 rounded-lg flex items-center justify-center",
+                    card.bg
+                  )}
+                >
+                  <card.icon className={cn("h-5 w-5", card.color)} />
+                </div>
+              </div>
+            </div>
+          </Link>
+        ))}
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Active Campaign */}
+        <Link href={activeCampaign ? `/dashboard/content/campaigns/${activeCampaign._id}` : "/dashboard/content/campaigns"}>
+          <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Megaphone className="h-4 w-4" /> Active Campaign
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+            {activeCampaign ? (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-semibold">{activeCampaign.name}</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {new Date(activeCampaign.dateRange.start).toLocaleDateString()} –{" "}
+                      {new Date(activeCampaign.dateRange.end).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <span className="text-xs px-2.5 py-1 rounded-full bg-green-100 text-green-800 font-medium">
+                    {activeCampaign.status}
+                  </span>
+                </div>
+                <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-primary rounded-full transition-all duration-500"
+                    style={{ width: `${activeCampaign.progress || 0}%` }}
+                  />
+                </div>
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>Progress</span>
+                  <span>{activeCampaign.progress || 0}%</span>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-6">
+                <p className="text-sm text-muted-foreground mb-3">
+                  No active campaign
+                </p>
+                <Link
+                  href="/dashboard/content/campaigns/new"
+                  className="inline-flex items-center gap-2 text-sm bg-primary text-primary-foreground rounded-lg px-4 py-2 hover:bg-primary/90 transition-colors"
+                >
+                  <Plus className="h-4 w-4" /> New Campaign
+                </Link>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+        </Link>
+
+        {/* Connection Status */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Share2 className="h-4 w-4" /> Connections
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-3">
+              {["linkedin", "facebook", "x", "instagram", "tiktok", "youtube"].map(
+                (platform) => {
+                  const conn = data.connections[platform];
+                  const connected = conn?.connected || false;
+                  return (
+                    <Link
+                      key={platform}
+                      href="/dashboard/content/connections"
+                      className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted/50 transition-colors"
+                    >
+                      <Circle
+                        className={cn(
+                          "h-2.5 w-2.5 fill-current",
+                          connected ? "text-green-500" : "text-red-400"
+                        )}
+                      />
+                      <span className="text-xs font-medium capitalize">
+                        {PLATFORM_ICONS[platform]} {platform}
+                      </span>
+                    </Link>
+                  );
+                }
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground mt-3">
+              {connectedPlatforms} of 6 connected
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* GA4 Analytics Status */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Activity className="h-4 w-4" /> GA4 Analytics
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {data.ga4Status?.configured ? (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 p-2 rounded-lg bg-green-50">
+                  <Circle className="h-2.5 w-2.5 fill-current text-green-500" />
+                  <span className="text-xs font-medium text-green-800">
+                    GA4 Connected — Real-time analytics active
+                  </span>
+                </div>
+                {data.ga4Status.realtime && (
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="p-2 rounded-lg bg-muted/30 text-center">
+                      <p className="text-lg font-bold">
+                        {data.ga4Status.realtime.activeUsers}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Active Users</p>
+                    </div>
+                    <div className="p-2 rounded-lg bg-muted/30 text-center">
+                      <p className="text-lg font-bold">
+                        {data.ga4Status.realtime.pageViews}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Page Views</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-center py-4">
+                <p className="text-sm text-muted-foreground mb-3">
+                  Configure GA4 for real-time analytics
+                </p>
+                <Link
+                  href="/dashboard/settings/analytics"
+                  className="inline-flex items-center gap-2 text-sm bg-primary text-primary-foreground rounded-lg px-4 py-2 hover:bg-primary/90 transition-colors"
+                >
+                  <Settings className="h-4 w-4" /> Configure GA4
+                </Link>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Today + Upcoming + Recent */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Today's Content */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <CalendarDays className="h-4 w-4" /> Today&apos;s Content
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {data.todayItems.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                Nothing scheduled for today
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {data.todayItems.slice(0, 5).map((item) => (
+                  <Link
+                    key={item._id}
+                    href={`/dashboard/content/articles/${item._id}`}
+                    className="flex items-center justify-between p-2 rounded-lg bg-muted/30 hover:bg-muted/60 transition-colors"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">{item.title}</p>
+                      <p className="text-xs text-muted-foreground capitalize">
+                        {item.type} {item.platform ? `• ${item.platform}` : ""}
+                      </p>
+                    </div>
+                    <span
+                      className={cn(
+                        "text-xs px-2 py-0.5 rounded-full whitespace-nowrap",
+                        STATUS_COLORS[item.status] || "bg-gray-100 text-gray-800"
+                      )}
+                    >
+                      {item.status}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Upcoming */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <TrendingUp className="h-4 w-4" /> Upcoming (7 days)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {data.upcomingItems.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                No upcoming content
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {data.upcomingItems.slice(0, 5).map((item) => (
+                  <Link
+                    key={item._id}
+                    href={`/dashboard/content/articles/${item._id}`}
+                    className="flex items-center justify-between p-2 rounded-lg bg-muted/30 hover:bg-muted/60 transition-colors"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">{item.title}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(item.scheduledAt!).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <span
+                      className={cn(
+                        "text-xs px-2 py-0.5 rounded-full whitespace-nowrap",
+                        STATUS_COLORS[item.status] || "bg-gray-100 text-gray-800"
+                      )}
+                    >
+                      {item.status}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Recent Publications */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <CheckCircle2 className="h-4 w-4" /> Recent Publications
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {data.recentPublished.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                No publications yet
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {data.recentPublished.map((item) => (
+                  <Link
+                    key={item._id}
+                    href={`/dashboard/content/articles/${item._id}`}
+                    className="flex items-center justify-between p-2 rounded-lg bg-muted/30 hover:bg-muted/60 transition-colors"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">{item.title}</p>
+                      <p className="text-xs text-muted-foreground capitalize">
+                        {item.platform || item.type}
+                      </p>
+                    </div>
+                    <span className="text-xs text-muted-foreground">
+                      {new Date(
+                        item.publishedAt || item.createdAt
+                      ).toLocaleDateString()}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="flex flex-wrap gap-3">
+        <button
+          onClick={executeDaily}
+          disabled={executing}
+          className="inline-flex items-center gap-2 border rounded-lg px-4 py-2 text-sm font-medium hover:bg-muted transition-colors disabled:opacity-50"
+        >
+          {executing ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Play className="h-4 w-4" />
+          )}
+          Run Daily Execution
+        </button>
+        <Link
+          href="/dashboard/content/campaigns/new"
+          className="inline-flex items-center gap-2 bg-primary text-primary-foreground rounded-lg px-4 py-2 text-sm font-medium hover:bg-primary/90 transition-colors"
+        >
+          <Plus className="h-4 w-4" /> New Campaign
+        </Link>
+        <Link
+          href="/dashboard/content/campaigns"
+          className="inline-flex items-center gap-2 border rounded-lg px-4 py-2 text-sm font-medium hover:bg-muted transition-colors"
+        >
+          <Megaphone className="h-4 w-4" /> View Campaigns
+        </Link>
+        <Link
+          href="/dashboard/content/calendar"
+          className="inline-flex items-center gap-2 border rounded-lg px-4 py-2 text-sm font-medium hover:bg-muted transition-colors"
+        >
+          <CalendarDays className="h-4 w-4" /> View Calendar
+        </Link>
+      </div>
+
+      {executionResult && (
+        <div className="flex items-center gap-2 text-sm p-3 rounded-lg bg-muted/50">
+          <Zap className="h-4 w-4 text-primary shrink-0" />
+          <span>{executionResult}</span>
+          <button
+            onClick={() => setExecutionResult(null)}
+            className="ml-auto text-muted-foreground hover:text-foreground"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      {/* Execution Status */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Clock className="h-4 w-4" /> Next Scheduled Execution
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {data.nextScheduled ? (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between p-2 rounded-lg bg-muted/30">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate">{data.nextScheduled.title}</p>
+                    <p className="text-xs text-muted-foreground capitalize">
+                      {data.nextScheduled.type} {data.nextScheduled.platform ? `• ${data.nextScheduled.platform}` : ""}
+                    </p>
+                  </div>
+                  <span className="text-xs text-muted-foreground">
+                    {new Date(data.nextScheduled.scheduledAt!).toLocaleDateString()}
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Scheduled for {new Date(data.nextScheduled.scheduledAt!).toLocaleString()}
+                </p>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                No upcoming scheduled content
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Zap className="h-4 w-4" /> Last Execution
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {data.lastExecution ? (
+              <div className="space-y-2">
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <div className="p-2 rounded-lg bg-muted/30">
+                    <p className="text-lg font-bold">{data.lastExecution.executed}</p>
+                    <p className="text-xs text-muted-foreground">Executed</p>
+                  </div>
+                  <div className="p-2 rounded-lg bg-muted/30">
+                    <p className="text-lg font-bold text-green-600">{data.lastExecution.published}</p>
+                    <p className="text-xs text-muted-foreground">Published</p>
+                  </div>
+                  <div className="p-2 rounded-lg bg-muted/30">
+                    <p className="text-lg font-bold text-yellow-600">{data.lastExecution.pendingApproval}</p>
+                    <p className="text-xs text-muted-foreground">Pending</p>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground text-center">
+                  Last run: {new Date(data.lastExecution.executedAt).toLocaleString()}
+                  {data.lastExecution.errors.length > 0 && (
+                    <span className="text-red-500 ml-2">• {data.lastExecution.errors.length} error(s)</span>
+                  )}
+                </p>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                No executions yet. Run daily execution to start.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Operations Link */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Activity className="h-5 w-5 text-gray-500" />
+              <div>
+                <p className="font-medium text-gray-900">Content Operations</p>
+                <p className="text-sm text-gray-500">View real-time execution tracking, timeline, and agent activity</p>
+              </div>
+            </div>
+            <Link
+              href="/dashboard/content/operations"
+              className="px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors"
+            >
+              View Operations
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

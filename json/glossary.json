@@ -1,0 +1,81 @@
+{
+  "name": "Glossary",
+  "type": "glossary",
+  "content": {
+    "aiTerms": [
+      { "term": "LLM", "definition": "Large Language Model. A neural network trained on vast text data capable of generating and understanding human language. Used in Wall-V chat and voice agents." },
+      { "term": "RAG", "definition": "Retrieval-Augmented Generation. A technique that combines LLM generation with retrieval from external knowledge bases to produce more accurate, grounded responses." },
+      { "term": "NLP", "definition": "Natural Language Processing. A branch of AI focused on enabling computers to understand, interpret, and generate human language." },
+      { "term": "Fine-tuning", "definition": "The process of further training a pre-trained model on domain-specific data to improve performance for particular tasks." },
+      { "term": "Embeddings", "definition": "Numerical vector representations of text that capture semantic meaning, used for similarity search and clustering in AI applications." },
+      { "term": "Vector DB", "definition": "Vector Database. A database optimized for storing and querying high-dimensional vectors, used in RAG pipelines for semantic search." },
+      { "term": "Prompt Engineering", "definition": "The practice of designing and refining input prompts to elicit desired outputs from AI models." }
+    ],
+    "businessTerms": [
+      { "term": "CRM", "definition": "Customer Relationship Management. Software for managing interactions with current and potential customers, tracking leads, and sales pipelines." },
+      { "term": "ERP", "definition": "Enterprise Resource Planning. Integrated management software that handles core business processes including finance, HR, manufacturing, and supply chain." },
+      { "term": "SaaS", "definition": "Software as a Service. A cloud-based software delivery model where applications are hosted and provided over the internet on a subscription basis." },
+      { "term": "B2B", "definition": "Business to Business. Commercial transactions and relationships between two businesses rather than between a business and individual consumers." },
+      { "term": "B2C", "definition": "Business to Consumer. Commercial transactions directly between a business and individual end consumers." },
+      { "term": "MVP", "definition": "Minimum Viable Product. A product with just enough features to satisfy early users and gather feedback for future development." },
+      { "term": "ROI", "definition": "Return on Investment. A performance metric measuring the gain or loss generated relative to the investment cost." },
+      { "term": "KPI", "definition": "Key Performance Indicator. A measurable value that demonstrates how effectively a business is achieving key objectives." }
+    ],
+    "technicalTerms": [
+      { "term": "API", "definition": "Application Programming Interface. A set of rules and protocols that allows different software applications to communicate with each other." },
+      { "term": "REST", "definition": "Representational State Transfer. An architectural style for designing networked applications, using standard HTTP methods for communication." },
+      { "term": "GraphQL", "definition": "A query language and runtime for APIs that allows clients to request exactly the data they need in a single request." },
+      { "term": "Webhook", "definition": "A user-defined HTTP callback triggered by an event in a source application, sending data to a specified URL in real time." },
+      { "term": "Middleware", "definition": "Software that acts as a bridge between an operating system or database and applications, especially on a network. In Next.js, functions that run before a request is completed." },
+      { "term": "SSR", "definition": "Server-Side Rendering. A technique where pages are rendered on the server and sent as fully formed HTML to the client browser." },
+      { "term": "CSR", "definition": "Client-Side Rendering. A technique where pages are rendered in the browser using JavaScript after the initial HTML is loaded." },
+      { "term": "SPA", "definition": "Single Page Application. A web application that loads a single HTML page and dynamically updates content without full page reloads." }
+    ],
+    "hostingTerms": [
+      { "term": "VPS", "definition": "Virtual Private Server. A virtualized server environment that provides dedicated resources within a shared physical server." },
+      { "term": "CDN", "definition": "Content Delivery Network. A distributed network of servers that delivers cached content to users based on geographic proximity." },
+      { "term": "SSL", "definition": "Secure Sockets Layer. A cryptographic protocol that encrypts data transmitted between a web server and browser, indicated by HTTPS." },
+      { "term": "DNS", "definition": "Domain Name System. The hierarchical naming system that translates human-readable domain names into IP addresses." },
+      { "term": "cPanel", "definition": "A web-based hosting control panel providing graphical interface and automation tools for managing web hosting accounts." },
+      { "term": "WHM", "definition": "Web Host Manager. A server administration tool used by hosting providers to manage accounts, packages, and server settings." },
+      { "term": "Uptime", "definition": "The amount of time a server or system is operational and available, typically expressed as a percentage. Wall-V guarantees 99.9% uptime." },
+      { "term": "Bandwidth", "definition": "The maximum rate of data transfer across a network path, measured in bits per second or bytes per second." }
+    ],
+    "paymentTerms": [
+      { "term": "IPN", "definition": "Instant Payment Notification. A message sent by a payment processor to notify a merchant of a transaction event such as payment received or refunded." },
+      { "term": "HMAC", "definition": "Hash-based Message Authentication Code. A cryptographic technique used to verify the integrity and authenticity of a message, commonly used for webhook signature verification." },
+      { "term": "Buy Link", "definition": "A pre-generated URL that directs a customer to a payment page for a specific product or service with amount and details pre-filled." },
+      { "term": "Checkout", "definition": "The process where a customer completes a purchase by providing payment and billing information." },
+      { "term": "Invoice", "definition": "A document issued by a seller to a buyer detailing the products, services, quantities, agreed prices, and payment terms." },
+      { "term": "Quote", "definition": "A formal estimate of the cost for specific products or services, typically valid for a defined period." },
+      { "term": "Milestone", "definition": "A significant checkpoint in a project that marks the completion of a deliverable, often tied to a partial payment." }
+    ],
+    "projectTerms": [
+      { "term": "Discovery", "definition": "The initial phase of a project focused on understanding requirements, goals, constraints, and stakeholder expectations." },
+      { "term": "Milestone", "definition": "A defined point in a project timeline marking the completion of a major deliverable or phase." },
+      { "term": "Sprint", "definition": "A fixed time period (typically 1-4 weeks) during which a specific set of work items must be completed in agile development." },
+      { "term": "Backlog", "definition": "An ordered list of features, tasks, and fixes to be addressed in a project, maintained and prioritized by the product owner." },
+      { "term": "Standup", "definition": "A brief daily meeting where team members share what they accomplished, what they are working on, and any blockers they face." },
+      { "term": "Retrospective", "definition": "A meeting held at the end of a sprint or project phase to reflect on what went well, what did not, and what to improve." }
+    ],
+    "legalTerms": [
+      { "term": "GDPR", "definition": "General Data Protection Regulation. European Union regulation governing data protection and privacy for individuals within the EU and EEA." },
+      { "term": "CCPA", "definition": "California Consumer Privacy Act. A California state statute that enhances privacy rights and consumer protection for residents of California." },
+      { "term": "DPA", "definition": "Data Processing Agreement. A legally binding contract between a data controller and a data processor specifying obligations for handling personal data." },
+      { "term": "TOC", "definition": "Terms and Conditions. The legal agreement between a service provider and a user governing the use of a service or website." },
+      { "term": "SLA", "definition": "Service Level Agreement. A commitment between a provider and client defining the level of service expected, including uptime, response time, and resolution time." },
+      { "term": "NDA", "definition": "Non-Disclosure Agreement. A legal contract establishing a confidential relationship between parties to protect proprietary information." },
+      { "term": "DMCA", "definition": "Digital Millennium Copyright Act. United States copyright law that implements international treaties to protect digital content from unauthorized use." }
+    ],
+    "marketingTerms": [
+      { "term": "SEO", "definition": "Search Engine Optimization. The practice of optimizing website content and structure to improve visibility and ranking in organic search engine results." },
+      { "term": "SEM", "definition": "Search Engine Marketing. A digital marketing strategy that increases website visibility in search engine results pages through paid advertising." },
+      { "term": "PPC", "definition": "Pay Per Click. An advertising model where advertisers pay a fee each time their ad is clicked, commonly used in search and display advertising." },
+      { "term": "CTR", "definition": "Click-Through Rate. The percentage of people who click on a link or advertisement out of the total who view it." },
+      { "term": "CPA", "definition": "Cost Per Action. An advertising pricing model where advertisers pay only when a specific action (signup, purchase, download) is completed." },
+      { "term": "CAC", "definition": "Customer Acquisition Cost. The total cost of acquiring a new customer, including marketing and sales expenses divided by the number of new customers." },
+      { "term": "LTV", "definition": "Lifetime Value. The total revenue a business can expect to generate from a single customer throughout their entire relationship." },
+      { "term": "Churn", "definition": "The rate at which customers stop doing business with a company, expressed as a percentage of total customers over a given period." }
+    ]
+  }
+}

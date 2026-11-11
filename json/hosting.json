@@ -1,0 +1,176 @@
+{
+  "name": "Hosting",
+  "type": "hosting",
+  "content": {
+    "plans": [
+      {
+        "name": "Basic",
+        "price": "$3.99/mo",
+        "websites": 1,
+        "storage": "5GB",
+        "bandwidth": "10GB",
+        "ssl": "Free",
+        "support": "Email",
+        "extras": [],
+        "features": [
+          "Single website hosting",
+          "5GB SSD storage",
+          "10GB monthly bandwidth",
+          "Free SSL certificate",
+          "Email support",
+          "Ideal for personal sites and blogs"
+        ]
+      },
+      {
+        "name": "Business",
+        "price": "$9.99/mo",
+        "websites": 10,
+        "storage": "25GB",
+        "bandwidth": "100GB",
+        "ssl": "Free",
+        "support": "Priority",
+        "extras": [
+          "Daily Backups"
+        ],
+        "features": [
+          "Up to 10 websites",
+          "25GB SSD storage",
+          "100GB monthly bandwidth",
+          "Free SSL certificates",
+          "Priority support",
+          "Daily backups included",
+          "Suitable for small businesses"
+        ]
+      },
+      {
+        "name": "Cloud",
+        "price": "$16.99/mo",
+        "websites": "Unlimited",
+        "storage": "50GB",
+        "bandwidth": "Unlimited",
+        "ssl": "Free",
+        "support": "24/7",
+        "extras": [
+          "CDN",
+          "Staging"
+        ],
+        "features": [
+          "Unlimited websites",
+          "50GB SSD storage",
+          "Unlimited bandwidth",
+          "Free SSL certificates",
+          "24/7 priority support",
+          "CDN included",
+          "Staging environment",
+          "Best for high-traffic sites"
+        ]
+      },
+      {
+        "name": "WordPress",
+        "price": "$6.99/mo",
+        "websites": 1,
+        "storage": "10GB",
+        "bandwidth": "-",
+        "ssl": "Free",
+        "support": "-",
+        "extras": [
+          "Auto Updates"
+        ],
+        "features": [
+          "Single WordPress website",
+          "10GB SSD storage",
+          "Free SSL certificate",
+          "Automatic WordPress updates",
+          "Optimized for WordPress performance"
+        ]
+      },
+      {
+        "name": "Reseller",
+        "price": "$29.99/mo",
+        "websites": "50 accounts",
+        "storage": "100GB",
+        "bandwidth": "Unlimited",
+        "ssl": "Free",
+        "support": "-",
+        "extras": [
+          "WHM",
+          "White Label"
+        ],
+        "features": [
+          "50 hosting accounts",
+          "100GB SSD storage",
+          "Unlimited bandwidth",
+          "Free SSL certificates",
+          "WHM control panel",
+          "White label branding",
+          "For agencies and resellers"
+        ]
+      },
+      {
+        "name": "Email",
+        "price": "$1.99/mo",
+        "websites": "-",
+        "storage": "5GB",
+        "bandwidth": "-",
+        "ssl": "Free",
+        "support": "-",
+        "extras": [
+          "5 Accounts"
+        ],
+        "features": [
+          "5 email accounts",
+          "5GB storage",
+          "Free SSL",
+          "Webmail access",
+          "IMAP/POP3/SMTP support"
+        ]
+      }
+    ],
+    "features": [
+      "99.9% uptime guarantee across all plans",
+      "Free domain with annual billing (first year)",
+      "Zero-downtime upgrades between plans",
+      "cPanel access for all hosting plans",
+      "One-click installs for 400+ applications",
+      "Daily backups included on Business plan and above",
+      "Free SSL certificates on all plans",
+      "Email hosting included on applicable plans"
+    ],
+    "competitivePositioning": [
+      {
+        "plan": "Basic",
+        "wallvPrice": "$3.99/mo",
+        "competitors": [
+          {
+            "provider": "Wix Basic",
+            "price": "$17/mo"
+          },
+          {
+            "provider": "Squarespace Personal",
+            "price": "$16/mo"
+          }
+        ]
+      },
+      {
+        "plan": "Business",
+        "wallvPrice": "$9.99/mo",
+        "competitors": [
+          {
+            "provider": "Wix Core",
+            "price": "$29/mo"
+          }
+        ]
+      },
+      {
+        "plan": "Cloud",
+        "wallvPrice": "$16.99/mo",
+        "competitors": [
+          {
+            "provider": "Wix Business",
+            "price": "$39/mo"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,62 @@
+{
+  "name": "Wall-V",
+  "type": "company",
+  "content": {
+    "overview": "Wall-V is an AI-powered software agency that delivers web, mobile, and automation solutions to businesses worldwide. By combining artificial intelligence with expert engineering, Wall-V provides faster, more affordable, and higher-quality software development compared to traditional agencies.",
+    "mission": "Make AI-powered digital solutions accessible to businesses of all sizes. Every startup, small business, and enterprise should be able to leverage cutting-edge technology without prohibitive costs or timelines.",
+    "vision": "Be the leading AI-first software agency, known for innovation, quality, and client success. Wall-V aims to redefine how software is built and delivered by placing AI at the center of every workflow.",
+    "values": [
+      {
+        "name": "Innovation",
+        "description": "Continuously explore and adopt emerging AI tools and methodologies to stay ahead of the curve."
+      },
+      {
+        "name": "Quality",
+        "description": "Deliver production-grade software that is reliable, performant, and maintainable."
+      },
+      {
+        "name": "Transparency",
+        "description": "Keep clients informed at every stage with clear communication, honest timelines, and open pricing."
+      },
+      {
+        "name": "Client-First",
+        "description": "Prioritize client goals and success above all else. Every decision is measured by client impact."
+      },
+      {
+        "name": "AI-First Approach",
+        "description": "Leverage AI agents and automation for first-line work, reserving human expertise for complex and creative tasks."
+      }
+    ],
+    "contact": {
+      "email": "info@wall-v.com",
+      "address": "1692, B Block, Master City Housing Society, Near Peoples Colony, Gujranwala, Pakistan",
+      "website": "https://www.wall-v.com"
+    },
+    "services": [
+      "Web Development",
+      "Mobile Applications",
+      "AI Automation",
+      "ERP/CRM Systems",
+      "Hosting",
+      "Domains",
+      "Digital Marketing",
+      "UI/UX Design",
+      "Technical Consulting"
+    ],
+    "brandPositioning": "Wall-V is an AI-first agency, not a traditional development shop. The agency uses AI to deliver faster, cheaper, and better results. This positioning differentiates Wall-V from three primary competitor categories: Traditional Agencies ($10,000 - $100,000), SaaS Platforms ($29 - $299/month), and Freelancers ($500 - $5,000). Wall-V Pricing: $499 - $29,000 per project, positioned between freelancers and traditional agencies with superior quality and speed.",
+    "targetClients": [
+      {
+        "segment": "Startups",
+        "description": "MVP development, rapid prototyping, and scalable architecture from day one"
+      },
+      {
+        "segment": "Small and Medium Businesses (SMBs)",
+        "description": "Cost-effective digital transformation, process automation, and customer engagement tools"
+      },
+      {
+        "segment": "Enterprises",
+        "description": "Complex system integration, custom ERP/CRM, and large-scale AI deployments"
+      }
+    ]
+  }
+}

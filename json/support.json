@@ -1,0 +1,61 @@
+{
+  "name": "Support",
+  "type": "support",
+  "content": {
+    "ticketSystem": {
+      "features": [
+        "Unique tracking numbers for every ticket",
+        "Category-based ticket routing",
+        "Automatic assignment based on issue type",
+        "Escalation paths for complex issues",
+        "Structured conversation threads per ticket",
+        "Attachment support for screenshots, logs, and documentation",
+        "Timestamp tracking for all communications",
+        "Link tickets to specific products and projects",
+        "Cross-reference related tickets",
+        "First response time metrics",
+        "Resolution time tracking",
+        "Filter by status, priority, or category",
+        "Search by number or content",
+        "Sort by date, priority, or status",
+        "Bulk operations for ticket management",
+        "Internal notes for support team collaboration",
+        "Canned responses for common issues",
+        "Template-based responses for consistency",
+        "Rich text formatting in messages",
+        "Response time metrics and resolution time tracking",
+        "Ticket volume trends and customer satisfaction tracking"
+      ],
+      "priorityLevels": [
+        { "level": "Low", "description": "General inquiries, non-urgent issues", "firstResponse": "24 hours", "resolutionTarget": "72 hours" },
+        { "level": "Medium", "description": "Standard support requests", "firstResponse": "8 hours", "resolutionTarget": "24 hours" },
+        { "level": "High", "description": "Important issues affecting workflow", "firstResponse": "4 hours", "resolutionTarget": "8 hours" },
+        { "level": "Urgent", "description": "Critical problems requiring immediate attention", "firstResponse": "1 hour", "resolutionTarget": "4 hours" }
+      ],
+      "statusWorkflow": ["Open", "In-Progress", "Waiting", "Resolved", "Closed"]
+    },
+    "contactMethods": [
+      {
+        "method": "Contact Form",
+        "description": "Public contact form at /contact with structured fields for different inquiry types",
+        "features": ["Automatic ticket creation", "Confirmation emails sent to users"]
+      },
+      {
+        "method": "Dashboard Support",
+        "description": "Support ticket creation from within the user dashboard",
+        "features": ["Ticket history and status tracking", "Direct communication with support team", "Attachment upload capability"]
+      },
+      {
+        "method": "Email Support",
+        "email": "support@wall-v.com",
+        "description": "Email tickets automatically created and tracked with thread tracking",
+        "features": ["Response time commitment based on priority level", "Thread tracking across email conversations"]
+      },
+      {
+        "method": "AI Chatbot",
+        "description": "Instant answers to common questions available 24/7",
+        "features": ["Escalation to human support when needed", "Knowledge base integration for accurate responses"]
+      }
+    ]
+  }
+}
