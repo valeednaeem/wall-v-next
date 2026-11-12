@@ -147,6 +147,49 @@ describe("extractVapiCallEvent — missing artifact", () => {
   });
 });
 
+// ─── Malformed artifact structures ──────────────────────────────────────────
+
+describe("extractVapiCallEvent — malformed artifact structures", () => {
+  it("ignores a wrong-typed messages field instead of treating it as content", () => {
+    const { event } = extractVapiCallEvent({
+      message: {
+        type: "end-of-call-report",
+        artifact: { messages: "not-an-array", transcript: "USER: ok" },
+        call: { id: "call-mal-messages" },
+      },
+    });
+
+    expect(event?.messages).toBeUndefined();
+    expect(event?.transcript).toBe("USER: ok");
+    expect(event?.artifactPresent).toBe(true);
+  });
+
+  it("skips a non-string transcript value and leaves derivation to the route", () => {
+    const { event } = extractVapiCallEvent({
+      message: {
+        type: "end-of-call-report",
+        artifact: { transcript: 12345, messages: [{ role: "user", message: "Hello" }] },
+        call: { id: "call-mal-transcript" },
+      },
+    });
+
+    expect(event?.transcript).toBeUndefined();
+    expect(event?.messages).toHaveLength(1);
+    expect(event?.messages?.[0]).toMatchObject({ role: "user", content: "Hello" });
+    expect(event?.artifactPresent).toBe(true);
+  });
+
+  it("treats an array-shaped artifact as absent", () => {
+    const { event } = extractVapiCallEvent({
+      message: { type: "end-of-call-report", artifact: [], call: { id: "call-mal-array" } },
+    });
+
+    expect(event?.artifactPresent).toBe(false);
+    expect(event?.transcript).toBeUndefined();
+    expect(event?.messages).toBeUndefined();
+  });
+});
+
 // ─── Authentication (fail-closed) ────────────────────────────────────────────
 
 describe("authenticateVapiWebhook", () => {

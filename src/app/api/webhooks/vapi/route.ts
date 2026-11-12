@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
+import type { QueryFilter, Types, UpdateQuery } from "mongoose";
 import { connectToDatabase } from "@/lib/mongodb";
 import Conversation from "@/models/conversation";
+import VapiWebhookEvent, { IVapiWebhookEvent } from "@/models/vapi-webhook-event";
 import { corsHeaders, handleOPTIONS } from "@/lib/cors";
 import { logError } from "@/lib/error-logger";
 import { checkRateLimit, getClientIp, logSecurityEvent } from "@/lib/security";
@@ -29,6 +31,22 @@ function toValidDate(value?: string): Date {
 }
 
 /**
+ * Event bookkeeping must never turn a successful webhook into a 500.
+ * A row stuck in `processing` is reclaimable after the stale window, so a
+ * failed status update self-heals on the next redelivery.
+ */
+async function safeUpdateEvent(
+  filter: QueryFilter<IVapiWebhookEvent>,
+  update: UpdateQuery<IVapiWebhookEvent>
+): Promise<void> {
+  try {
+    await VapiWebhookEvent.updateOne(filter, update);
+  } catch {
+    // swallow — diagnostics only
+  }
+}
+
+/**
  * POST /api/webhooks/vapi
  *
  * Vapi server-events endpoint (point the Vapi assistant's server URL here).
@@ -43,6 +61,7 @@ function toValidDate(value?: string): Date {
 export async function POST(request: Request) {
   const headers = corsHeaders(request);
   const ip = getClientIp(request);
+  let activeEventId: Types.ObjectId | null = null;
 
   try {
     const rl = checkRateLimit("webhook:vapi:" + ip, 30, 60 * 1000);
@@ -134,12 +153,64 @@ export async function POST(request: Request) {
 
     await connectToDatabase();
 
+    // ─── Event-level dedup (F-1): claim the event BEFORE touching the
+    // Conversation store, so concurrent deliveries of the same end-of-call
+    // report cannot both pass the content check and double-upsert. Mirrors
+    // the Dograh webhook: unique eventKey → processed → ack; failed /
+    // incomplete / stale-processing rows are reclaimable by a retry.
+    const staleProcessingAt = new Date(Date.now() - 10 * 60 * 1000);
+    try {
+      const claimed = await VapiWebhookEvent.create({
+        eventKey,
+        callId: event.callId,
+        type: event.type,
+        status: "processing",
+      });
+      activeEventId = claimed._id;
+    } catch (claimError) {
+      const isDuplicateKey = (claimError as { code?: number })?.code === 11000;
+      if (!isDuplicateKey) throw claimError;
+
+      const existingEvent = await VapiWebhookEvent.findOne({ eventKey });
+      if (existingEvent?.status === "processed") {
+        return NextResponse.json({ success: true, duplicate: true, key: eventKey }, { headers });
+      }
+
+      const reclaimed = await VapiWebhookEvent.findOneAndUpdate(
+        {
+          eventKey,
+          $or: [
+            { status: "failed" },
+            { status: "incomplete" },
+            { status: "processing", updatedAt: { $lt: staleProcessingAt } },
+          ],
+        },
+        { $set: { status: "processing" }, $unset: { error: 1 } },
+        { new: true }
+      );
+      if (!reclaimed) {
+        // Another delivery is actively processing this event — ack without
+        // touching the conversation (Dograh in-flight pattern).
+        return NextResponse.json(
+          { success: true, duplicate: true, processing: true, key: eventKey },
+          { headers }
+        );
+      }
+      activeEventId = reclaimed._id;
+    }
+
     const sessionId = `vapi_${event.callId}`;
 
     // Idempotency: Vapi retries deliveries. A retry after the conversation has
     // durable content is a no-op (never overwrite content with empties).
     const existing = await Conversation.findOne({ sessionId }).catch(() => null);
     if (existing && ((existing.messages?.length || 0) > 0 || existing.voiceAgent?.transcript)) {
+      // Content is already durable — record the event as processed so future
+      // redeliveries ack at the claim step.
+      await safeUpdateEvent(
+        { _id: activeEventId },
+        { $set: { status: "processed", processedAt: new Date() }, $unset: { error: 1 } }
+      );
       return NextResponse.json(
         { success: true, duplicate: true, conversationId: existing._id, key: eventKey },
         { headers }
@@ -210,6 +281,11 @@ export async function POST(request: Request) {
     // NOT report success. A later retry can still fill in the content because
     // the idempotency check only skips conversations that already have any.
     if (!transcriptPersisted) {
+      // Reclaimable by a later redelivery that carries the transcript.
+      await safeUpdateEvent(
+        { _id: activeEventId },
+        { $set: { status: "incomplete", processedAt: new Date() }, $unset: { error: 1 } }
+      );
       console.warn(
         `[Vapi Webhook] Incomplete end-of-call-report (${eventKey}) — no transcript/messages ` +
           `(artifactPresent=${Boolean(event.artifactPresent)}); call metadata persisted only`
@@ -244,11 +320,27 @@ export async function POST(request: Request) {
       `[Vapi Webhook] Persisted conversation (${eventKey}) id=${conversation._id} messages=${messages.length}`
     );
 
+    await safeUpdateEvent(
+      { _id: activeEventId },
+      { $set: { status: "processed", processedAt: new Date() }, $unset: { error: 1 } }
+    );
+
     return NextResponse.json(
       { success: true, conversationId: conversation._id, key: eventKey },
       { headers }
     );
   } catch (error) {
+    // Record the failure so a Vapi retry can reclaim this event immediately
+    // (instead of waiting for the stale-processing window).
+    await safeUpdateEvent(
+      { _id: activeEventId },
+      {
+        $set: {
+          status: "failed",
+          error: error instanceof Error ? error.message.slice(0, 500) : "Webhook processing failed",
+        },
+      }
+    );
     await logError({
       level: "error",
       message: "Error processing vapi webhook",

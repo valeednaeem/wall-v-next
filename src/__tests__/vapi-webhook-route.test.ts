@@ -7,8 +7,10 @@
  * and preserved auth/validation/rate-limit behavior.
  */
 import { POST } from "@/app/api/webhooks/vapi/route";
+import { logError } from "@/lib/error-logger";
 import { checkRateLimit, logSecurityEvent } from "@/lib/security";
 import Conversation from "@/models/conversation";
+import VapiWebhookEvent from "@/models/vapi-webhook-event";
 
 // ─── Module mocks ───────────────────────────────────────────────────────────
 
@@ -42,6 +44,16 @@ jest.mock("@/models/conversation", () => ({
   default: {
     findOne: jest.fn(),
     findOneAndUpdate: jest.fn(),
+  },
+}));
+
+jest.mock("@/models/vapi-webhook-event", () => ({
+  __esModule: true,
+  default: {
+    create: jest.fn(),
+    findOne: jest.fn(),
+    findOneAndUpdate: jest.fn(),
+    updateOne: jest.fn(),
   },
 }));
 
@@ -115,8 +127,36 @@ function emptyPayload(callId = "call-abc") {
 
 const findOneMock = jest.mocked(Conversation.findOne);
 const findOneAndUpdateMock = jest.mocked(Conversation.findOneAndUpdate);
+const eventCreateMock = VapiWebhookEvent.create as unknown as jest.Mock;
+const eventFindOneMock = VapiWebhookEvent.findOne as unknown as jest.Mock;
+const eventFindOneAndUpdateMock = VapiWebhookEvent.findOneAndUpdate as unknown as jest.Mock;
+const eventUpdateOneMock = VapiWebhookEvent.updateOne as unknown as jest.Mock;
 const checkRateLimitMock = jest.mocked(checkRateLimit);
 const logSecurityEventMock = jest.mocked(logSecurityEvent);
+const logErrorMock = jest.mocked(logError);
+
+// ─── In-memory VapiWebhookEvent store (F-1) ─────────────────────────────────
+// The real uniqueness lives in the MongoDB unique index on eventKey; this
+// mock reproduces claim / duplicate-key / reclaim semantics at the model
+// boundary so the route's dedup logic is exercised end-to-end.
+
+type StoredEventStatus = "processing" | "processed" | "failed" | "incomplete";
+interface StoredEvent {
+  _id: string;
+  status: StoredEventStatus;
+  updatedAt: number;
+}
+
+const eventStore = new Map<string, StoredEvent>();
+let eventSeq = 0;
+
+function duplicateKeyError(): Error & { code: number } {
+  const err = new Error("E11000 duplicate key error collection: vapiwebhookevents") as Error & {
+    code: number;
+  };
+  err.code = 11000;
+  return err;
+}
 
 const ORIGINAL_SECRET = process.env.VAPI_WEBHOOK_SECRET;
 
@@ -133,6 +173,59 @@ beforeEach(() => {
   jest.clearAllMocks();
   checkRateLimitMock.mockReturnValue({ allowed: true, remaining: 29, resetAt: Date.now() + 60_000 });
   logSecurityEventMock.mockResolvedValue(undefined);
+
+  // Fresh event store per test, with claim/reclaim semantics wired up.
+  eventStore.clear();
+  eventSeq = 0;
+  eventCreateMock.mockImplementation(
+    async (doc: { eventKey: string; callId?: string; type?: string; status?: StoredEventStatus }) => {
+      if (eventStore.has(doc.eventKey)) throw duplicateKeyError();
+      eventSeq += 1;
+      const record: StoredEvent = {
+        _id: `evt-${eventSeq}`,
+        status: doc.status ?? "processing",
+        updatedAt: Date.now(),
+      };
+      eventStore.set(doc.eventKey, record);
+      return { ...doc, _id: record._id };
+    }
+  );
+  eventFindOneMock.mockImplementation(async ({ eventKey }: { eventKey: string }) => {
+    const record = eventStore.get(eventKey);
+    return record ? { eventKey, status: record.status, updatedAt: record.updatedAt } : null;
+  });
+  eventFindOneAndUpdateMock.mockImplementation(
+    async (
+      filter: { eventKey: string; $or?: Array<Record<string, unknown>> },
+      update: { $set?: { status?: StoredEventStatus } }
+    ) => {
+      const record = eventStore.get(filter.eventKey);
+      if (!record) return null;
+      const matches = (filter.$or || []).some((clause) => {
+        if (clause.status !== record.status) return false;
+        const updatedAtCond = clause.updatedAt as { $lt?: Date } | undefined;
+        if (updatedAtCond?.$lt) return record.updatedAt < updatedAtCond.$lt.getTime();
+        return true;
+      });
+      if (!matches) return null;
+      const nextStatus = update.$set?.status ?? record.status;
+      eventStore.set(filter.eventKey, { ...record, status: nextStatus, updatedAt: Date.now() });
+      return { eventKey: filter.eventKey, status: nextStatus, _id: record._id };
+    }
+  );
+  eventUpdateOneMock.mockImplementation(
+    async (filter: { _id?: string }, update: { $set?: { status?: StoredEventStatus } }) => {
+      if (filter._id && update.$set?.status) {
+        for (const [key, record] of eventStore) {
+          if (record._id === filter._id) {
+            eventStore.set(key, { ...record, status: update.$set.status, updatedAt: Date.now() });
+            return { acknowledged: true, matchedCount: 1 };
+          }
+        }
+      }
+      return { acknowledged: true, matchedCount: 0 };
+    }
+  );
 });
 
 // ─── Persistence from both payload shapes ───────────────────────────────────
@@ -349,6 +442,179 @@ describe("POST /api/webhooks/vapi — missing artifact", () => {
     };
     expect(update.$set.voiceAgent.transcriptPersisted).toBe(true);
     expect(update.$set.voiceAgent.transcript).toContain("Hello there.");
+  });
+});
+
+// ─── Persistence failure and retry (F-1 bookkeeping) ────────────────────────
+
+describe("POST /api/webhooks/vapi — persistence failure and retry", () => {
+  it("returns 500 without claiming success when the conversation write fails", async () => {
+    findOneMock.mockResolvedValue(null);
+    findOneAndUpdateMock.mockRejectedValueOnce(new Error("mongo write failed"));
+
+    const res = (await POST(
+      makeRequest(messageLevelPayload("call-db-fail"))
+    )) as unknown as WebhookResponse;
+
+    expect(res.status).toBe(500);
+    expect(res.body.success).toBeUndefined();
+    expect(res.body.error).toBe("Webhook processing failed");
+
+    // The event is marked failed so a Vapi retry can reclaim it immediately
+    // instead of waiting for the stale-processing window.
+    expect(eventStore.get("vapi:end-of-call-report:call-db-fail")?.status).toBe("failed");
+    expect(logErrorMock).toHaveBeenCalled();
+  });
+
+  it("lets a Vapi retry succeed after a failed persistence attempt", async () => {
+    const key = "vapi:end-of-call-report:call-retry-fail";
+    findOneMock.mockResolvedValue(null);
+    findOneAndUpdateMock
+      .mockRejectedValueOnce(new Error("transient mongo failure"))
+      .mockResolvedValueOnce({ _id: "conv-rf" } as never);
+
+    const first = (await POST(
+      makeRequest(messageLevelPayload("call-retry-fail"))
+    )) as unknown as WebhookResponse;
+    expect(first.status).toBe(500);
+    expect(eventStore.get(key)?.status).toBe("failed");
+
+    const second = (await POST(
+      makeRequest(messageLevelPayload("call-retry-fail"))
+    )) as unknown as WebhookResponse;
+    expect(second.status).toBe(200);
+    expect(second.body.success).toBe(true);
+    expect(second.body.duplicate).toBeUndefined();
+    expect(eventStore.get(key)?.status).toBe("processed");
+
+    const update = findOneAndUpdateMock.mock.calls[1][1] as {
+      $set: { voiceAgent: Record<string, unknown> };
+    };
+    expect(update.$set.voiceAgent.transcriptPersisted).toBe(true);
+  });
+});
+
+// ─── Concurrent deliveries (F-1 claim) ──────────────────────────────────────
+
+describe("POST /api/webhooks/vapi — concurrent deliveries", () => {
+  it("acknowledges both concurrent deliveries but writes the conversation exactly once", async () => {
+    findOneMock.mockResolvedValue(null);
+    findOneAndUpdateMock.mockResolvedValue({ _id: "conv-race" } as never);
+
+    const [rawA, rawB] = await Promise.all([
+      POST(makeRequest(messageLevelPayload("call-race"))),
+      POST(makeRequest(messageLevelPayload("call-race"))),
+    ]);
+    const a = rawA as unknown as WebhookResponse;
+    const b = rawB as unknown as WebhookResponse;
+
+    // Exactly one delivery passes the claim and touches the Conversation store.
+    expect(findOneAndUpdateMock).toHaveBeenCalledTimes(1);
+
+    // Both are acknowledged with 200; exactly one is a duplicate ack.
+    expect(a.status).toBe(200);
+    expect(b.status).toBe(200);
+    const bodies = [a.body, b.body];
+    expect(bodies.filter((body) => body.success === true)).toHaveLength(2);
+    expect(bodies.filter((body) => body.duplicate === true)).toHaveLength(1);
+
+    expect(eventStore.get("vapi:end-of-call-report:call-race")?.status).toBe("processed");
+  });
+});
+
+// ─── Transcript derivation and malformed artifacts ──────────────────────────
+
+describe("POST /api/webhooks/vapi — transcript derivation and malformed artifacts", () => {
+  it("derives the transcript from messages when the artifact has no transcript string", async () => {
+    const payload = {
+      message: {
+        type: "end-of-call-report",
+        endedReason: "hangup",
+        artifact: {
+          messages: [
+            { role: "user", message: "What are your prices?" },
+            { role: "assistant", message: "Our plans start at twenty-nine dollars." },
+          ],
+        },
+        call: { id: "call-derived", duration: 9 },
+      },
+    };
+    findOneMock.mockResolvedValue(null);
+    findOneAndUpdateMock.mockResolvedValue({ _id: "conv-d" } as never);
+
+    const res = (await POST(makeRequest(payload))) as unknown as WebhookResponse;
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+
+    const update = findOneAndUpdateMock.mock.calls[0][1] as {
+      $set: { voiceAgent: Record<string, unknown>; messages?: unknown[] };
+    };
+    expect(update.$set.voiceAgent.transcript).toBe(
+      "USER: What are your prices?\n\nAGENT: Our plans start at twenty-nine dollars."
+    );
+    expect(update.$set.voiceAgent.transcriptPersisted).toBe(true);
+    expect(update.$set.messages).toHaveLength(2);
+    expect(eventStore.get("vapi:end-of-call-report:call-derived")?.status).toBe("processed");
+  });
+
+  it("treats wrong-typed artifact fields as incomplete without inventing content", async () => {
+    const payload = {
+      message: {
+        type: "end-of-call-report",
+        endedReason: "hangup",
+        artifact: { transcript: 12345, messages: "not-an-array" }, // wrong types
+        call: { id: "call-malformed", duration: 3 },
+      },
+    };
+    findOneMock.mockResolvedValue(null);
+    findOneAndUpdateMock.mockResolvedValue({ _id: "conv-m" } as never);
+
+    const res = (await POST(makeRequest(payload))) as unknown as WebhookResponse;
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(false);
+    expect(res.body.incomplete).toBe(true);
+
+    const update = findOneAndUpdateMock.mock.calls[0][1] as {
+      $set: { voiceAgent: Record<string, unknown> };
+    };
+    expect(update.$set.voiceAgent.transcript).toBe("");
+    expect(update.$set.voiceAgent.transcriptPersisted).toBe(false);
+
+    // The artifact object exists (artifactPresent=true) but carried no usable
+    // content — the diagnostic reports presence only, never the values.
+    const diagnostic = logSecurityEventMock.mock.calls[0][0];
+    expect(diagnostic.details).toMatchObject({
+      reason: "missing_transcript_artifact",
+      artifactPresent: true,
+    });
+    expect(eventStore.get("vapi:end-of-call-report:call-malformed")?.status).toBe("incomplete");
+  });
+
+  it("treats a non-object artifact as absent", async () => {
+    const payload = {
+      message: {
+        type: "end-of-call-report",
+        endedReason: "hangup",
+        artifact: "just-a-string",
+        call: { id: "call-string-artifact", duration: 2 },
+      },
+    };
+    findOneMock.mockResolvedValue(null);
+    findOneAndUpdateMock.mockResolvedValue({ _id: "conv-sa" } as never);
+
+    const res = (await POST(makeRequest(payload))) as unknown as WebhookResponse;
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(false);
+    expect(res.body.incomplete).toBe(true);
+
+    const diagnostic = logSecurityEventMock.mock.calls[0][0];
+    expect(diagnostic.details).toMatchObject({ artifactPresent: false });
+    expect(
+      eventStore.get("vapi:end-of-call-report:call-string-artifact")?.status
+    ).toBe("incomplete");
   });
 });
 
