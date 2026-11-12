@@ -145,7 +145,7 @@
 - **Verification:** `tsc` 0, lint 0, **142 tests / 11 suites**, `npm run build` exit 0; secrets/design scan clean.
 - **Push (user-approved):** `git switch -c deploy/pre-vapi` + `git push -u origin deploy/pre-vapi` → `origin/deploy/pre-vapi` = `de02ed5` (Vercel **Preview** only). **`origin/master` untouched at `2fcfb88` — production not deployed.**
 
-## 2026-11-13 — General Settings → Voice Agent Configuration (Vapi alongside Dograh)
+## 2026-11-13 — General Settings → Voice Agent Configuration (Vapi alongside Dograh) — commits `0ec7430` (code) + `d0e71c4` (docs)
 
 - **User report:** Vapi Voice Agent options not visible in Dashboard → General Settings (brief required inspecting first, not trusting prior reports).
 - **Root causes found by inspection:**

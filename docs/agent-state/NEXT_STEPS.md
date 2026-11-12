@@ -38,6 +38,8 @@
 
 ## Immediate next action (resume point)
 
+> **STOP POINT (2026-11-13):** Stage 3 final report (8 items) delivered — **awaiting user approval.** Nothing pushed, nothing deployed, provider still Dograh. Code commit `0ec7430`, docs `d0e71c4` (local `master` 14 ahead; 15 with the handoff commit).
+
 1. **Review:** user reviews the General Settings Vapi work (root causes + controls + end-to-end wiring) and the final report.
 2. **Approval decision:** whether to push the new local commit(s) (push to `master` auto-deploys Vercel — explicit approval required) and/or update `deploy/pre-vapi` for the Preview.
 3. **Vapi E2E:** confirm the webhook persists a real Vapi transcript end-to-end (browser Web SDK; **no phone number required**). Configure the Vapi credential as Header Name `X-Vapi-Secret`, **Bearer prefix OFF**, token = `VAPI_WEBHOOK_SECRET`; server URL `https://www.wall-v.com/api/webhooks/vapi`. Verify `duration` semantics during this test.
