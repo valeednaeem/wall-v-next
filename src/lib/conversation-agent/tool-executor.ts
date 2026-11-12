@@ -16,6 +16,7 @@ import type { ToolResult } from "./types";
 import { validateToolArgs } from "./tool-registry";
 import { sendEmail, generateInquiryReceivedEmail } from "@/lib/mail";
 import { executeManagementTool } from "@/lib/management-agent-tools";
+import { isAssistantToolAllowed } from "@/lib/capability-access";
 
 function success(toolName: string, data: Record<string, unknown>): ToolResult {
   return { success: true, toolName, data, error: null, errorCode: null };
@@ -645,6 +646,17 @@ export async function executeConversationTool(
   args: Record<string, unknown>,
   role?: string
 ): Promise<ToolResult> {
+  // Audience gate (capability-access policy): anonymous visitors may only
+  // execute explicitly public tools — default deny. This runs BEFORE any
+  // handler or management-tool fallback, covering every call path at once.
+  if (!isAssistantToolAllowed(toolName, role)) {
+    return failure(
+      toolName,
+      "This capability is not available to public visitors. Sign in to use it, or share your request here and our team will follow up.",
+      "ACCESS_DENIED"
+    );
+  }
+
   const handler = TOOL_MAP[toolName];
   if (!handler) {
     // Fall back to management tools (blog, product, SEO, security, logging)

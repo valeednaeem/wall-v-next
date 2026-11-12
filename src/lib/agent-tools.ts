@@ -2,6 +2,7 @@
 import { ADMIN_ROLES } from "@/lib/api-middleware";
 import { CONTENT_TOOL_DEFINITIONS, executeContentTool } from "@/lib/content-agent-tools";
 import { MANAGEMENT_TOOL_DEFINITIONS, executeManagementTool, getAllowedManagementTools } from "@/lib/management-agent-tools";
+import { isAssistantToolAllowed } from "@/lib/capability-access";
 
 export interface AgentToolDefinition {
   type: "function";
@@ -1059,6 +1060,18 @@ export async function executeTool(
   args: Record<string, unknown>,
   role?: string
 ): Promise<unknown> {
+  // Audience gate (capability-access policy): anonymous visitors may only
+  // execute explicitly public tools — default deny. Runs before the switch
+  // so every tool (hardcoded, content, management) is covered, no matter
+  // which entry point called us.
+  if (!isAssistantToolAllowed(toolName, role)) {
+    return {
+      error:
+        "This capability is not available to public visitors. Sign in to use it, or share your request here and our team will follow up.",
+      code: "ACCESS_DENIED",
+    };
+  }
+
   switch (toolName) {
     case "get_projects":
       return executeGetProjects(args);
@@ -1201,6 +1214,15 @@ export async function runAgentWithTools(opts: {
       console.error("[Agent Tools] Failed to load agent config from registry, using defaults", err);
     }
   }
+
+  // Audience gating (capability-access): visitors (no role) are only OFFERED
+  // explicitly public tools — applied AFTER all assembly (including the
+  // agentId DB-tool merge, which resets the list) so DB-assigned tools are
+  // covered too. Denied tools never reach the model, and executeTool
+  // re-checks at execution time as defense in depth.
+  toolDefinitions = toolDefinitions.filter((tool) =>
+    tool?.function?.name ? isAssistantToolAllowed(tool.function.name, userRole) : false
+  );
 
   const allMessages: { role: string; content: string; tool_calls?: unknown[]; tool_call_id?: string; name?: string }[] = [
     { role: "system", content: systemPrompt },

@@ -25,6 +25,7 @@ import { createVisitorState } from "./types";
 import { extractFromMessage, determineRequiredActions, shouldTriggerBilling, parseBudgetAmount } from "./state-manager";
 import { getOpenAITools } from "./tool-registry";
 import { executeConversationTool } from "./tool-executor";
+import { isAssistantToolAllowed } from "@/lib/capability-access";
 import { getEffectiveConfig, toOpenAITools, buildSkillContext, invalidateAgentConfig } from "@/lib/agent-registry";
 
 // ─── Logging ────────────────────────────────────────────────────────────────
@@ -376,9 +377,17 @@ export async function orchestrateConversation(params: {
   const adapter = getProviderAdapter(model);
 
   // Load tools: merge hardcoded conversation tools with database-assigned tools
-  const tools = effectiveConfig
+  const allTools = effectiveConfig
     ? toOpenAITools(effectiveConfig.tools, true)
     : getOpenAITools();
+
+  // Audience gating: visitors (no role) are only OFFERED explicitly public
+  // tools — denied tools never reach the model. Execution is re-checked in
+  // executeConversationTool as defense in depth. An empty list is safe: the
+  // provider adapter omits `tools` when the array is empty.
+  const tools = allTools.filter((tool) =>
+    tool?.function?.name ? isAssistantToolAllowed(tool.function.name, params.userRole) : false
+  );
 
   let responseText: string;
   try {
