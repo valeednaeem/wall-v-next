@@ -13,10 +13,11 @@
 ## 2. Git State (verified)
 
 - **Branch:** `master`
-- **HEAD:** `36846ec` — `feat(ai): audience-gated capability access for public visitors`
+- **HEAD:** docs checkpoint following `104f9c5` (`fix(ai): staff-aware rate limits on public AI endpoints`) — see PROGRESS_LOG for full hashes.
 - **Working tree:** clean
-- **Ahead of origin:** **5 commits** (`247a2c8`, `88f0a3b`, `4ffe6c9`, `53a82d8`, `36846ec`) — **NOT pushed** (push to `master` auto-deploys Vercel; approval required)
-- **Origin:** `https://github.com/valeednaeem/wall-v-next.git`
+- **Ahead of origin:** **10 commits** (7 original: `247a2c8`, `88f0a3b`, `4ffe6c9`, `53a82d8`, `36846ec`, `b5ec2dd`, `ae9ea13` + Fix A `e2cad86` + Fix B `104f9c5` + this docs checkpoint) — **NOT pushed** (push to `master` auto-deploys Vercel; approval required)
+- **Ancestry:** `origin/master` = `2fcfb88` = merge-base → **0 behind / 10 ahead, clean fast-forward** (no merge, no unrelated histories)
+- **Origin:** `https://github.com/valeednaeem/wall-v-next.git` (plain HTTPS, no embedded credentials; default branch `master`)
 - **Note:** Repository was **not** a git repo at session start; git was initialized locally during the deployment task on 2026-11-11.
 
 ## 3. Implementation Status
@@ -41,8 +42,10 @@ All four phases of the current brief are **COMPLETE (local commits, unpushed)**:
 3. **Vapi admin dashboard controls (Phase 2):** provider selector, config-health, `/api/voice/status`, provider-gated Dograh widgets, new `VapiWidget`, `/api/webhooks/vapi` (conversation persistence only) — **DONE** (`4ffe6c9`).
 4. **AI Tools page populated (Phase 3):** 12 idempotent draft `AITool` seeds (`$setOnInsert`, never auto-published) + diagnostic empty states — **DONE** (`53a82d8`); **production seed run pending** (manual).
 5. **Public visitor capability access (Phase 4):** `capability-access.ts` policy (default deny, 5-tool public allow-list), `GET /api/ai/capabilities`, offer-filter + execution gate in both executors — **DONE** (`36846ec`).
+6. **Pre-deployment Fix A — Vapi webhook payload compatibility:** message-level `artifact`/`endedReason`/`transcript`/`messages`/`summary` first with call-level fallback, `transcriptPersisted` marker, sanitized missing-artifact diagnostic (never claims success), retry/idempotency preserved — **DONE** (`e2cad86`, 30 tests).
+7. **Pre-deployment Fix B — staff-aware rate limits:** `/api/ai/execute` 10/min anon + 30/min auth, `/api/ai/unified-chat` 15/min anon + 30/min auth, keyed per user/IP, consistent 429 + `Retry-After`, enforced before LLM/tools/writes — **DONE** (`104f9c5`, 7 tests). Store is process-local (per-instance only on Vercel — no shared store configured).
 
-**Remaining (not code):** production `npm run seed:ai-tools` run, Vapi env vars + Vapi dashboard setup, Vapi E2E verification, push/deploy approval.
+**Remaining (not code):** production `npm run seed:ai-tools` run (backup + preflight first — see §8), Vapi env vars + Vapi dashboard setup, Vapi E2E verification, push/deploy approval (user's post-fix review sequence).
 
 ## 6. Voice Integration State (verified 2026-11-12)
 
@@ -71,19 +74,23 @@ All four phases of the current brief are **COMPLETE (local commits, unpushed)**:
 - Payments: `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET`
 - Cron: `CRON_SECRET`
 - Analytics: `GA4_MEASUREMENT_ID`, `GA4_API_SECRET`, `GA4_PROPERTY_ID`, `GOOGLE_SERVICE_ACCOUNT_KEY`
-- Voice (historical/current): `DOGRAH_WEBHOOK_SECRET`, widget URL via DB settings (`voice.widgetUrl`); Vapi-era: `NEXT_PUBLIC_VAPI_PUBLIC_KEY`, `VAPI_ASSISTANT_ID`, `VAPI_WEBHOOK_SECRET`
+- Voice: `DOGRAH_WEBHOOK_SECRET`, widget URL via DB settings (`voice.widgetUrl`); Vapi: `NEXT_PUBLIC_VAPI_PUBLIC_KEY` (**public** — inlined into browser bundle), `VAPI_ASSISTANT_ID`, `VAPI_WEBHOOK_SECRET`, `VAPI_WEBHOOK_HEADER` (optional, default `X-Vapi-Secret`), `VAPI_SERVER_URL` (optional) — **all server-only except the public key**; names documented in `.env.example`. `VAPI_API_KEY`/`VAPI_ORGANIZATION_ID` exist as getters but are unused by runtime code (deliberately not in `.env.example`).
 
 ## 8. Known Bugs / Unresolved Issues
 
-- Vapi E2E untested: no Vapi credentials/env locally; webhook conversation-persistence scope is v1 (transcript only — no lead/inquiry/project pipeline until E2E approval).
+- Vapi E2E untested: no Vapi credentials/env locally; webhook conversation-persistence scope is v1 (transcript only — no lead/inquiry/project pipeline until E2E approval). Webhook auth matches Vapi **only** with credential Header Name `X-Vapi-Secret`, Bearer prefix OFF, token = `VAPI_WEBHOOK_SECRET` (standard `Authorization: Bearer` form is NOT compatible as written).
 - No local `.env` / `.env.local` present (only `.env.example`) — production DB seeding/verification requires administrator action.
+- `call.duration` semantics (units/existence) unverified — do not rely on `durationSeconds` until E2E confirms it.
+- **Seed hazard (deferred by decision):** `npm run seed:ai-tools` uses `$setOnInsert` for the 12 tool records (safe) but `$set` for categories/tags/providers/plans — a re-run overwrites admin edits and re-activates deactivated reference records; no dry-run; DB selection silently falls back to localhost when `MONGODB_URI` is unset. Requires its own controlled backup + URI preflight before any run.
+- **Rate-limit store is process-local** (`Map` in `src/lib/security.ts`) — `checkRateLimit` gives per-instance protection only on Vercel (cold starts reset state); no Redis/Upstash/KV is configured anywhere in the project. Smallest safe next step (needs approval): Vercel middleware/edge throttling or an Upstash Redis limiter. Do NOT claim cross-instance protection until then.
 - Pre-existing (not introduced): `runAgentWithTools` management-tool role filter is reset by the agentId DB-tool merge (affects authenticated staff flows only; visitor gate applied after the merge so it is unaffected).
 
 ## 9. Test / Build / Deploy Status
 
-- `npx tsc --noEmit`: **clean**. `npm run lint`: warnings only (all pre-existing). `npm test`: **7 suites / 81 tests passing** (rerun after Phase 4).
-- Vercel deployment: **Ready** (production, old design) — unchanged this session; **no push/deploy performed** for the 5 local commits.
+- `npx tsc --noEmit`: **clean** (exit 0). `npm run lint`: exit 0 (warnings only, all pre-existing; none in changed files). `npm test`: **11 suites / 131 tests passing** (incl. 30 webhook + 7 rate-limit regression tests added by Fixes A/B; capability policy suite still green).
+- Vercel deployment: **Ready** (production, old design) — unchanged this session; **no push/deploy performed** for the 10 local commits.
 - Live site: `https://www.wall-v.com` — responding (untouched).
+- **NOT runtime-verified:** webhook payload fix (needs a real Vapi E2E call) and rate limiting in the actual Vercel deployment (process-local store behaves differently across instances) — both are unit-tested only.
 
 ## 10. Architectural Decisions / Constraints
 
@@ -96,11 +103,14 @@ All four phases of the current brief are **COMPLETE (local commits, unpushed)**:
 
 ## 11. Exact Next Action Required to Resume
 
-- Brief Phases 1–4: **ALL COMPLETE** (local commits; see PROGRESS_LOG 2026-11-12 entries).
-- Resume point:
-  1. **Administrator:** run `npm run seed:ai-tools` against production (`MONGODB_URI` set) to populate the AI Tools dashboard; verify `/dashboard/ai-tools/tools` shows 12 draft records.
-  2. **Administrator:** configure Vapi env vars (`NEXT_PUBLIC_VAPI_PUBLIC_KEY`, `VAPI_ASSISTANT_ID`, `VAPI_WEBHOOK_SECRET`, `VAPI_API_KEY`, `VAPI_SERVER_URL`) + Vapi dashboard assistant/phone/webhook → `https://www.wall-v.com/api/webhooks/vapi`; E2E verify before any provider switch (production stays **Dograh** until approved).
-  3. **Approval:** review the 5 local commits and authorize `git push` to `master` (auto-deploys Vercel).
+- Brief Phases 1–4 + approved pre-deployment Fixes A/B: **ALL COMPLETE** (local commits; see PROGRESS_LOG 2026-11-12 entries).
+- Resume point — **user's approved post-fix sequence:**
+  1. **Review:** user reviews Fix A (`e2cad86`) and Fix B (`104f9c5`) local commits + their tests.
+  2. **Vapi E2E:** confirm the webhook persists a real Vapi transcript (browser Web SDK — no phone number needed) — exercises the message-level artifact fix; verify duration semantics here too.
+  3. **Deployment check:** confirm rate limiting behaves as expected in the actual Vercel deployment (process-local store = per-instance only).
+  4. **Re-run** the Git/deployment-readiness check.
+  5. **Decide:** only then whether to push the 10 local commits (push auto-deploys Vercel).
+- Deferred (own controlled steps): production `npm run seed:ai-tools` — requires DB backup + URI preflight first (`$set` reference-collection overwrite hazard, §8). Production provider stays **Dograh** until Vapi E2E passes and the user explicitly approves a switch.
 
 ---
 

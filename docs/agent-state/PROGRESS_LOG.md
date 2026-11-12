@@ -105,6 +105,39 @@
 - Commits on local `master` (NOT pushed — push to `master` auto-deploys Vercel): `247a2c8` (checkpoints), `88f0a3b` (Vapi config+hook), `4ffe6c9` (Phase 2 admin controls), `53a82d8` (Phase 3 AI Tools), `36846ec` (Phase 4 capability access) — **5 ahead of `origin/master`**.
 - Working tree clean. Production DB seed + Vapi env/E2E remain manual (no local `.env`/`MONGODB_URI`).
 
+## 2026-11-12 — State docs + policy regression suite (commits `b5ec2dd`, `ae9ea13`)
+
+- `b5ec2dd` docs(agent-state): checkpoint Phases 2-4 completion and resume point.
+- `ae9ea13` test(ai): 13-test capability access policy suite (`src/__tests__/capability-access.test.ts`).
+- Local `master` reached **7 ahead of `origin/master`**, clean fast-forward, working tree clean.
+
+## 2026-11-12 — Read-only pre-production safety audit (user-ordered)
+
+- **Mode:** STRICT READ-ONLY (no writes, no seed, no push, no deploy). Verified facts:
+  - **Git:** `master` @ `ae9ea13`, 7 local commits; `origin/master` = `2fcfb88` = merge-base → **0 behind / 7 ahead, clean fast-forward**; remote `https://github.com/valeednaeem/wall-v-next.git` (no credentials embedded), default branch `master`; single author; push auto-deploys Vercel (documented + historically observed).
+  - **AI Tools architecture:** no generic `Tool` model exists. **AITool** = visitor-facing marketplace catalogue with its OWN guarded execute pipeline (`/api/tools/[slug]/execute`: published-only, zod input cap, 5/min per IP, plan/credit checks, `AIToolExecution` persistence). **AgentTool** = DB tool registry for agents (RBAC'd `/api/agents/tools`), plus hardcoded conversation tools and `CAPABILITY_REGISTRY` (routing, not a tool store). **Intentionally separated layers — no duplicate registry**, no misleading dashboard UI (zero assistant-execution claims on the AI Tools page).
+  - **Capability trace:** public `sales` capability requires exactly `create_inquiry`+`create_lead` (⊆ allow-list); `support` requires none; `GET /api/ai/request` omits `requiredTools`/`minUserRole`; `validateToolArgs` enforces required fields + 1000-char caps; `create_project_request` creates `ProjectRequest` (status `collecting`), never an active Project.
+  - **Seed safety:** tool records use `$setOnInsert` (never overwrite, never duplicate, always draft) BUT categories/tags/providers/plans use `$set` — a re-run overwrites admin edits (names, provider model lists, plan prices) and re-activates deactivated reference records. No dry-run; DB selection = `MONGODB_URI` else silent localhost fallback (host not echoed). **Backup + preflight required before any run** (deferred by user decision).
+  - **Vapi config:** browser gets only `NEXT_PUBLIC_VAPI_PUBLIC_KEY` (+ assistantId/firstMessage via `/api/settings/public`); `/api/voice/status` admin-gated booleans only; webhook auth matches Vapi credentials **only when configured as Header Name `X-Vapi-Secret`, Bearer prefix OFF, token = `VAPI_WEBHOOK_SECRET`** (standard `Authorization: Bearer` form NOT compatible as written). No phone number needed for the browser Web SDK test.
+- **Gaps found (→ approved as fixes a/b):**
+  1. Extractor read only `message.call.artifact`, but official Vapi docs place `artifact`/`endedReason` at the **message level** → transcripts could persist **empty** (silent data loss).
+  2. `/api/ai/execute` and `/api/ai/unified-chat` had **no rate limits** (siblings: chat 20/min, assist 30/min) → anonymous LLM cost + inquiry/email spam exposure (pre-existing in production, not introduced by the 7 commits).
+  3. `checkRateLimit` store = **process-local `Map`** (no Redis/Upstash/KV anywhere in the project) → per-instance protection only on Vercel.
+- **User decision table:** fix (a) webhook payload = Required; fix (b) rate limits = Required before promotion; seed `$set` = Defer (own backup+preflight); `.env.example` = include if convenient; seed host logging = Defer; duration semantics = verify during E2E.
+
+## 2026-11-12 — Fix A: Vapi webhook payload compatibility — commit `e2cad86`
+
+- **Changes:** `src/lib/vapi-webhook.ts` (extractor reads `message.artifact`/`message.transcript`/`message.endedReason` FIRST with `call.artifact`/`call.endedReason` fallback; new `artifactPresent` flag), `src/app/api/webhooks/vapi/route.ts` (content check + `voiceAgent.transcriptPersisted` marker; missing-artifact deliveries persist call metadata but respond `success:false, incomplete:true, diagnostic:"missing_transcript_artifact"` — never claim success — plus sanitized console + SecurityEvent diagnostic containing only event key/reason/artifact presence), `src/models/conversation.ts` (additive `voiceAgent.transcriptPersisted?: boolean`), `.env.example` (Vapi env names, public vs server-only; unused `VAPI_API_KEY`/`VAPI_ORGANIZATION_ID` deliberately NOT listed).
+- **Preserved:** auth (fail-closed 503/401), 30/min/IP rate limit, 1MB size caps, payload validation, idempotency (duplicate-with-content = no-op; empty retry NEVER overwrites a valid transcript; incomplete deliveries ARE fillable by retry), safe logging (no secrets/content in diagnostics).
+- **Tests:** 30 new (`vapi-webhook.test.ts` 16: message-level artifact, call-level fallback, message-level endedReason, missing artifact, auth/invalid-payload/key; `vapi-webhook-route.test.ts` 14: both payload shapes, transient ack, duplicate, empty-retry-no-clobber, retry-after-incomplete, missing-artifact diagnostic + no-false-success + sanitized output, 503/401/400s/429).
+
+## 2026-11-12 — Fix B: staff-aware rate limits on public AI endpoints — commit `104f9c5`
+
+- **Changes:** `src/app/api/ai/execute/route.ts` (10/min anonymous, 30/min authenticated) and `src/app/api/ai/unified-chat/route.ts` (15/min anonymous, 30/min authenticated), both via existing `checkRateLimit`/`getClientIp` from `@/lib/security`; keys `ai-execute:<userId|ip>` / `ai-unified:<userId|ip>` so authenticated staff get a per-user quota never shared with the anonymous IP quota; consistent 429 body `{error, retryAfterSeconds}` + `Retry-After` header; enforced after `getAuthUser` but BEFORE body parsing, LLM calls, tool execution, inquiry/lead creation, and email sending.
+- **Store honesty:** the helper is a **process-local `Map`** — per-instance protection only on Vercel; no shared production store is configured anywhere in the repo (no Redis/Upstash/KV dependency). Documented in code; smallest safe next step (not implemented, needs approval): Vercel edge/middleware throttling or an Upstash Redis rate limiter.
+- **Tests:** 7 new (`ai-endpoint-rate-limit.test.ts`, real store): anonymous within/over limit per endpoint, staff separate quota (IP exhausted → staff still allowed; staff 30/min own cap), rejection-before-execution (mock call counts unchanged on 429), 429 shape (status + body + Retry-After), per-endpoint quota isolation.
+- **Verification:** `npx tsc --noEmit` exit 0; `npm test` **11 suites / 131 tests passing** (+37 new); `npm run lint` exit 0 (only pre-existing warnings; no new warnings in changed files).
+
 ---
 
 *End of log entries for this session.*

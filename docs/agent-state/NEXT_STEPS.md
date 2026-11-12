@@ -1,7 +1,7 @@
 # Wall-V — Agent Next Steps
 
 > Prioritized unfinished work. Updated at every checkpoint.
-> **Last updated:** 2026-11-12 (all four brief phases complete — local commits, unpushed)
+> **Last updated:** 2026-11-12 (all four brief phases + approved pre-deployment Fixes A/B complete — 10 local commits, unpushed)
 
 ## Priority 1 — Persistent project checkpoints
 
@@ -31,17 +31,21 @@
 - [x] P2. Vapi admin dashboard controls + provider gating — commit `4ffe6c9`.
 - [x] P3. AI Tools page populated — 12 idempotent draft `AITool` seeds + diagnostic empty states — commit `53a82d8`.
 - [x] P4. Safe public-visitor capability access — `capability-access.ts` (default deny, 5-tool allow-list), `GET /api/ai/capabilities`, offer-filter + execution gate in both executors — commit `36846ec`.
+- [x] P5. **Fix A — Vapi webhook payload compatibility:** message-level `artifact`/`endedReason` first with call-level fallback, `transcriptPersisted` marker, sanitized missing-artifact diagnostic (no false success), retries never clobber valid transcripts — commit `e2cad86` (30 tests).
+- [x] P6. **Fix B — staff-aware rate limits:** `/api/ai/execute` (10/min anon, 30/min auth) + `/api/ai/unified-chat` (15/min anon, 30/min auth), per-user/per-IP keys, consistent 429 + `Retry-After`, enforced before LLM/tools/writes — commit `104f9c5` (7 tests).
 
-## Immediate next action (resume point)
+## Immediate next action (resume point — user-approved post-fix sequence)
 
-1. **Administrator — production seed:** run `npm run seed:ai-tools` with `MONGODB_URI` set (no local `.env` exists), then verify `/dashboard/ai-tools/tools` shows the 12 draft records (seed is idempotent; never overwrites admin edits; nothing auto-published).
-2. **Administrator — Vapi setup:** set env vars (`NEXT_PUBLIC_VAPI_PUBLIC_KEY`, `VAPI_ASSISTANT_ID`, `VAPI_WEBHOOK_SECRET`, `VAPI_API_KEY`, `VAPI_SERVER_URL`), create the Vapi assistant + phone number, point the assistant server URL at `https://www.wall-v.com/api/webhooks/vapi`.
-3. **E2E verification** (requires real credentials + browser mic) — only after which a production provider switch may be *proposed* (Dograh stays production until explicitly approved).
-4. **Approval — push:** review the 5 local commits (`247a2c8`…`36846ec`) and authorize `git push` to `master` (auto-deploys Vercel).
+1. **Review:** inspect local commits `e2cad86` (Fix A) and `104f9c5` (Fix B) and their test suites.
+2. **Vapi E2E:** confirm the webhook persists a real Vapi transcript end-to-end (browser Web SDK; **no phone number required**). Configure the Vapi credential as Header Name `X-Vapi-Secret`, **Bearer prefix OFF**, token = `VAPI_WEBHOOK_SECRET`; server URL `https://www.wall-v.com/api/webhooks/vapi`. Verify `duration` semantics during this test.
+3. **Deployment check:** confirm rate limiting behaves as expected on Vercel (store is process-local → per-instance protection only; no shared store configured).
+4. **Re-run** the Git/deployment-readiness check (branch, remote, fast-forward, expected file set).
+5. **Decide** whether to push the 10 local commits (push to `master` auto-deploys Vercel) — explicit approval required.
 
 ## Blockers / manual steps pending
 
-- **REQUIRES MANUAL ACTION:** production DB seed (`npm run seed:ai-tools`) — no local `.env`/`MONGODB_URI`.
-- **NOT TESTED:** Vapi E2E voice (dashboard-side assistant creation, phone numbers, keys — user action; browser mic — cannot be done headlessly).
-- Vercel env vars for Vapi (user action; names only documented — never values).
-- Push/deploy of the 5 local commits awaits explicit approval.
+- **DEFERRED (own controlled step):** production DB seed (`npm run seed:ai-tools`) — requires DB backup + URI preflight first: the seed `$set`-overwrites admin edits to categories/tags/providers/plans (tool records themselves are `$setOnInsert`-safe). No local `.env`/`MONGODB_URI`.
+- **NOT TESTED:** Vapi E2E voice (dashboard-side assistant creation, keys — user action; browser mic — cannot be done headlessly).
+- **NOT TESTED:** rate limiting in the actual deployment environment (unit-tested only).
+- Vercel env vars for Vapi (user action; names only documented in `.env.example` — never values).
+- Push/deploy of the 10 local commits awaits explicit approval (after steps 1–4).
