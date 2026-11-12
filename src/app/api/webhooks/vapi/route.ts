@@ -161,6 +161,13 @@ export async function POST(request: Request) {
       (event.transcript || "").trim().length > 0 ? (event.transcript as string) : derivedTranscript;
     const transcriptPersisted = transcriptText.trim().length > 0;
 
+    // F-5: an incoming non-empty summary wins, but an empty retry must never
+    // erase a summary that is already stored on the conversation.
+    const summaryText =
+      (event.summary || "").trim().length > 0
+        ? (event.summary as string)
+        : existing?.voiceAgent?.summary || "";
+
     const conversationData: Record<string, unknown> = {
       sessionId,
       agentType: "voice-agent",
@@ -173,7 +180,7 @@ export async function POST(request: Request) {
         durationSeconds: event.durationSeconds || 0,
         callStatus: event.endedReason || "completed",
         transcript: transcriptText,
-        summary: event.summary || "",
+        summary: summaryText,
         transcriptPersisted,
       },
     };

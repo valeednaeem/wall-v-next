@@ -239,6 +239,48 @@ describe("POST /api/webhooks/vapi — idempotency and retries", () => {
     expect(update.$set.voiceAgent.transcript).toBe("AGENT: Hello there.\n\nUSER: Hi");
     expect(update.$set.voiceAgent.transcriptPersisted).toBe(true);
   });
+
+  it("never lets an empty retry erase an existing summary (F-5)", async () => {
+    findOneMock.mockResolvedValue({
+      _id: "conv-12",
+      messages: [],
+      voiceAgent: { transcript: "", transcriptPersisted: false, summary: "Existing summary" },
+    } as never);
+    findOneAndUpdateMock.mockResolvedValue({ _id: "conv-12" } as never);
+
+    const res = (await POST(makeRequest(emptyPayload("call-f5-empty")))) as unknown as WebhookResponse;
+
+    // Not a content duplicate (no transcript/messages), so the write happens —
+    // but the stored summary must survive the empty payload.
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(false);
+    expect(res.body.incomplete).toBe(true);
+
+    const update = findOneAndUpdateMock.mock.calls[0][1] as {
+      $set: { voiceAgent: Record<string, unknown> };
+    };
+    expect(update.$set.voiceAgent.summary).toBe("Existing summary");
+    expect(update.$set.voiceAgent.transcriptPersisted).toBe(false);
+  });
+
+  it("lets a fresh non-empty summary replace the stored one (F-5)", async () => {
+    findOneMock.mockResolvedValue({
+      _id: "conv-13",
+      messages: [],
+      voiceAgent: { transcript: "", transcriptPersisted: false, summary: "Stale summary" },
+    } as never);
+    findOneAndUpdateMock.mockResolvedValue({ _id: "conv-13" } as never);
+
+    const res = (await POST(makeRequest(messageLevelPayload("call-f5-new")))) as unknown as WebhookResponse;
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+
+    const update = findOneAndUpdateMock.mock.calls[0][1] as {
+      $set: { voiceAgent: Record<string, unknown> };
+    };
+    expect(update.$set.voiceAgent.summary).toBe("Short greeting");
+  });
 });
 
 // ─── Missing artifact: sanitized diagnostic, no false success ───────────────
