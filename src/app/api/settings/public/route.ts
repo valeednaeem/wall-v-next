@@ -3,6 +3,7 @@ import { connectToDatabase } from "@/lib/mongodb";
 import SiteSettings from "@/models/site-settings";
 import AdSenseSettings from "@/models/adsense-settings";
 import { resolveDograhWidgetUrl } from "@/lib/dograh-widget";
+import { getVapiPublicKey, getVapiAssistantId } from "@/lib/vapi-config";
 
 export async function GET() {
   try {
@@ -82,6 +83,7 @@ export async function GET() {
         },
         voice: {
           enabled: grouped.voice?.enabled ?? true,
+          provider: grouped.voice?.provider === "vapi" ? "vapi" : "dograh",
           widgetUrl: dograhWidget.url,
           widgetConfigured: Boolean(dograhWidget.url),
           widgetConfigError: dograhWidget.error || "",
@@ -91,6 +93,12 @@ export async function GET() {
           buttonColor: grouped.voice?.buttonColor || "#7c3aed",
           buttonText: grouped.voice?.buttonText || "Talk to AI",
           systemPrompt: grouped.voice?.systemPrompt || "",
+          // Non-secret Vapi values only (safe for the browser SDK).
+          vapi: {
+            assistantId: grouped.voice?.vapiAssistantId || getVapiAssistantId() || "",
+            publicKeyConfigured: Boolean(getVapiPublicKey()),
+            firstMessage: grouped.voice?.vapiFirstMessage || "",
+          },
         },
         contact: {
           email: contact.email || "info@wall-v.com",

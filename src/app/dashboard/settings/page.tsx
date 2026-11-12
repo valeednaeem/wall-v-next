@@ -23,13 +23,23 @@ interface SEOSettings {
 
 interface VoiceAgentSettings {
   enabled: boolean;
+  provider: "dograh" | "vapi";
   widgetUrl: string;
   agentId: string;
+  vapiAssistantId: string;
+  vapiFirstMessage: string;
   position: "bottom-left" | "bottom-right";
   buttonColor: string;
   buttonText: string;
   allowedDomains: string[];
   systemPrompt: string;
+}
+
+interface VoiceStatus {
+  provider: "dograh" | "vapi";
+  enabled: boolean;
+  dograh: { widgetUrlConfigured: boolean; widgetUrlError: string; apiUrlConfigured: boolean; webhookSecretConfigured: boolean };
+  vapi: { publicKeyConfigured: boolean; assistantIdConfigured: boolean; webhookSecretConfigured: boolean; serverUrl: string; webhookUrl: string; configured: boolean };
 }
 
 interface LocationSettings {
@@ -51,6 +61,9 @@ export default function GeneralSettingsPage() {
   const [saving, setSaving] = useState(false);
   const [showSecrets, setShowSecrets] = useState<Record<string, boolean>>({});
   const [saveMessage, setSaveMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [voiceStatus, setVoiceStatus] = useState<VoiceStatus | null>(null);
+  const [voiceStatusError, setVoiceStatusError] = useState("");
+  const [testingVoice, setTestingVoice] = useState(false);
 
   const [site, setSite] = useState<SiteSettings>({
     siteName: "Wall-V",
@@ -69,8 +82,11 @@ export default function GeneralSettingsPage() {
 
   const [voice, setVoice] = useState<VoiceAgentSettings>({
     enabled: true,
+    provider: "dograh",
     widgetUrl: "",
     agentId: "",
+    vapiAssistantId: "",
+    vapiFirstMessage: "Welcome to Wall-V! I'm your AI assistant. How can I help you today?",
     position: "bottom-left",
     buttonColor: "#7c3aed",
     buttonText: "Talk to AI",
@@ -154,6 +170,48 @@ BEHAVIOR:
       .catch(() => {});
   }, []);
 
+  useEffect(() => {
+    if (activeTab !== "voice") return;
+    let cancelled = false;
+    fetch("/api/voice/status")
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+      .then((d) => {
+        if (!cancelled && d?.success) setVoiceStatus(d.data);
+        if (!cancelled && !d?.success) setVoiceStatusError("Could not load voice configuration status.");
+      })
+      .catch(() => {
+        if (!cancelled) setVoiceStatusError("Could not load voice configuration status.");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab]);
+
+  const testVoiceConfig = async () => {
+    setTestingVoice(true);
+    setSaveMessage(null);
+    try {
+      const res = await fetch("/api/voice/status");
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setVoiceStatus(data.data);
+        setVoiceStatusError("");
+        const isVapi = data.data.provider === "vapi";
+        const ok = isVapi ? data.data.vapi.configured : data.data.dograh.widgetUrlConfigured;
+        setSaveMessage(
+          ok
+            ? { type: "success", text: isVapi ? "Vapi configuration looks complete." : "Dograh widget URL is configured." }
+            : { type: "error", text: isVapi ? "Vapi configuration incomplete — see the checklist below." : "Dograh widget URL is not configured." }
+        );
+      } else {
+        setSaveMessage({ type: "error", text: data.error || "Status check failed." });
+      }
+    } catch {
+      setSaveMessage({ type: "error", text: "Network error while checking voice status." });
+    }
+    setTestingVoice(false);
+  };
+
   const toggleSecret = (key: string) => {
     setShowSecrets((prev) => ({ ...prev, [key]: !prev[key] }));
   };
@@ -161,14 +219,21 @@ BEHAVIOR:
   const handleSave = async () => {
     setSaving(true);
     setSaveMessage(null);
-    const widgetValidation = voice.widgetUrl
-      ? validateDograhWidgetUrl(voice.widgetUrl, {
-          production: typeof window !== "undefined" && window.location.protocol === "https:" && !["localhost", "127.0.0.1"].includes(window.location.hostname),
-        })
-      : { valid: true };
+    const widgetValidation =
+      voice.provider === "dograh" && voice.widgetUrl
+        ? validateDograhWidgetUrl(voice.widgetUrl, {
+            production: typeof window !== "undefined" && window.location.protocol === "https:" && !["localhost", "127.0.0.1"].includes(window.location.hostname),
+          })
+        : { valid: true };
 
     if (!widgetValidation.valid) {
       setSaveMessage({ type: "error", text: widgetValidation.reason || "Invalid Dograh widget URL" });
+      setSaving(false);
+      return;
+    }
+
+    if (voice.provider === "vapi" && voice.enabled && !voice.vapiAssistantId.trim()) {
+      setSaveMessage({ type: "error", text: "Vapi is selected but no Assistant ID is configured." });
       setSaving(false);
       return;
     }
@@ -422,6 +487,87 @@ BEHAVIOR:
       {/* Voice Agent */}
       {activeTab === "voice" && (
         <div className="space-y-6">
+          {/* Provider selection + shared enable toggle + health */}
+          <div className="rounded-lg border p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold">Voice Agent Provider</h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Choose which provider powers the website voice widget. Dograh stays available as a fallback.
+                </p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" checked={voice.enabled} onChange={(e) => setVoice({ ...voice, enabled: e.target.checked })} className="sr-only peer" />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:ring-2 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+              </label>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-4">
+              <button
+                type="button"
+                onClick={() => setVoice({ ...voice, provider: "dograh" })}
+                className={`rounded-lg border p-4 text-left transition-colors ${voice.provider === "dograh" ? "border-primary bg-primary/5" : "hover:border-primary/40"}`}
+              >
+                <p className="font-medium">Dograh</p>
+                <p className="text-xs text-muted-foreground mt-1">Self-hosted Dograh widget (current production provider).</p>
+              </button>
+              <button
+                type="button"
+                onClick={() => setVoice({ ...voice, provider: "vapi" })}
+                className={`rounded-lg border p-4 text-left transition-colors ${voice.provider === "vapi" ? "border-primary bg-primary/5" : "hover:border-primary/40"}`}
+              >
+                <p className="font-medium">Vapi</p>
+                <p className="text-xs text-muted-foreground mt-1">Vapi Web SDK assistant (requires Vapi credentials).</p>
+              </button>
+            </div>
+
+            <div className="rounded-lg border p-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium">Configuration health</p>
+                <button
+                  type="button"
+                  onClick={testVoiceConfig}
+                  disabled={testingVoice}
+                  className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-xs font-medium hover:bg-muted disabled:opacity-50"
+                >
+                  {testingVoice && <Loader2 className="h-3 w-3 animate-spin" />}
+                  Test configuration
+                </button>
+              </div>
+              {voiceStatusError && <p className="text-xs text-amber-600">{voiceStatusError}</p>}
+              {voiceStatus && (
+                <ul className="text-xs space-y-1">
+                  {(voiceStatus.provider === "vapi"
+                    ? [
+                        { label: "Public key (NEXT_PUBLIC_VAPI_PUBLIC_KEY)", ok: voiceStatus.vapi.publicKeyConfigured },
+                        { label: "Assistant ID", ok: voiceStatus.vapi.assistantIdConfigured },
+                        { label: "Webhook secret (VAPI_WEBHOOK_SECRET)", ok: voiceStatus.vapi.webhookSecretConfigured },
+                        { label: "Server URL", ok: Boolean(voiceStatus.vapi.serverUrl) },
+                      ]
+                    : [
+                        { label: "Widget script URL", ok: voiceStatus.dograh.widgetUrlConfigured },
+                        { label: "API URL", ok: voiceStatus.dograh.apiUrlConfigured },
+                        { label: "Webhook secret (DOGRAH_WEBHOOK_SECRET)", ok: voiceStatus.dograh.webhookSecretConfigured },
+                      ]
+                  ).map((item) => (
+                    <li key={item.label} className="flex items-center gap-2">
+                      <span className={item.ok ? "text-emerald-600" : "text-amber-600"}>{item.ok ? "✓" : "!"}</span>
+                      <span>{item.label}</span>
+                      <span className="text-muted-foreground">{item.ok ? "configured" : "missing"}</span>
+                    </li>
+                  ))}
+                  {voiceStatus.provider === "vapi" && voiceStatus.vapi.webhookUrl && (
+                    <li className="text-muted-foreground">
+                      Webhook URL: <code className="bg-muted px-1 rounded">{voiceStatus.vapi.webhookUrl}</code>
+                    </li>
+                  )}
+                </ul>
+              )}
+            </div>
+          </div>
+
+          {/* Dograh configuration */}
+          {voice.provider === "dograh" && (
           <div className="rounded-lg border p-6 space-y-4">
             <div className="flex items-center justify-between">
               <div>
@@ -430,10 +576,6 @@ BEHAVIOR:
                   Add a voice AI agent to your website. Visitors can speak naturally to get answers about your services.
                 </p>
               </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" checked={voice.enabled} onChange={(e) => setVoice({ ...voice, enabled: e.target.checked })} className="sr-only peer" />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:ring-2 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-              </label>
             </div>
 
             {voice.enabled && (
@@ -520,6 +662,87 @@ BEHAVIOR:
               </div>
             )}
           </div>
+          )}
+
+          {/* Vapi configuration */}
+          {voice.provider === "vapi" && (
+            <div className="rounded-lg border p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-semibold">Vapi AI Voice Agent</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Configure the Vapi assistant used by the website voice widget.
+                  </p>
+                </div>
+              </div>
+
+              {voice.enabled && (
+                <div className="space-y-4 pt-4 border-t">
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800">
+                    <p className="font-medium">Setup Instructions</p>
+                    <ol className="mt-2 space-y-1 list-decimal list-inside text-xs">
+                      <li>Create an assistant in the Vapi Dashboard and publish it</li>
+                      <li>Copy the Assistant ID below</li>
+                      <li>
+                        Set <code className="bg-blue-100 px-1 rounded">NEXT_PUBLIC_VAPI_PUBLIC_KEY</code> and{" "}
+                        <code className="bg-blue-100 px-1 rounded">VAPI_ASSISTANT_ID</code> in Vercel
+                      </li>
+                      <li>
+                        Set <code className="bg-blue-100 px-1 rounded">VAPI_WEBHOOK_SECRET</code> and point the assistant server URL at
+                        the webhook URL shown in the health checklist above
+                      </li>
+                    </ol>
+                  </div>
+
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium">Vapi Assistant ID</label>
+                      <input
+                        type="text"
+                        value={voice.vapiAssistantId}
+                        onChange={(e) => setVoice({ ...voice, vapiAssistantId: e.target.value })}
+                        className="mt-1 w-full rounded-lg border px-3 py-2 text-sm font-mono"
+                        placeholder="asst_..."
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">Published assistant ID from the Vapi Dashboard.</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">First message (greeting)</label>
+                      <input
+                        type="text"
+                        value={voice.vapiFirstMessage}
+                        onChange={(e) => setVoice({ ...voice, vapiFirstMessage: e.target.value })}
+                        className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+                        placeholder="Welcome to Wall-V! ..."
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">Optional override for the assistant&apos;s opening line.</p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium">Agent System Prompt</label>
+                    <textarea
+                      value={voice.systemPrompt}
+                      onChange={(e) => setVoice({ ...voice, systemPrompt: e.target.value })}
+                      className="mt-1 w-full rounded-lg border px-3 py-2 text-sm font-mono min-h-[200px]"
+                      placeholder="You are Wall-V's AI voice assistant..."
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Passed to Vapi as <code>assistantOverrides.systemPrompt</code> when a call starts (via the useVapi hook).
+                    </p>
+                  </div>
+
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-800">
+                    <p className="font-medium">Migration note</p>
+                    <p className="mt-1 text-xs">
+                      Selecting Vapi does not remove or modify any Dograh configuration. Dograh remains the production provider
+                      until the Vapi end-to-end verification is approved.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 

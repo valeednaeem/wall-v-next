@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 
 interface VoiceSettings {
   enabled: boolean;
+  provider: "dograh" | "vapi";
   widgetUrl: string;
   agentId: string;
   position: "bottom-left" | "bottom-right";
@@ -36,6 +37,7 @@ const SUGGESTIONS = [
 
 const DEFAULT_VOICE_SETTINGS: VoiceSettings = {
   enabled: true,
+  provider: "dograh",
   widgetUrl: "",
   agentId: "",
   position: "bottom-left",
@@ -67,6 +69,7 @@ export function FloatingVoiceWidget({ position: positionProp }: FloatingVoiceWid
         if (d?.data?.voice) {
           setVoiceSettings({
             enabled: d.data.voice.enabled ?? true,
+            provider: d.data.voice.provider === "vapi" ? "vapi" : "dograh",
             widgetUrl: d.data.voice.widgetUrl || "",
             agentId: d.data.voice.agentId || "",
             position: d.data.voice.position || "bottom-left",
@@ -95,7 +98,13 @@ export function FloatingVoiceWidget({ position: positionProp }: FloatingVoiceWid
     getStatusLabel,
     duration,
   } = useDograh({
-    enabled: ownsVoiceRuntime && (!settingsLoaded || voiceSettings.enabled),
+    // Dograh runtime only initializes once settings confirm Dograh is the
+    // active provider — selecting Vapi must never touch Dograh scripts.
+    enabled:
+      ownsVoiceRuntime &&
+      settingsLoaded &&
+      voiceSettings.provider === "dograh" &&
+      voiceSettings.enabled,
     mode: "headless",
     widgetScriptUrl: voiceSettings.widgetUrl || undefined,
     onCallDisconnected: handleCallEnd,
@@ -158,8 +167,9 @@ export function FloatingVoiceWidget({ position: positionProp }: FloatingVoiceWid
     startCall();
   }, [startCall, clientDetails, selectedSuggestion]);
 
-  // Don't render if voice is disabled
-  if (!settingsLoaded || !voiceSettings.enabled) return null;
+  // Don't render if voice is disabled or Vapi is the active provider
+  // (the Vapi widget renders instead — see vapi-widget.tsx).
+  if (!settingsLoaded || !voiceSettings.enabled || voiceSettings.provider !== "dograh") return null;
 
   const position = positionProp || voiceSettings.position;
   const positionClasses = position === "bottom-left" ? "left-6" : "right-6";

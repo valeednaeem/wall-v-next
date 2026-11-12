@@ -27,6 +27,9 @@ export interface IConversation extends Document {
     callStatus?: string;
     transcript?: string;
     summary?: string;
+    /** Vapi-specific (additive — only set for Vapi-sourced voice calls). */
+    vapiCallId?: string;
+    vapiAssistantId?: string;
   };
   outcome: "none" | "inquiry-created" | "project-created" | "payment-completed";
   projectId?: mongoose.Types.ObjectId;
@@ -77,6 +80,8 @@ const ConversationSchema = new Schema<IConversation>(
       callStatus: String,
       transcript: String,
       summary: String,
+      vapiCallId: String,
+      vapiAssistantId: String,
     },
     outcome: {
       type: String,

@@ -3,6 +3,7 @@ import { Footer } from "@/components/footer";
 import { SalesChatbot } from "@/components/ai/sales-chatbot";
 import { FloatingVoiceWidget } from "@/components/ai/voice-widget";
 import { DograhWidgetLoader } from "@/components/ai/dograh-widget-loader";
+import { VapiWidget } from "@/components/ai/vapi-widget";
 import { CartProvider } from "@/lib/cart-context";
 import { DynamicFavicon } from "@/components/dynamic-favicon";
 import { GoogleAnalytics } from "@/components/analytics/GoogleAnalytics";
@@ -33,6 +34,7 @@ export default async function WebsiteLayout({
       <SalesChatbot />
       <DograhWidgetLoader />
       <FloatingVoiceWidget />
+      <VapiWidget />
     </div>
   );
 }
