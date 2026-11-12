@@ -64,6 +64,47 @@
 - Phase 4 (Vapi config + browser hook): IMPLEMENTED; typecheck + lint clean. Widget UI wiring (floating/inline Vapi widgets) remains for Phase 6 (dashboard/provider management) and later phases.
 - Production provider remains **Dograh** (no switch performed — migration approval pending).
 
+## 2026-11-12 — Phase 2 (new brief): Vapi admin dashboard controls — commit `4ffe6c9`
+
+- **Task:** Admin can see/configure Vapi + provider management without disturbing Dograh.
+- **Actions (10 files):**
+  - Settings voice tab: Dograh/Vapi provider selector, configuration-health checklist (public key, assistant ID, webhook secret, server URL), Vapi config card (assistant ID, first message, system prompt) persisted as key-value `SiteSettings` (`voice.*` keys — no migration needed).
+  - New `GET /api/voice/status` (admin-only): non-secret health for both providers (Dograh widget URL, Vapi env/config presence).
+  - `GET /api/settings/public` exposes `voice.provider` + non-secret `vapi` block (`assistantId`, `publicKeyConfigured`, `firstMessage`).
+  - **Provider gating:** `DograhWidgetLoader` never loads the Dograh script when `provider==="vapi"`; `FloatingVoiceWidget` only initializes `useDograh` when settings confirm `provider==="dograh"` (also waits for settings load — no premature init) and returns null for Vapi; new `VapiWidget` (`src/components/ai/vapi-widget.tsx`, uses `useVapi`) mounted in `(website)/layout.tsx`, renders only when provider=vapi + enabled + publicKey configured.
+  - New `POST /api/webhooks/vapi` (+ `src/lib/vapi-webhook.ts`): mirrors Dograh security posture (30/min/IP rate limit, fail-closed secret auth — Bearer/X-Vapi-Secret/HMAC, 1MB size caps, payload validation, event extraction, idempotent by call ID). **v1 scope:** persists `end-of-call-report` transcripts/summaries to `Conversation` (sessionId `vapi_<callId>`); transient events acknowledged. Dograh's lead/inquiry/client/project auto-creation pipeline deliberately NOT mirrored — activates only after Vapi E2E approval.
+  - `Conversation.voiceAgent` gains additive optional `vapiCallId`/`vapiAssistantId` (interface + schema; strict mode requires both).
+- **Verification:** `npx tsc --noEmit` clean; `npm run lint` warnings only (pre-existing: img/alt in settings logo section, unused `getStatusLabel`).
+- **Constraint honored:** production voice provider stays Dograh; selecting Vapi never initializes Dograh scripts; no push.
+
+## 2026-11-12 — Phase 3 (new brief): AI Tools page populated — commit `53a82d8`
+
+- **Task:** Dashboard `/dashboard/ai-tools/tools` empty in production (likely missing seed) — populate without duplicating records or auto-publishing.
+- **Root cause:** `src/scripts/seed-ai-tools.ts` seeded categories/tags/providers/plans but **never created `AITool` records**.
+- **Actions:**
+  - Seed extended with 12 curated `AITool` starter records (Content Writer, Blog Outline Generator, Image Prompt Studio, Code Assistant, SEO Meta Optimizer, Document Summarizer, Email Campaign Writer, Social Post Generator, Voice Script Writer, Workflow Automation Planner, Business Name Brainstorm, Research Synthesizer) — `updateOne({slug}, {$setOnInsert}, {upsert:true})`: re-runs never duplicate (slug unique) and **never overwrite admin edits**; `status:"draft"` so nothing appears publicly (`/api/tools` filters `status:"published"`); publish remains a permission-gated admin action (`ai-tools:publish` bulk gate); categories/tags/providers linked by slug lookup with warnings when missing; aiConfig references provider doc + model name only — **no secrets**.
+  - Tools list page diagnostics: distinguishes 401 (session expired) / 403 (missing `ai-tools:view`) / API unreachable (Retry) from genuinely-empty (seed guidance + "Add your first tool" + Refresh) and filtered-empty (clear-filters hint) — previously all showed a misleading "No tools found."
+- **Verification:** tsc clean; lint warnings pre-existing only.
+
+## 2026-11-12 — Phase 4 (new brief): public visitor capability access — commit `36846ec`
+
+- **Task:** Visitors may use only explicitly approved public capabilities; internal tools/private data protected.
+- **Security findings (pre-fix):**
+  - `/api/ai/execute` (public sales chatbot) → orchestrator offered **all** tools to the model regardless of role; `TOOL_MAP` handlers (`lookup_user`, `create_user`, `create_invoice`, `create_notification`, `delegate_to_agent`, …) executed **with no role check** — anonymous callers could probe user accounts (other users' data), create invoices, spam notifications.
+  - `/api/ai/unified-chat` (also anonymous-allowed) → `runAgentWithTools` only filtered management tools `if (userRole)` — **visitors got the full internal toolset** (`get_projects`, `get_clients`, `get_invoices`, `get_quotes`, `update_project`, content tools, …) and the agentId DB-tool merge even reset the filtered list.
+  - Management tools (blog/product/SEO/security/logging) enforce RBAC internally — safe; `admin-master-chat` route is cookie-auth + ADMIN_ROLES gated — safe.
+- **Actions:**
+  - New `src/lib/capability-access.ts` — central public/client/staff policy, **default deny** for anonymous; explicit `PUBLIC_ASSISTANT_TOOLS` allow-list spanning BOTH executors: `get_service_info`, `get_company_info`, `create_inquiry`, `create_lead`, `create_project_request` (read-only public info + contact intake; reads no other user's data). Registry audience derives from existing `capability-registry` `requiresAuth`/`minUserRole` (no duplicate registry); `toPublicCapabilityView` omits `requiredTools`/`requiredSkills`/`minUserRole`/`requestTypes`.
+  - New `GET /api/ai/capabilities` — audience-filtered discovery (anonymous → only `requiresAuth:false` registry entries `sales`/`support`; authenticated → role-appropriate). Distinct purpose from existing `GET /api/ai/request` (the restored public *service catalog* page feed — deliberately untouched).
+  - Defense in depth, both layers: tools **never offered** to the model for visitors (orchestrator filter after DB-tool assembly; `runAgentWithTools` filter after the agentId merge) AND execution re-checked centrally at the top of `executeConversationTool` and `executeTool` (covers LLM tool-calls, deterministic plan steps, content/management fallbacks, all entry points). Adapter safely omits `tools` when empty.
+  - Authenticated callers keep existing behavior (management RBAC internal) — no staff/dashboard regression.
+- **Verification:** `npx tsc --noEmit` clean; `npm run lint` warnings only (all pre-existing); **`npm test` → 7 suites / 81 tests all passing**.
+
+## 2026-11-12 — Milestone checkpoint (all four brief phases complete, local only)
+
+- Commits on local `master` (NOT pushed — push to `master` auto-deploys Vercel): `247a2c8` (checkpoints), `88f0a3b` (Vapi config+hook), `4ffe6c9` (Phase 2 admin controls), `53a82d8` (Phase 3 AI Tools), `36846ec` (Phase 4 capability access) — **5 ahead of `origin/master`**.
+- Working tree clean. Production DB seed + Vapi env/E2E remain manual (no local `.env`/`MONGODB_URI`).
+
 ---
 
 *End of log entries for this session.*

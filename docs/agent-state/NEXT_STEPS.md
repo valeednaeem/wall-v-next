@@ -1,6 +1,7 @@
 # Wall-V — Agent Next Steps
 
 > Prioritized unfinished work. Updated at every checkpoint.
+> **Last updated:** 2026-11-12 (all four brief phases complete — local commits, unpushed)
 
 ## Priority 1 — Persistent project checkpoints
 
@@ -14,26 +15,33 @@
 - [x] C1. Research official Vapi docs (docs.vapi.ai) — Web SDK, public key, assistant config, server URL/webhook, variables, lifecycle, tools, transcripts, errors.
 - [x] C2. Assess Vapi recovery gaps in current restored code — Vapi ABSENT; full port required.
 - [x] C3. Dograh→Vapi configuration mapping table produced.
-- [ ] C4. Preserve existing architecture constraints (OpenAI/Anthropic AI stack, CRM, auth, Mongo, tool registry) — ongoing.
-- [ ] C5. Design secure Vapi webhook architecture (dedicated endpoint preferred; idempotency; auth; validation; safe logging) — pending design.
-- [x] Phase 4a. Implement Vapi config (`@vapi-ai/web`, `src/lib/vapi-config.ts`) + `useVapi` hook — DONE (tsc clean, lint warnings only).
-- [ ] Phase 4b. Wire Vapi widget UI (floating/inline) — pending (Phase 6 provider management).
-- [ ] Phase 5. Implement Vapi webhook (auth/validation/idempotency/assistant-request/end-of-call-report/tool-calls) — NEXT.
+- [x] C4. Preserve existing architecture constraints (OpenAI/Anthropic AI stack, CRM, auth, Mongo, tool registry) — ongoing, honored.
+- [x] C5. Secure Vapi webhook architecture — `POST /api/webhooks/vapi` + `src/lib/vapi-webhook.ts` (rate limit, fail-closed auth, 1MB caps, validation, idempotent end-of-call conversation persistence; lead/project pipeline deferred to E2E approval) — commit `4ffe6c9`.
+- [x] Phase 4a. Implement Vapi config (`@vapi-ai/web`, `src/lib/vapi-config.ts`) + `useVapi` hook — commit `88f0a3b`.
+- [x] Phase 4b. Wire Vapi widget UI — `VapiWidget` mounted in `(website)/layout.tsx`; Dograh loader/widget gated to `provider==="dograh"` — commit `4ffe6c9`.
+- [x] Phase 5. Vapi webhook (auth/validation/idempotency/end-of-call persistence) — commit `4ffe6c9` (v1: conversation persistence only).
 
 ## Priority 3 — Controlled migration
 
-- [ ] D. Dashboard provider management (Dograh ↔ Vapi selection, status, enable/disable, test; no private creds in browser).
-- [ ] E. Testing: technical + E2E validation; manual Vapi-dashboard/browser steps outstanding.
+- [x] D. Dashboard provider management — settings voice tab provider selector + config-health checklist + `GET /api/voice/status` + public non-secret vapi settings block — commit `4ffe6c9`.
+- [ ] E. Testing: technical + E2E validation; manual Vapi-dashboard/browser steps outstanding (**NOT TESTED** — no Vapi credentials locally).
+
+## Priority 4 — Current brief (admin controls / AI Tools / public capabilities)
+
+- [x] P2. Vapi admin dashboard controls + provider gating — commit `4ffe6c9`.
+- [x] P3. AI Tools page populated — 12 idempotent draft `AITool` seeds + diagnostic empty states — commit `53a82d8`.
+- [x] P4. Safe public-visitor capability access — `capability-access.ts` (default deny, 5-tool allow-list), `GET /api/ai/capabilities`, offer-filter + execution gate in both executors — commit `36846ec`.
 
 ## Immediate next action (resume point)
 
-1. Phase 4: implement Vapi configuration layer (`@vapi-ai/web` install + `src/lib/vapi-config.ts`) and `useVapi` hook mirroring `useDograh` API.
-2. Then wire Vapi widget/browser integration; keep Dograh path intact.
-3. Phase 5: Vapi webhook server flow (`assistant-request`, `end-of-call-report`, `tool-calls`) at dedicated endpoint; idempotency; auth.
-4. Phase 6: dashboard provider management; Phase 7: tests; Phase 8: final report.
+1. **Administrator — production seed:** run `npm run seed:ai-tools` with `MONGODB_URI` set (no local `.env` exists), then verify `/dashboard/ai-tools/tools` shows the 12 draft records (seed is idempotent; never overwrites admin edits; nothing auto-published).
+2. **Administrator — Vapi setup:** set env vars (`NEXT_PUBLIC_VAPI_PUBLIC_KEY`, `VAPI_ASSISTANT_ID`, `VAPI_WEBHOOK_SECRET`, `VAPI_API_KEY`, `VAPI_SERVER_URL`), create the Vapi assistant + phone number, point the assistant server URL at `https://www.wall-v.com/api/webhooks/vapi`.
+3. **E2E verification** (requires real credentials + browser mic) — only after which a production provider switch may be *proposed* (Dograh stays production until explicitly approved).
+4. **Approval — push:** review the 5 local commits (`247a2c8`…`36846ec`) and authorize `git push` to `master` (auto-deploys Vercel).
 
 ## Blockers / manual steps pending
 
-- Vapi dashboard-side: assistant creation, phone numbers, keys (user action; cannot be created from code).
-- Vercel env vars for Vapi (user action; names only documented).
-- Live E2E voice testing requires real Vapi credentials + browser mic — cannot be completed headlessly.
+- **REQUIRES MANUAL ACTION:** production DB seed (`npm run seed:ai-tools`) — no local `.env`/`MONGODB_URI`.
+- **NOT TESTED:** Vapi E2E voice (dashboard-side assistant creation, phone numbers, keys — user action; browser mic — cannot be done headlessly).
+- Vercel env vars for Vapi (user action; names only documented — never values).
+- Push/deploy of the 5 local commits awaits explicit approval.

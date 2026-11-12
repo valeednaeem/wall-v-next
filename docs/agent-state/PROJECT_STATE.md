@@ -13,8 +13,9 @@
 ## 2. Git State (verified)
 
 - **Branch:** `master`
-- **HEAD:** `2fcfb88` — `chore: update project state tracker after deployment`
+- **HEAD:** `36846ec` — `feat(ai): audience-gated capability access for public visitors`
 - **Working tree:** clean
+- **Ahead of origin:** **5 commits** (`247a2c8`, `88f0a3b`, `4ffe6c9`, `53a82d8`, `36846ec`) — **NOT pushed** (push to `master` auto-deploys Vercel; approval required)
 - **Origin:** `https://github.com/valeednaeem/wall-v-next.git`
 - **Note:** Repository was **not** a git repo at session start; git was initialized locally during the deployment task on 2026-11-11.
 
@@ -33,9 +34,15 @@
 
 ## 5. Active Development Tasks
 
-1. **Part A — Persistent project-state checkpoints:** docs/agent-state/{PROJECT_STATE,PROGRESS_LOG,NEXT_STEPS}.md — **IN PROGRESS**.
-2. **Part B — Dograh ↔ Vapi audit:** inspect Dograh implementation; map to Vapi — **STARTED** (files identified; deep audit pending).
-3. **Part C–E — Vapi restore & controlled migration:** config, browser integration, webhooks, dashboard, tests — **NOT STARTED**.
+All four phases of the current brief are **COMPLETE (local commits, unpushed)**:
+
+1. **Part A — Persistent project-state checkpoints:** `docs/agent-state/{PROJECT_STATE,PROGRESS_LOG,NEXT_STEPS}.md` — **DONE** (`247a2c8`).
+2. **Vapi config + hook:** `src/lib/vapi-config.ts`, `src/hooks/useVapi.ts`, `@vapi-ai/web` installed — **DONE** (`88f0a3b`).
+3. **Vapi admin dashboard controls (Phase 2):** provider selector, config-health, `/api/voice/status`, provider-gated Dograh widgets, new `VapiWidget`, `/api/webhooks/vapi` (conversation persistence only) — **DONE** (`4ffe6c9`).
+4. **AI Tools page populated (Phase 3):** 12 idempotent draft `AITool` seeds (`$setOnInsert`, never auto-published) + diagnostic empty states — **DONE** (`53a82d8`); **production seed run pending** (manual).
+5. **Public visitor capability access (Phase 4):** `capability-access.ts` policy (default deny, 5-tool public allow-list), `GET /api/ai/capabilities`, offer-filter + execution gate in both executors — **DONE** (`36846ec`).
+
+**Remaining (not code):** production `npm run seed:ai-tools` run, Vapi env vars + Vapi dashboard setup, Vapi E2E verification, push/deploy approval.
 
 ## 6. Voice Integration State (verified 2026-11-12)
 
@@ -68,14 +75,15 @@
 
 ## 8. Known Bugs / Unresolved Issues
 
-- Vapi integration recovery: current restored codebase has **NO Vapi implementation** (Dograh is the active provider) — a full Vapi port is required.
-- No local `.env` / `.env.local` present (only `.env.example`).
+- Vapi E2E untested: no Vapi credentials/env locally; webhook conversation-persistence scope is v1 (transcript only — no lead/inquiry/project pipeline until E2E approval).
+- No local `.env` / `.env.local` present (only `.env.example`) — production DB seeding/verification requires administrator action.
+- Pre-existing (not introduced): `runAgentWithTools` management-tool role filter is reset by the agentId DB-tool merge (affects authenticated staff flows only; visitor gate applied after the merge so it is unaffected).
 
 ## 9. Test / Build / Deploy Status
 
-- `npm run lint`: warnings only. `npx tsc --noEmit`: clean. Tests not re-run this session.
-- Vercel deployment: **Ready** (production).
-- Live site: `https://www.wall-v.com` — responding.
+- `npx tsc --noEmit`: **clean**. `npm run lint`: warnings only (all pre-existing). `npm test`: **7 suites / 81 tests passing** (rerun after Phase 4).
+- Vercel deployment: **Ready** (production, old design) — unchanged this session; **no push/deploy performed** for the 5 local commits.
+- Live site: `https://www.wall-v.com` — responding (untouched).
 
 ## 10. Architectural Decisions / Constraints
 
@@ -83,14 +91,16 @@
 - `vercel.json`: function maxDuration 30; crons.
 - Never remove Dograh, delete its config, change production voice provider, push, or deploy without explicit approval.
 - Preserve OpenRouter AI integration, CRM/inquiry workflows, auth/roles, MongoDB models, Socket.IO/notifications, capability/tool registry; no duplicates.
+- Visitor capability access: default deny via `src/lib/capability-access.ts`; public allow-list = `get_service_info`, `get_company_info`, `create_inquiry`, `create_lead`, `create_project_request`; seeded AI tools are `draft` until an admin publishes (`ai-tools:publish`).
+- Existing `GET /api/ai/request` (public service-catalog feed for the restored `/ai-capabilities` page) deliberately untouched; new `GET /api/ai/capabilities` is the audience-gated authorization view (distinct purpose, not a duplicate).
 
 ## 11. Exact Next Action Required to Resume
 
-- Phase 1: COMPLETE (docs/agent-state established; root PROJECT_STATE.md migrated/removed).
-- Phase 2: COMPLETE (Dograh deep audit + Vapi assessment done; see `docs/agent-state/PROGRESS_LOG.md`).
-- Phase 3: COMPLETE (official Vapi docs researched; Dograh→Vapi mapping produced).
-- Phase 4: IN PROGRESS — Vapi config (`src/lib/vapi-config.ts`) + `useVapi` hook implemented + verified (tsc clean, lint warnings only). Widget UI wiring pending.
-- Phase 5: NEXT — Vapi webhook (dedicated endpoint): auth, validation, idempotency, assistant-request, end-of-call-report, tool-calls.
+- Brief Phases 1–4: **ALL COMPLETE** (local commits; see PROGRESS_LOG 2026-11-12 entries).
+- Resume point:
+  1. **Administrator:** run `npm run seed:ai-tools` against production (`MONGODB_URI` set) to populate the AI Tools dashboard; verify `/dashboard/ai-tools/tools` shows 12 draft records.
+  2. **Administrator:** configure Vapi env vars (`NEXT_PUBLIC_VAPI_PUBLIC_KEY`, `VAPI_ASSISTANT_ID`, `VAPI_WEBHOOK_SECRET`, `VAPI_API_KEY`, `VAPI_SERVER_URL`) + Vapi dashboard assistant/phone/webhook → `https://www.wall-v.com/api/webhooks/vapi`; E2E verify before any provider switch (production stays **Dograh** until approved).
+  3. **Approval:** review the 5 local commits and authorize `git push` to `master` (auto-deploys Vercel).
 
 ---
 
