@@ -30,6 +30,12 @@ export interface IConversation extends Document {
     /** Vapi-specific (additive — only set for Vapi-sourced voice calls). */
     vapiCallId?: string;
     vapiAssistantId?: string;
+    /**
+     * Whether durable transcript content (transcript or messages) was present
+     * when the call record was written. `false` = an end-of-call report arrived
+     * without an artifact (incomplete delivery); a later retry may set it true.
+     */
+    transcriptPersisted?: boolean;
   };
   outcome: "none" | "inquiry-created" | "project-created" | "payment-completed";
   projectId?: mongoose.Types.ObjectId;
@@ -82,6 +88,7 @@ const ConversationSchema = new Schema<IConversation>(
       summary: String,
       vapiCallId: String,
       vapiAssistantId: String,
+      transcriptPersisted: Boolean,
     },
     outcome: {
       type: String,

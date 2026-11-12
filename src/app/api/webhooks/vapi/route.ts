@@ -152,6 +152,15 @@ export async function POST(request: Request) {
       timestamp: toValidDate(m.timestamp),
     }));
 
+    // Content check: a transcript is expected on every end-of-call-report.
+    // Derive one from the message list when the artifact string is absent.
+    const derivedTranscript = messages
+      .map((m) => `${m.role === "user" ? "USER" : "AGENT"}: ${m.content}`)
+      .join("\n\n");
+    const transcriptText =
+      (event.transcript || "").trim().length > 0 ? (event.transcript as string) : derivedTranscript;
+    const transcriptPersisted = transcriptText.trim().length > 0;
+
     const conversationData: Record<string, unknown> = {
       sessionId,
       agentType: "voice-agent",
@@ -163,10 +172,9 @@ export async function POST(request: Request) {
         workflowRunId: event.callId,
         durationSeconds: event.durationSeconds || 0,
         callStatus: event.endedReason || "completed",
-        transcript:
-          event.transcript ||
-          messages.map((m) => `${m.role === "user" ? "USER" : "AGENT"}: ${m.content}`).join("\n\n"),
+        transcript: transcriptText,
         summary: event.summary || "",
+        transcriptPersisted,
       },
     };
 
@@ -186,6 +194,43 @@ export async function POST(request: Request) {
 
     if (!conversation) {
       throw new Error("Unable to persist Vapi conversation");
+    }
+
+    // Incomplete delivery: an end-of-call-report is expected to carry a
+    // transcript artifact, but none was found. Persist the call metadata so
+    // the call is not lost, record a SANITIZED diagnostic (event key and
+    // artifact presence only — no secrets, no conversation content), and do
+    // NOT report success. A later retry can still fill in the content because
+    // the idempotency check only skips conversations that already have any.
+    if (!transcriptPersisted) {
+      console.warn(
+        `[Vapi Webhook] Incomplete end-of-call-report (${eventKey}) — no transcript/messages ` +
+          `(artifactPresent=${Boolean(event.artifactPresent)}); call metadata persisted only`
+      );
+      await logSecurityEvent({
+        type: "input_validation_failed",
+        severity: "low",
+        ip,
+        path: "/api/webhooks/vapi",
+        method: "POST",
+        blocked: false,
+        details: {
+          source: "vapi-webhook",
+          reason: "missing_transcript_artifact",
+          key: eventKey,
+          artifactPresent: Boolean(event.artifactPresent),
+        },
+      });
+      return NextResponse.json(
+        {
+          success: false,
+          incomplete: true,
+          diagnostic: "missing_transcript_artifact",
+          conversationId: conversation._id,
+          key: eventKey,
+        },
+        { headers }
+      );
     }
 
     console.log(

@@ -87,6 +87,8 @@ export interface VapiCallEvent {
   transcript?: string;
   summary?: string;
   messages?: Array<{ role?: string; content?: string; timestamp?: string }>;
+  /** True when either message-level or call-level `artifact` was present. */
+  artifactPresent?: boolean;
 }
 
 export interface VapiWebhookExtraction {
@@ -108,11 +110,29 @@ export function extractVapiCallEvent(body: unknown): VapiWebhookExtraction {
   const type = String(messageRecord.type ?? "") as VapiServerMessageType;
   const call = messageRecord.call;
   const callRecord = call && typeof call === "object" && !Array.isArray(call) ? (call as Record<string, unknown>) : undefined;
-  const artifact = callRecord && typeof callRecord.artifact === "object" && !Array.isArray(callRecord.artifact)
-    ? (callRecord.artifact as Record<string, unknown>)
-    : undefined;
 
-  const rawMessages = Array.isArray(artifact?.messages) ? (artifact?.messages as unknown[]) : undefined;
+  // Artifact locations — official Vapi docs place `artifact` at the MESSAGE
+  // level (`message.artifact`); older/SDK payloads may carry it on the call
+  // object (`message.call.artifact`). Message-level wins, call-level is the
+  // compatibility fallback.
+  const messageArtifact =
+    messageRecord.artifact && typeof messageRecord.artifact === "object" && !Array.isArray(messageRecord.artifact)
+      ? (messageRecord.artifact as Record<string, unknown>)
+      : undefined;
+  const callArtifact =
+    callRecord && typeof callRecord.artifact === "object" && !Array.isArray(callRecord.artifact)
+      ? (callRecord.artifact as Record<string, unknown>)
+      : undefined;
+  const artifactPresent = Boolean(messageArtifact || callArtifact);
+
+  // Messages: message.artifact.messages → message.messages → call.artifact.messages.
+  const rawMessages = Array.isArray(messageArtifact?.messages)
+    ? (messageArtifact?.messages as unknown[])
+    : Array.isArray(messageRecord.messages)
+      ? (messageRecord.messages as unknown[])
+      : Array.isArray(callArtifact?.messages)
+        ? (callArtifact?.messages as unknown[])
+        : undefined;
   const messages = rawMessages
     ? rawMessages
         .map((m) => {
@@ -129,20 +149,49 @@ export function extractVapiCallEvent(body: unknown): VapiWebhookExtraction {
         .filter((m) => m.content)
     : undefined;
 
-  const durationRaw = callRecord ? callRecord.duration : artifact?.duration;
+  const durationRaw = callRecord?.duration ?? messageArtifact?.duration ?? callArtifact?.duration;
   const durationSeconds = typeof durationRaw === "number" ? durationRaw : parseFloat(String(durationRaw ?? "0")) || 0;
+
+  // Transcript/summary/endedReason: message-level first (official docs), then
+  // call-level fallback. First non-empty string wins.
+  const transcript = firstNonEmptyString(
+    messageArtifact?.transcript,
+    messageRecord.transcript,
+    callArtifact?.transcript
+  );
+  const summary = firstNonEmptyString(
+    messageArtifact?.summary,
+    messageRecord.summary,
+    callArtifact?.summary
+  );
+  const endedReason = firstNonEmptyString(
+    messageRecord.endedReason,
+    callRecord?.endedReason,
+    messageArtifact?.endedReason,
+    callArtifact?.endedReason
+  );
 
   const event: VapiCallEvent = {
     type,
     callId: callRecord ? String(callRecord.id ?? callRecord.callId ?? "") : undefined,
-    endedReason: callRecord ? String(callRecord.endedReason ?? "") : artifact ? String(artifact.endedReason ?? "") : undefined,
+    endedReason,
     durationSeconds,
-    transcript: artifact?.transcript ? String(artifact.transcript) : undefined,
-    summary: artifact?.summary ? String(artifact.summary) : undefined,
+    transcript,
+    summary,
     messages,
+    artifactPresent,
   };
 
   return { event };
+}
+
+function firstNonEmptyString(...candidates: unknown[]): string | undefined {
+  for (const candidate of candidates) {
+    if (typeof candidate === "string" && candidate.trim().length > 0) {
+      return candidate;
+    }
+  }
+  return undefined;
 }
 
 export function buildVapiEventKey(callId?: string, type?: string): string {
