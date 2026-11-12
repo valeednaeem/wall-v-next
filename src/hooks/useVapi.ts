@@ -29,6 +29,8 @@ export interface VapiCallContextInput {
 export interface UseVapiOptions {
   enabled?: boolean;
   assistantId?: string;
+  /** Browser-safe public key (from public settings); falls back to NEXT_PUBLIC_VAPI_PUBLIC_KEY. */
+  publicKey?: string;
   onStatusChange?: (status: VapiCallStatus, text?: string, subtext?: string) => void;
   onCallConnected?: (data: { agentId?: string; callId?: string }) => void;
   onCallDisconnected?: (data: { durationSeconds?: number }) => void;
@@ -45,11 +47,15 @@ export interface UseVapiResult {
 }
 
 let vapiClient: Vapi | null = null;
+let vapiClientKey: string | null = null;
 
-function getVapiClient(): Vapi | null {
-  const publicKey = getVapiPublicKey();
+function getVapiClient(publicKeyOverride?: string): Vapi | null {
+  const publicKey = publicKeyOverride?.trim() || getVapiPublicKey();
   if (!publicKey) return null;
-  if (!vapiClient) vapiClient = new Vapi(publicKey);
+  if (!vapiClient || vapiClientKey !== publicKey) {
+    vapiClient = new Vapi(publicKey);
+    vapiClientKey = publicKey;
+  }
   return vapiClient;
 }
 
@@ -57,6 +63,7 @@ export function useVapi(options: UseVapiOptions = {}): UseVapiResult {
   const {
     enabled = false,
     assistantId: assistantIdProp,
+    publicKey: publicKeyProp,
     onStatusChange,
     onCallConnected,
     onCallDisconnected,
@@ -85,7 +92,7 @@ export function useVapi(options: UseVapiOptions = {}): UseVapiResult {
 
   useEffect(() => {
     if (!enabled) return;
-    const client = getVapiClient();
+    const client = getVapiClient(publicKeyProp);
     if (!client) {
       setError("Vapi public key is not configured.");
       return;
@@ -137,11 +144,11 @@ export function useVapi(options: UseVapiOptions = {}): UseVapiResult {
       client.off("call-end", handleCallEnd);
       client.off("error", handleError);
     };
-  }, [enabled, setStatusSafe]);
+  }, [enabled, publicKeyProp, setStatusSafe]);
 
   const startCall = useCallback(
     async (context?: VapiCallContextInput) => {
-      const client = getVapiClient();
+      const client = getVapiClient(publicKeyProp);
       const assistantId = assistantIdProp ?? getVapiAssistantId();
       if (!client) throw new Error("Vapi public key is not configured.");
       if (!assistantId) throw new Error("Vapi assistant ID is not configured.");
@@ -158,16 +165,17 @@ export function useVapi(options: UseVapiOptions = {}): UseVapiResult {
       const call = await client.start(assistantId, assistantOverrides);
       return call;
     },
-    [assistantIdProp]
+    [assistantIdProp, publicKeyProp]
   );
 
   const endCall = useCallback(() => {
-    const client = getVapiClient();
+    const client = getVapiClient(publicKeyProp);
     if (!client) return;
     client.end();
-  }, []);
+  }, [publicKeyProp]);
 
-  const isConfigured = Boolean(getVapiPublicKey() && getVapiAssistantId());
+  const resolvedPublicKey = publicKeyProp?.trim() || getVapiPublicKey();
+  const isConfigured = Boolean(resolvedPublicKey && (assistantIdProp ?? getVapiAssistantId()));
 
   return {
     status,

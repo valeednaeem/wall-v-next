@@ -27,6 +27,7 @@ interface VoiceAgentSettings {
   widgetUrl: string;
   agentId: string;
   vapiAssistantId: string;
+  vapiPublicKey: string;
   vapiFirstMessage: string;
   position: "bottom-left" | "bottom-right";
   buttonColor: string;
@@ -86,6 +87,7 @@ export default function GeneralSettingsPage() {
     widgetUrl: "",
     agentId: "",
     vapiAssistantId: "",
+    vapiPublicKey: "",
     vapiFirstMessage: "Welcome to Wall-V! I'm your AI assistant. How can I help you today?",
     position: "bottom-left",
     buttonColor: "#7c3aed",
@@ -196,7 +198,7 @@ BEHAVIOR:
       if (res.ok && data.success) {
         setVoiceStatus(data.data);
         setVoiceStatusError("");
-        const isVapi = data.data.provider === "vapi";
+        const isVapi = voice.provider === "vapi";
         const ok = isVapi ? data.data.vapi.configured : data.data.dograh.widgetUrlConfigured;
         setSaveMessage(
           ok
@@ -234,6 +236,20 @@ BEHAVIOR:
 
     if (voice.provider === "vapi" && voice.enabled && !voice.vapiAssistantId.trim()) {
       setSaveMessage({ type: "error", text: "Vapi is selected but no Assistant ID is configured." });
+      setSaving(false);
+      return;
+    }
+
+    if (
+      voice.provider === "vapi" &&
+      voice.enabled &&
+      !voice.vapiPublicKey.trim() &&
+      !voiceStatus?.vapi.publicKeyConfigured
+    ) {
+      setSaveMessage({
+        type: "error",
+        text: "Vapi is selected but no Public API Key is configured. Paste the key above or set NEXT_PUBLIC_VAPI_PUBLIC_KEY.",
+      });
       setSaving(false);
       return;
     }
@@ -491,7 +507,7 @@ BEHAVIOR:
           <div className="rounded-lg border p-6 space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="font-semibold">Voice Agent Provider</h3>
+                <h3 className="font-semibold">Voice Agent Configuration</h3>
                 <p className="text-sm text-muted-foreground mt-1">
                   Choose which provider powers the website voice widget. Dograh stays available as a fallback.
                 </p>
@@ -502,13 +518,28 @@ BEHAVIOR:
               </label>
             </div>
 
+            {voiceStatus && (
+              <p className="text-xs text-muted-foreground">
+                Active provider (saved):{" "}
+                <span className="font-medium text-foreground">
+                  {voiceStatus.provider === "vapi" ? "Vapi Voice Agent" : "Dograh Agent"}
+                </span>
+                {voice.provider !== voiceStatus.provider && (
+                  <span className="text-amber-600">
+                    {" "}
+                    — selected: {voice.provider === "vapi" ? "Vapi Voice Agent" : "Dograh Agent"} (applies when you save)
+                  </span>
+                )}
+              </p>
+            )}
+
             <div className="grid md:grid-cols-2 gap-4">
               <button
                 type="button"
                 onClick={() => setVoice({ ...voice, provider: "dograh" })}
                 className={`rounded-lg border p-4 text-left transition-colors ${voice.provider === "dograh" ? "border-primary bg-primary/5" : "hover:border-primary/40"}`}
               >
-                <p className="font-medium">Dograh</p>
+                <p className="font-medium">Dograh Agent</p>
                 <p className="text-xs text-muted-foreground mt-1">Self-hosted Dograh widget (current production provider).</p>
               </button>
               <button
@@ -516,7 +547,7 @@ BEHAVIOR:
                 onClick={() => setVoice({ ...voice, provider: "vapi" })}
                 className={`rounded-lg border p-4 text-left transition-colors ${voice.provider === "vapi" ? "border-primary bg-primary/5" : "hover:border-primary/40"}`}
               >
-                <p className="font-medium">Vapi</p>
+                <p className="font-medium">Vapi Voice Agent</p>
                 <p className="text-xs text-muted-foreground mt-1">Vapi Web SDK assistant (requires Vapi credentials).</p>
               </button>
             </div>
@@ -537,11 +568,11 @@ BEHAVIOR:
               {voiceStatusError && <p className="text-xs text-amber-600">{voiceStatusError}</p>}
               {voiceStatus && (
                 <ul className="text-xs space-y-1">
-                  {(voiceStatus.provider === "vapi"
+                  {(voice.provider === "vapi"
                     ? [
-                        { label: "Public key (NEXT_PUBLIC_VAPI_PUBLIC_KEY)", ok: voiceStatus.vapi.publicKeyConfigured },
+                        { label: "Public API key (entered below or NEXT_PUBLIC_VAPI_PUBLIC_KEY)", ok: voiceStatus.vapi.publicKeyConfigured },
                         { label: "Assistant ID", ok: voiceStatus.vapi.assistantIdConfigured },
-                        { label: "Webhook secret (VAPI_WEBHOOK_SECRET)", ok: voiceStatus.vapi.webhookSecretConfigured },
+                        { label: "Webhook secret (VAPI_WEBHOOK_SECRET — server-side only)", ok: voiceStatus.vapi.webhookSecretConfigured },
                         { label: "Server URL", ok: Boolean(voiceStatus.vapi.serverUrl) },
                       ]
                     : [
@@ -556,9 +587,14 @@ BEHAVIOR:
                       <span className="text-muted-foreground">{item.ok ? "configured" : "missing"}</span>
                     </li>
                   ))}
-                  {voiceStatus.provider === "vapi" && voiceStatus.vapi.webhookUrl && (
+                  {voice.provider === "vapi" && (
                     <li className="text-muted-foreground">
-                      Webhook URL: <code className="bg-muted px-1 rounded">{voiceStatus.vapi.webhookUrl}</code>
+                      Webhook URL:{" "}
+                      {voiceStatus.vapi.webhookUrl ? (
+                        <code className="bg-muted px-1 rounded">{voiceStatus.vapi.webhookUrl}</code>
+                      ) : (
+                        <span className="text-amber-600">missing — set VAPI_SERVER_URL</span>
+                      )}
                     </li>
                   )}
                 </ul>
@@ -669,78 +705,136 @@ BEHAVIOR:
             <div className="rounded-lg border p-6 space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="font-semibold">Vapi AI Voice Agent</h3>
+                  <h3 className="font-semibold">Vapi Voice Agent</h3>
                   <p className="text-sm text-muted-foreground mt-1">
                     Configure the Vapi assistant used by the website voice widget.
                   </p>
                 </div>
+                {(voiceStatus || voiceStatusError) && (
+                  <span
+                    className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-medium ${
+                      voiceStatusError
+                        ? "border-destructive/40 text-destructive"
+                        : voiceStatus?.vapi.configured
+                          ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                          : "border-amber-200 bg-amber-50 text-amber-700"
+                    }`}
+                  >
+                    {voiceStatusError ? "Error" : voiceStatus?.vapi.configured ? "Configured" : "Missing"}
+                  </span>
+                )}
               </div>
 
-              {voice.enabled && (
-                <div className="space-y-4 pt-4 border-t">
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800">
-                    <p className="font-medium">Setup Instructions</p>
-                    <ol className="mt-2 space-y-1 list-decimal list-inside text-xs">
-                      <li>Create an assistant in the Vapi Dashboard and publish it</li>
-                      <li>Copy the Assistant ID below</li>
-                      <li>
-                        Set <code className="bg-blue-100 px-1 rounded">NEXT_PUBLIC_VAPI_PUBLIC_KEY</code> and{" "}
-                        <code className="bg-blue-100 px-1 rounded">VAPI_ASSISTANT_ID</code> in Vercel
-                      </li>
-                      <li>
-                        Set <code className="bg-blue-100 px-1 rounded">VAPI_WEBHOOK_SECRET</code> and point the assistant server URL at
-                        the webhook URL shown in the health checklist above
-                      </li>
-                    </ol>
+              <div className="space-y-4 pt-4 border-t">
+                {!voice.enabled && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-800">
+                    Voice is disabled — the configuration below is saved, but the widget will not activate until the enable toggle above is on.
                   </div>
+                )}
 
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-sm font-medium">Vapi Assistant ID</label>
-                      <input
-                        type="text"
-                        value={voice.vapiAssistantId}
-                        onChange={(e) => setVoice({ ...voice, vapiAssistantId: e.target.value })}
-                        className="mt-1 w-full rounded-lg border px-3 py-2 text-sm font-mono"
-                        placeholder="asst_..."
-                      />
-                      <p className="text-xs text-muted-foreground mt-1">Published assistant ID from the Vapi Dashboard.</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium">First message (greeting)</label>
-                      <input
-                        type="text"
-                        value={voice.vapiFirstMessage}
-                        onChange={(e) => setVoice({ ...voice, vapiFirstMessage: e.target.value })}
-                        className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
-                        placeholder="Welcome to Wall-V! ..."
-                      />
-                      <p className="text-xs text-muted-foreground mt-1">Optional override for the assistant&apos;s opening line.</p>
-                    </div>
-                  </div>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800">
+                  <p className="font-medium">Setup Instructions</p>
+                  <ol className="mt-2 space-y-1 list-decimal list-inside text-xs">
+                    <li>Create an assistant in the Vapi Dashboard and publish it</li>
+                    <li>Paste the Public API Key and Assistant ID below</li>
+                    <li>
+                      Or set <code className="bg-blue-100 px-1 rounded">NEXT_PUBLIC_VAPI_PUBLIC_KEY</code> and{" "}
+                      <code className="bg-blue-100 px-1 rounded">VAPI_ASSISTANT_ID</code> in Vercel
+                    </li>
+                    <li>
+                      Set <code className="bg-blue-100 px-1 rounded">VAPI_WEBHOOK_SECRET</code> (server-side, Vercel) and point the
+                      assistant server URL at the webhook endpoint shown below
+                    </li>
+                  </ol>
+                </div>
 
+                <div className="grid md:grid-cols-2 gap-4">
+                  <SecretInput
+                    label="Vapi Public API Key"
+                    value={voice.vapiPublicKey}
+                    onChange={(v) => setVoice({ ...voice, vapiPublicKey: v })}
+                    placeholder="Public key from the Vapi Dashboard"
+                  />
                   <div>
-                    <label className="text-sm font-medium">Agent System Prompt</label>
-                    <textarea
-                      value={voice.systemPrompt}
-                      onChange={(e) => setVoice({ ...voice, systemPrompt: e.target.value })}
-                      className="mt-1 w-full rounded-lg border px-3 py-2 text-sm font-mono min-h-[200px]"
-                      placeholder="You are Wall-V's AI voice assistant..."
+                    <label className="text-sm font-medium">Vapi Assistant ID</label>
+                    <input
+                      type="text"
+                      value={voice.vapiAssistantId}
+                      onChange={(e) => setVoice({ ...voice, vapiAssistantId: e.target.value })}
+                      className="mt-1 w-full rounded-lg border px-3 py-2 text-sm font-mono"
+                      placeholder="asst_..."
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">Published assistant ID from the Vapi Dashboard.</p>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground -mt-2">
+                  The public key is intentionally browser-visible (used by the Vapi Web SDK). Leave empty to use{" "}
+                  <code className="bg-muted px-1 rounded">NEXT_PUBLIC_VAPI_PUBLIC_KEY</code> from Vercel.
+                </p>
+
+                <div>
+                  <label className="text-sm font-medium">First message (greeting)</label>
+                  <input
+                    type="text"
+                    value={voice.vapiFirstMessage}
+                    onChange={(e) => setVoice({ ...voice, vapiFirstMessage: e.target.value })}
+                    className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+                    placeholder="Welcome to Wall-V! ..."
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">Optional override for the assistant&apos;s opening line.</p>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium">Webhook endpoint</label>
+                    <input
+                      type="text"
+                      readOnly
+                      value={voiceStatus?.vapi.webhookUrl || ""}
+                      className="mt-1 w-full rounded-lg border bg-muted px-3 py-2 text-sm font-mono"
+                      placeholder={voiceStatus ? "Missing — set VAPI_SERVER_URL" : "Loading..."}
                     />
                     <p className="text-xs text-muted-foreground mt-1">
-                      Passed to Vapi as <code>assistantOverrides.systemPrompt</code> when a call starts (via the useVapi hook).
+                      Point the Vapi assistant&apos;s server URL at this endpoint. Read-only.
                     </p>
                   </div>
-
-                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-800">
-                    <p className="font-medium">Migration note</p>
-                    <p className="mt-1 text-xs">
-                      Selecting Vapi does not remove or modify any Dograh configuration. Dograh remains the production provider
-                      until the Vapi end-to-end verification is approved.
+                  <div>
+                    <label className="text-sm font-medium">Webhook authentication</label>
+                    <p className="mt-1 text-sm">
+                      {voiceStatus?.vapi.webhookSecretConfigured ? (
+                        <span className="font-medium text-emerald-600">Configured</span>
+                      ) : (
+                        <span className="font-medium text-amber-600">Missing</span>
+                      )}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Server-side only via the <code className="bg-muted px-1 rounded">VAPI_WEBHOOK_SECRET</code> environment variable
+                      (Vercel). The secret is never shown or entered in the browser.
                     </p>
                   </div>
                 </div>
-              )}
+
+                <div>
+                  <label className="text-sm font-medium">Agent System Prompt</label>
+                  <textarea
+                    value={voice.systemPrompt}
+                    onChange={(e) => setVoice({ ...voice, systemPrompt: e.target.value })}
+                    className="mt-1 w-full rounded-lg border px-3 py-2 text-sm font-mono min-h-[200px]"
+                    placeholder="You are Wall-V's AI voice assistant..."
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Passed to Vapi as <code>assistantOverrides.systemPrompt</code> when a call starts (via the useVapi hook).
+                  </p>
+                </div>
+
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-800">
+                  <p className="font-medium">Migration note</p>
+                  <p className="mt-1 text-xs">
+                    Selecting Vapi does not remove or modify any Dograh configuration. Dograh remains the production provider
+                    until the Vapi end-to-end verification is approved.
+                  </p>
+                </div>
+              </div>
             </div>
           )}
         </div>

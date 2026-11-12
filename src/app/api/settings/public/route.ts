@@ -57,6 +57,13 @@ export async function GET() {
       { production: process.env.NODE_ENV === "production" }
     );
 
+    // Vapi public key is intentionally public (browser SDK uses it): dashboard-saved
+    // value wins, env fallback. NEVER expose webhook secrets or server-side credentials here.
+    const vapiPublicKey =
+      (typeof grouped.voice?.vapiPublicKey === "string" && grouped.voice.vapiPublicKey.trim()) ||
+      getVapiPublicKey() ||
+      "";
+
     return NextResponse.json({
       success: true,
       data: {
@@ -96,7 +103,8 @@ export async function GET() {
           // Non-secret Vapi values only (safe for the browser SDK).
           vapi: {
             assistantId: grouped.voice?.vapiAssistantId || getVapiAssistantId() || "",
-            publicKeyConfigured: Boolean(getVapiPublicKey()),
+            publicKey: vapiPublicKey,
+            publicKeyConfigured: Boolean(vapiPublicKey),
             firstMessage: grouped.voice?.vapiFirstMessage || "",
           },
         },

@@ -39,7 +39,10 @@ export async function GET() {
 
     const serverUrl = getVapiServerUrl();
     const vapiAssistantId = (voice.vapiAssistantId as string | undefined) || getVapiAssistantId();
-    const vapiPublicKeyConfigured = Boolean(getVapiPublicKey());
+    // Public key is browser-visible by design: dashboard-saved value wins, env is the fallback.
+    const dbPublicKey =
+      typeof voice.vapiPublicKey === "string" && voice.vapiPublicKey.trim() ? voice.vapiPublicKey.trim() : "";
+    const vapiPublicKeyConfigured = Boolean(dbPublicKey || getVapiPublicKey());
 
     return NextResponse.json({
       success: true,

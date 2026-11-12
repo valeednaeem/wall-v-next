@@ -7,8 +7,8 @@ module.exports = {
     "^.+\\.tsx?$": [
       "ts-jest",
       {
-        tsconfig: "tsconfig.json",
-        jsx: "react-jsx",
+        // tsconfig.json has jsx:"preserve" (Next.js); tests need real JSX transform.
+        tsconfig: "tsconfig.jest.json",
       },
     ],
   },

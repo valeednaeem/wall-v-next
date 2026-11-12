@@ -22,6 +22,7 @@ interface VapiWidgetSettings {
   systemPrompt: string;
   vapi?: {
     assistantId: string;
+    publicKey: string;
     publicKeyConfigured: boolean;
     firstMessage: string;
   };
@@ -48,6 +49,7 @@ export function VapiWidget() {
   const { status, duration, error, startCall, endCall } = useVapi({
     enabled: isActive,
     assistantId: settings?.vapi?.assistantId || undefined,
+    publicKey: settings?.vapi?.publicKey || undefined,
     onError: (err) => console.error("[Vapi] call error:", err),
   });
 
