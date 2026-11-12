@@ -1,13 +1,44 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthUser } from "@/lib/auth";
+import { checkRateLimit, getClientIp } from "@/lib/security";
 import { processRequest } from "@/lib/unified-request-processor";
 import Project from "@/models/project";
 import Client from "@/models/client";
 import connectToDatabase from "@/lib/mongodb";
 
+/**
+ * Rate limiting (see @/lib/security): keyed per authenticated user or per
+ * anonymous IP so public traffic cannot exhaust a staff member's quota. The
+ * store is process-local — per-instance protection only on Vercel. This
+ * pipeline runs LLM classification/response generation (and can create
+ * projects downstream), so anonymous traffic gets a stricter cap than staff.
+ */
+const RATE_LIMITS = {
+  ANONYMOUS: { max: 15, windowMs: 60_000 },
+  AUTHENTICATED: { max: 30, windowMs: 60_000 },
+} as const;
+
+function rateLimitedResponse(resetAt: number) {
+  const retryAfterSeconds = Math.max(1, Math.ceil((resetAt - Date.now()) / 1000));
+  return NextResponse.json(
+    { error: "Too many requests. Please try again later.", retryAfterSeconds },
+    { status: 429, headers: { "Retry-After": String(retryAfterSeconds) } }
+  );
+}
+
 export async function POST(request: NextRequest) {
   try {
     const user = await getAuthUser();
+
+    // Enforced BEFORE body parsing, LLM classification, tool execution, and
+    // any downstream writes (client/project creation).
+    const ip = getClientIp(request);
+    const limit = user ? RATE_LIMITS.AUTHENTICATED : RATE_LIMITS.ANONYMOUS;
+    const rl = checkRateLimit(`ai-unified:${user?.userId || ip}`, limit.max, limit.windowMs);
+    if (!rl.allowed) {
+      return rateLimitedResponse(rl.resetAt);
+    }
+
     const body = await request.json();
     const { message, conversationId, channel, page } = body;
 

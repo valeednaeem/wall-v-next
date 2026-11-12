@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthUser } from "@/lib/auth";
+import { checkRateLimit, getClientIp } from "@/lib/security";
 import { orchestrateConversation, createVisitorState } from "@/lib/conversation-agent";
 
 /**
@@ -14,10 +15,39 @@ import { orchestrateConversation, createVisitorState } from "@/lib/conversation-
  *   channel?: "chat" | "voice" | "website" | "dashboard" | "api"
  *   visitorState?: VisitorState (for resuming conversation)
  *   page?: string
+ *
+ * Rate limiting (see @/lib/security): keyed per authenticated user or per
+ * anonymous IP so public traffic cannot exhaust a staff member's quota. The
+ * store is process-local — per-instance protection only on Vercel. Anonymous
+ * traffic is capped strictly because this endpoint runs the full LLM + tool
+ * pipeline, including inquiry/lead writes and emails.
  */
+const RATE_LIMITS = {
+  ANONYMOUS: { max: 10, windowMs: 60_000 },
+  AUTHENTICATED: { max: 30, windowMs: 60_000 },
+} as const;
+
+function rateLimitedResponse(resetAt: number) {
+  const retryAfterSeconds = Math.max(1, Math.ceil((resetAt - Date.now()) / 1000));
+  return NextResponse.json(
+    { error: "Too many requests. Please try again later.", retryAfterSeconds },
+    { status: 429, headers: { "Retry-After": String(retryAfterSeconds) } }
+  );
+}
+
 export async function POST(request: NextRequest) {
   try {
     const user = await getAuthUser();
+
+    // Enforced BEFORE body parsing, LLM calls, tool execution, and any
+    // inquiry/lead creation or email sending.
+    const ip = getClientIp(request);
+    const limit = user ? RATE_LIMITS.AUTHENTICATED : RATE_LIMITS.ANONYMOUS;
+    const rl = checkRateLimit(`ai-execute:${user?.userId || ip}`, limit.max, limit.windowMs);
+    if (!rl.allowed) {
+      return rateLimitedResponse(rl.resetAt);
+    }
+
     const body = await request.json();
     const { message, conversationId, channel, visitorState, page } = body;
 
