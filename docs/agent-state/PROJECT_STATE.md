@@ -89,7 +89,8 @@
 - Phase 1: COMPLETE (docs/agent-state established; root PROJECT_STATE.md migrated/removed).
 - Phase 2: COMPLETE (Dograh deep audit + Vapi assessment done; see `docs/agent-state/PROGRESS_LOG.md`).
 - Phase 3: COMPLETE (official Vapi docs researched; Dograh→Vapi mapping produced).
-- Phase 4: NEXT — implement Vapi: install `@vapi-ai/web`, create `src/lib/vapi-config.ts`, create `useVapi` hook mirroring `useDograh`, wire browser widget; keep Dograh untouched until migration approved.
+- Phase 4: IN PROGRESS — Vapi config (`src/lib/vapi-config.ts`) + `useVapi` hook implemented + verified (tsc clean, lint warnings only). Widget UI wiring pending.
+- Phase 5: NEXT — Vapi webhook (dedicated endpoint): auth, validation, idempotency, assistant-request, end-of-call-report, tool-calls.
 
 ---
 

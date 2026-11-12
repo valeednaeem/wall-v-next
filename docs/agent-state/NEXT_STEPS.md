@@ -16,7 +16,9 @@
 - [x] C3. Dograh→Vapi configuration mapping table produced.
 - [ ] C4. Preserve existing architecture constraints (OpenAI/Anthropic AI stack, CRM, auth, Mongo, tool registry) — ongoing.
 - [ ] C5. Design secure Vapi webhook architecture (dedicated endpoint preferred; idempotency; auth; validation; safe logging) — pending design.
-- [ ] Phase 4 (next): implement Vapi config + browser integration (`@vapi-ai/web`, `src/lib/vapi-config.ts`, `useVapi`), keep Dograh fallback.
+- [x] Phase 4a. Implement Vapi config (`@vapi-ai/web`, `src/lib/vapi-config.ts`) + `useVapi` hook — DONE (tsc clean, lint warnings only).
+- [ ] Phase 4b. Wire Vapi widget UI (floating/inline) — pending (Phase 6 provider management).
+- [ ] Phase 5. Implement Vapi webhook (auth/validation/idempotency/assistant-request/end-of-call-report/tool-calls) — NEXT.
 
 ## Priority 3 — Controlled migration
 

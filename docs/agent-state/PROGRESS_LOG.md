@@ -44,7 +44,25 @@
 - Phase 1 (checkpoints): DONE (docs/agent-state created; root PROJECT_STATE.md migrated/removed).
 - Phase 2 (audit): DONE (Dograh deep audit + Vapi recovery assessment).
 - Phase 3 (Vapi docs research + mapping): DONE (official-docs facts gathered; mapping table produced).
-- Phase 4 (Vapi implementation): NOT STARTED.
+- Phase 4 (Vapi implementation): IN PROGRESS — Vapi config layer + useVapi hook implemented (see entries below).
+
+## 2026-11-12 — Phase 4 implementation start (Vapi config + hook)
+
+- Task: Phase 4 — recover Vapi configuration and browser integration.
+- Actions:
+  - Installed `@vapi-ai/web@^3.1.0` (npm resolved `^3.0.0` → `3.1.0`; latest published version; SDK engine node>=22.14.0 satisfied by node v24).
+  - Created `src/lib/vapi-config.ts`: Vapi env names (`NEXT_PUBLIC_VAPI_PUBLIC_KEY`, `VAPI_ASSISTANT_ID`, `VAPI_WEBHOOK_SECRET`, `VAPI_API_KEY`, `VAPI_ORGANIZATION_ID`, `VAPI_SERVER_URL`), `resolveVapiConfig`, getters, `createVapiClient`, `isVapiConfigured`.
+  - Created `src/hooks/useVapi.ts`: `useVapi` hook mirroring `useDograh` surface (status/duration/error/isConfigured/startCall/endCall + callbacks); subscribes to Vapi SDK events (`call-start`, `call-start-success`, `call-start-failed`, `call-end`, `error`); status machine idle→connecting→connected→failed; `startCall(context)` maps context → `assistantOverrides` (`systemPrompt`, `firstMessage`, `variableValues`) and calls `client.start(assistantId, assistantOverrides)`; module-level Vapi client singleton.
+- Verification: `npx tsc --noEmit` clean; `npm run lint` warnings only (pre-existing).
+
+## 2026-11-12 — Phase 4 fix
+
+- Fixed TS2353: `client.start(assistantId, assistantOverrides)` — overrides passed directly as the second parameter (not wrapped).
+
+## 2026-11-12 — Phase 4 status
+
+- Phase 4 (Vapi config + browser hook): IMPLEMENTED; typecheck + lint clean. Widget UI wiring (floating/inline Vapi widgets) remains for Phase 6 (dashboard/provider management) and later phases.
+- Production provider remains **Dograh** (no switch performed — migration approval pending).
 
 ---
 
