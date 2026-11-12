@@ -39,24 +39,42 @@ export default function AiToolsListPage() {
   const [total, setTotal] = useState(0);
   const [selected, setSelected] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   const fetchTools = useCallback(() => {
     setLoading(true);
+    setFetchError(null);
     const params = new URLSearchParams({ allStatuses: "true", limit: "20", page: String(page) });
     if (statusFilter !== "all") params.set("status", statusFilter);
     if (accessFilter !== "all") params.set("accessModel", accessFilter);
     if (search) params.set("search", search);
 
     fetch(`/api/ai-tools?${params}`)
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.success) {
-          setTools(d.data);
-          setTotalPages(d.pagination?.totalPages || 1);
-          setTotal(d.pagination?.total || 0);
+      .then(async (r) => {
+        const d = await r.json().catch(() => ({}));
+        if (r.status === 401) {
+          setTools([]);
+          setFetchError("Your session has expired. Sign in again to view AI tools.");
+          return;
         }
+        if (r.status === 403) {
+          setTools([]);
+          setFetchError("Your role does not include the ai-tools:view permission. Ask an administrator for access.");
+          return;
+        }
+        if (!r.ok || !d.success) {
+          setTools([]);
+          setFetchError(d.error || "Could not load tools from the server.");
+          return;
+        }
+        setTools(d.data);
+        setTotalPages(d.pagination?.totalPages || 1);
+        setTotal(d.pagination?.total || 0);
       })
-      .catch(console.error)
+      .catch(() => {
+        setTools([]);
+        setFetchError("Could not reach the server. Check your connection and try again.");
+      })
       .finally(() => setLoading(false));
   }, [page, statusFilter, accessFilter, search]);
 
@@ -203,7 +221,34 @@ export default function AiToolsListPage() {
             {loading ? (
               <tr><td colSpan={12} className="p-8 text-center text-sm text-muted-foreground">Loading...</td></tr>
             ) : tools.length === 0 ? (
-              <tr><td colSpan={12} className="p-8 text-center text-sm text-muted-foreground">No tools found.</td></tr>
+              <tr>
+                <td colSpan={12} className="p-8 text-center text-sm text-muted-foreground">
+                  {fetchError ? (
+                    <div className="space-y-2">
+                      <p className="text-destructive">{fetchError}</p>
+                      <button onClick={fetchTools} className="text-primary hover:underline">Retry</button>
+                    </div>
+                  ) : !search && statusFilter === "all" && accessFilter === "all" ? (
+                    <div className="mx-auto max-w-lg space-y-2">
+                      <p className="font-medium text-foreground">No tool records yet</p>
+                      <p>
+                        The AI tools collection is empty in this environment. Tools are added here in the
+                        dashboard, or seeded with <code className="rounded bg-muted px-1.5 py-0.5">npm run seed:ai-tools</code>{" "}
+                        (categories, tags, providers, plans, and draft tool records — existing records are never
+                        overwritten, and nothing is auto-published).
+                      </p>
+                      <div className="flex justify-center gap-4">
+                        <Link href="/dashboard/ai-tools/tools/create" className="text-primary hover:underline">
+                          Add your first tool
+                        </Link>
+                        <button onClick={fetchTools} className="text-primary hover:underline">Refresh</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <span>No tools found. Try clearing the search or filters.</span>
+                  )}
+                </td>
+              </tr>
             ) : (
               tools.map((tool) => (
                 <tr key={tool._id} className="border-b last:border-0 hover:bg-gray-50">
