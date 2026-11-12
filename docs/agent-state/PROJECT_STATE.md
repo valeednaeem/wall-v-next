@@ -10,14 +10,14 @@
 - **Stack:** Next.js 15.3.4 App Router, React 19, TypeScript 5.8 (strict), Tailwind CSS v4, MongoDB (Mongoose 9.7.4), NextAuth v5 (beta), tiptap, framer-motion, recharts, zod, Jest.
 - **Production:** Vercel (`valeednaeems-projects/wall-v-next`), production alias `https://www.wall-v.com`.
 
-## 2. Git State (verified)
+## 2. Git State (verified 2026-11-13)
 
-- **Branch:** `master`
-- **HEAD:** docs checkpoint following `104f9c5` (`fix(ai): staff-aware rate limits on public AI endpoints`) — see PROGRESS_LOG for full hashes.
-- **Working tree:** clean
-- **Ahead of origin:** **10 commits** (7 original: `247a2c8`, `88f0a3b`, `4ffe6c9`, `53a82d8`, `36846ec`, `b5ec2dd`, `ae9ea13` + Fix A `e2cad86` + Fix B `104f9c5` + this docs checkpoint) — **NOT pushed** (push to `master` auto-deploys Vercel; approval required)
-- **Ancestry:** `origin/master` = `2fcfb88` = merge-base → **0 behind / 10 ahead, clean fast-forward** (no merge, no unrelated histories)
-- **Origin:** `https://github.com/valeednaeem/wall-v-next.git` (plain HTTPS, no embedded credentials; default branch `master`)
+- **Branch:** `master` (canonical work line, unpushed). `deploy/pre-vapi` = preview snapshot branch (pushed, user-approved) at `de02ed5`.
+- **HEAD (base):** `de02ed5` (`fix(voice): claim Vapi webhook events before conversation upserts (F-1)`), preceded by `6756181` (F-5) and `8d4e825` (docs).
+- **Ahead of origin:** local `master` = **14 commits ahead of `origin/master`** (`2fcfb88`) after the General Settings Vapi code + docs commits — **NOT pushed** (push to `master` auto-deploys Vercel; approval required).
+- **Preview branch:** `deploy/pre-vapi` pushed (user-approved) → `origin/deploy/pre-vapi` = `de02ed5` — Vercel Preview only; does NOT yet contain the General Settings Vapi commits (re-push needs approval).
+- **Ancestry:** `origin/master` = `2fcfb88` = merge-base → clean fast-forward (no merge, no unrelated histories).
+- **Origin:** `https://github.com/valeednaeem/wall-v-next.git` (plain HTTPS, no embedded credentials; default branch `master`).
 - **Note:** Repository was **not** a git repo at session start; git was initialized locally during the deployment task on 2026-11-11.
 
 ## 3. Implementation Status
@@ -44,8 +44,10 @@ All four phases of the current brief are **COMPLETE (local commits, unpushed)**:
 5. **Public visitor capability access (Phase 4):** `capability-access.ts` policy (default deny, 5-tool public allow-list), `GET /api/ai/capabilities`, offer-filter + execution gate in both executors — **DONE** (`36846ec`).
 6. **Pre-deployment Fix A — Vapi webhook payload compatibility:** message-level `artifact`/`endedReason`/`transcript`/`messages`/`summary` first with call-level fallback, `transcriptPersisted` marker, sanitized missing-artifact diagnostic (never claims success), retry/idempotency preserved — **DONE** (`e2cad86`, 30 tests).
 7. **Pre-deployment Fix B — staff-aware rate limits:** `/api/ai/execute` 10/min anon + 30/min auth, `/api/ai/unified-chat` 15/min anon + 30/min auth, keyed per user/IP, consistent 429 + `Retry-After`, enforced before LLM/tools/writes — **DONE** (`104f9c5`, 7 tests). Store is process-local (per-instance only on Vercel — no shared store configured).
+8. **Webhook fixes F-5/F-1 + preview push:** empty-retry summary guard (`6756181`) + `VapiWebhookEvent` unique `eventKey` claim-before-upsert (`de02ed5`) — **DONE** (142 tests); pushed to `deploy/pre-vapi` (user-approved Vercel **Preview**; `origin/master` untouched).
+9. **General Settings → Voice Agent Configuration:** section renamed with **Dograh Agent** / **Vapi Voice Agent** cards, masked public-key input, config-status badge, read-only webhook endpoint, webhook-auth status (boolean only — secret server-side), selected-provider health checklist, save validation, DB `voice.vapiPublicKey` + env fallback in `/api/voice/status` and `/api/settings/public`, `useVapi`/`VapiWidget` public-key pass-through — **DONE** (171 tests / 13 suites), local commits only, **no push**.
 
-**Remaining (not code):** production `npm run seed:ai-tools` run (backup + preflight first — see §8), Vapi env vars + Vapi dashboard setup, Vapi E2E verification, push/deploy approval (user's post-fix review sequence).
+**Remaining (not code):** production `npm run seed:ai-tools` run (backup + preflight first — see §8), Vapi env vars + Vapi dashboard setup, Vapi E2E verification, push/deploy approval (user's review sequence), production provider switch (stays **Dograh** until explicitly approved).
 
 ## 6. Voice Integration State (verified 2026-11-12)
 

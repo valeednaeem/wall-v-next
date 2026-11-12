@@ -138,6 +138,28 @@
 - **Tests:** 7 new (`ai-endpoint-rate-limit.test.ts`, real store): anonymous within/over limit per endpoint, staff separate quota (IP exhausted → staff still allowed; staff 30/min own cap), rejection-before-execution (mock call counts unchanged on 429), 429 shape (status + body + Retry-After), per-endpoint quota isolation.
 - **Verification:** `npx tsc --noEmit` exit 0; `npm test` **11 suites / 131 tests passing** (+37 new); `npm run lint` exit 0 (only pre-existing warnings; no new warnings in changed files).
 
+## 2026-11-12 — Pre-deployment webhook fixes F-5/F-1 + approved preview push (commits `6756181`, `de02ed5`)
+
+- **F-5 (`6756181`):** stored Vapi conversation summaries protected from empty webhook retries (summary guard — an empty retry never clobbers a valid stored summary).
+- **F-1 (`de02ed5`):** new `VapiWebhookEvent` model with unique `eventKey` (mirrors Dograh's `DograhWebhookEvent` idempotency) — claim-before-upsert prevents duplicate conversation writes under concurrent/retried deliveries; deliberately NO unique index on `Conversation.sessionId`.
+- **Verification:** `tsc` 0, lint 0, **142 tests / 11 suites**, `npm run build` exit 0; secrets/design scan clean.
+- **Push (user-approved):** `git switch -c deploy/pre-vapi` + `git push -u origin deploy/pre-vapi` → `origin/deploy/pre-vapi` = `de02ed5` (Vercel **Preview** only). **`origin/master` untouched at `2fcfb88` — production not deployed.**
+
+## 2026-11-13 — General Settings → Voice Agent Configuration (Vapi alongside Dograh)
+
+- **User report:** Vapi Voice Agent options not visible in Dashboard → General Settings (brief required inspecting first, not trusting prior reports).
+- **Root causes found by inspection:**
+  1. Production `origin/master` (`2fcfb88`) predates ALL Vapi UI — controls exist only in local commits / the `deploy/pre-vapi` preview.
+  2. Health checklist + webhook URL were keyed to the **saved** `voiceStatus.provider` — with Dograh saved (production default), clicking the Vapi card still rendered Dograh items; Vapi health/webhook endpoint never appeared (primary "controls not appearing" defect).
+  3. Vapi config card only rendered after clicking the Vapi card, and its inner controls were hidden entirely when `voice.enabled` was false (empty card header).
+  4. Section named "Voice Agent Provider" (brief requires **Voice Agent Configuration**); cards labeled "Dograh"/"Vapi" (required "Dograh Agent"/"Vapi Voice Agent"); no Public API Key input; no explicit configuration-status line.
+- **UI (`src/app/dashboard/settings/page.tsx`):** section renamed **Voice Agent Configuration**; provider cards **Dograh Agent** / **Vapi Voice Agent**; active-(saved)-provider indicator + pending-selection note ("applies when you save"); checklist + webhook URL now keyed to the **selected** provider; Vapi card gains: masked `vapiPublicKey` input (existing `SecretInput`, show/hide), configuration-status badge (Configured/Missing/Error), read-only webhook endpoint, webhook-auth status (boolean only — secret stays server-side via `VAPI_WEBHOOK_SECRET` env, never an input, never returned); controls render when selected even while disabled (amber note); save validation requires Assistant ID AND resolved public key (dashboard input or env) when provider=vapi && enabled; "Test configuration" validates the selected provider. Dograh section untouched.
+- **API:** `/api/voice/status` + `/api/settings/public` resolve the public key as DB `voice.vapiPublicKey` → env fallback; public projection adds `vapi.publicKey` (public by design — required by the browser SDK) and fixes `publicKeyConfigured`; webhook secret / `VAPI_API_KEY` / organization id never projected. `/api/settings/general` unchanged (generic key-value PUT persists the new field).
+- **Runtime wiring:** `useVapi` gains optional `publicKey` prop (env fallback; client recreated if the key changes); `VapiWidget` passes `settings.vapi.publicKey`. Production provider remains **Dograh**; no dual-provider init; Dograh fallback untouched; no `VAPI_API_KEY` introduced.
+- **Tests:** +29 — `voice-settings-api.test.ts` (14: role matrix 401/403/200 for admin + super-admin across all three routes, DB public-key fallback, missing-config diagnostic, PUT persistence of `voice.provider`/`voice.vapiPublicKey`, reload-verify, and no-secret serialization — webhook secret/apiKey/organizationId never appear in any response) and `general-settings-voice-ui.test.tsx` (15: section + both provider options, Vapi controls appear on select despite saved=Dograh (regression guard), masked key + show/hide, no webhook-secret input anywhere, active-provider indicator, save blocked on missing key, PUT body carries provider + public key, Test configuration, Dograh controls intact).
+- **Test infra:** new `tsconfig.jest.json` (extends `tsconfig.json`, `jsx: "react-jsx"`) + `jest.config.js` points ts-jest at it — required because `tsconfig.json` uses `jsx: "preserve"` (Next.js), which left raw JSX under jest (first `.tsx` test suite in the repo).
+- **Verification:** `npx tsc --noEmit` exit 0; `npm run lint` exit 0 (pre-existing warnings only, none in changed files); `npm test` **13 suites / 171 tests passing** (+29 new); `npm run build` exit 0.
+
 ---
 
 *End of log entries for this session.*
