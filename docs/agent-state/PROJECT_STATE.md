@@ -1,7 +1,7 @@
 # Wall-V — Agent Project State (Authoritative Checkpoint)
 
-> **Last updated:** 2026-11-13
-> **Session context:** Two-part controlled recovery & integration project — Part A (persistent state management) + Part B–E (Dograh → Vapi recovery) + Stage 3 (General Settings Vapi controls)
+> **Last updated:** 2026-11-14
+> **Session context:** Two-part controlled recovery & integration project — Part A (persistent state management) + Part B–E (Dograh → Vapi recovery) + Stage 3 (General Settings Vapi controls) + Stage 4 (public Talk to Agent provider routing)
 > **Domain:** https://www.wall-v.com
 
 ## 1. Project Snapshot
@@ -13,8 +13,8 @@
 ## 2. Git State (verified 2026-11-13)
 
 - **Branch:** `master` (canonical work line, unpushed). `deploy/pre-vapi` = preview snapshot branch (pushed, user-approved) at `de02ed5`.
-- **HEAD (base):** `de02ed5` (`fix(voice): claim Vapi webhook events before conversation upserts (F-1)`), preceded by `6756181` (F-5) and `8d4e825` (docs).
-- **Ahead of origin:** local `master` = **14 commits ahead of `origin/master`** (`2fcfb88`) after the General Settings Vapi code + docs commits — **NOT pushed** (push to `master` auto-deploys Vercel; approval required).
+- **HEAD:** `64df936` (`fix(voice): route public Talk to Agent by selected provider, no Dograh fallback`) + docs handoff commit, on top of `85fc850`/`d0e71c4`/`0ec7430` (Stage 3), `de02ed5`/`6756181` (F-1/F-5).
+- **Ahead of origin:** local `master` = **17 commits ahead of `origin/master`** (`2fcfb88`) — **NOT pushed** (push to `master` auto-deploys Vercel; approval required).
 - **Preview branch:** `deploy/pre-vapi` pushed (user-approved) → `origin/deploy/pre-vapi` = `de02ed5` — Vercel Preview only; does NOT yet contain the General Settings Vapi commits (re-push needs approval).
 - **Ancestry:** `origin/master` = `2fcfb88` = merge-base → clean fast-forward (no merge, no unrelated histories).
 - **Origin:** `https://github.com/valeednaeem/wall-v-next.git` (plain HTTPS, no embedded credentials; default branch `master`).
@@ -46,6 +46,7 @@ All four phases of the current brief are **COMPLETE (local commits, unpushed)**:
 7. **Pre-deployment Fix B — staff-aware rate limits:** `/api/ai/execute` 10/min anon + 30/min auth, `/api/ai/unified-chat` 15/min anon + 30/min auth, keyed per user/IP, consistent 429 + `Retry-After`, enforced before LLM/tools/writes — **DONE** (`104f9c5`, 7 tests). Store is process-local (per-instance only on Vercel — no shared store configured).
 8. **Webhook fixes F-5/F-1 + preview push:** empty-retry summary guard (`6756181`) + `VapiWebhookEvent` unique `eventKey` claim-before-upsert (`de02ed5`) — **DONE** (142 tests); pushed to `deploy/pre-vapi` (user-approved Vercel **Preview**; `origin/master` untouched).
 9. **General Settings → Voice Agent Configuration:** section renamed with **Dograh Agent** / **Vapi Voice Agent** cards, masked public-key input, config-status badge, read-only webhook endpoint, webhook-auth status (boolean only — secret server-side), selected-provider health checklist, save validation, DB `voice.vapiPublicKey` + env fallback in `/api/voice/status` and `/api/settings/public`, `useVapi`/`VapiWidget` public-key pass-through — **DONE** (171 tests / 13 suites), local commits only, **no push**.
+10. **Stage 4 — public Talk to Agent provider routing (CRITICAL recovery brief):** `InlineVoicePanel` (/voice-agent) now resolves the provider from `/api/settings/public` and initialises ONLY that runtime (Dograh path unchanged; Vapi path via `useVapi` with loading/connecting/connected/error states); `VapiWidget` renders the exact required error — "Vapi Voice Agent is selected but not configured. Please contact the administrator." — when selected-but-unconfigured instead of silently disappearing, and surfaces `startCall` failures in-UI; `/api/settings/public` adds non-secret `vapi.assistantIdConfigured` + `vapi.configured`; shared `VAPI_NOT_CONFIGURED_MESSAGE` in `vapi-config.ts`; dashboard labels renamed to **Dograh Voice Agent** / **Vapi Voice Agent**, no-auto-fallback copy, **Validate Configuration** button; new `voice-provider-routing` test suite (12 tests) — **DONE** (`64df936`, 186 tests / 14 suites), local only, **no push**.
 
 **Remaining (not code):** production `npm run seed:ai-tools` run (backup + preflight first — see §8), Vapi env vars + Vapi dashboard setup, Vapi E2E verification, push/deploy approval (user's review sequence), production provider switch (stays **Dograh** until explicitly approved).
 
@@ -89,10 +90,10 @@ All four phases of the current brief are **COMPLETE (local commits, unpushed)**:
 
 ## 9. Test / Build / Deploy Status
 
-- `npx tsc --noEmit`: **clean** (exit 0). `npm run lint`: exit 0 (warnings only, all pre-existing; none in changed files). `npm test`: **13 suites / 171 tests passing** (incl. 30 webhook + 7 rate-limit + 29 General Settings voice tests). `npm run build`: **exit 0** (2026-11-13).
-- Vercel deployment: **Ready** (production, old design) — unchanged; **no push/deploy** for the 14 local commits. `origin/master` = `2fcfb88`; `origin/deploy/pre-vapi` = `de02ed5` (preview only, does not yet contain the General Settings commits).
+- `npx tsc --noEmit`: **clean** (exit 0). `npm run lint`: exit 0 (warnings only, all pre-existing; none in changed files). `npm test`: **14 suites / 186 tests passing** (incl. 30 webhook + 7 rate-limit + 29 General Settings voice + 12 provider-routing tests). `npm run build`: **exit 0** (2026-11-14; robots/sitemap `MONGODB_URI` warnings are the known local no-`.env` condition, build completes).
+- Vercel deployment: **Ready** (production, old design) — unchanged; **no push/deploy** for the 17 local commits. `origin/master` = `2fcfb88`; `origin/deploy/pre-vapi` = `de02ed5` (preview only, does not yet contain the General Settings or provider-routing commits).
 - Live site: `https://www.wall-v.com` — responding (untouched).
-- **NOT runtime-verified:** webhook payload fix (needs a real Vapi E2E call), rate limiting in the actual Vercel deployment (process-local store), and the new General Settings save/load flow against the real DB (unit/component-tested only).
+- **NOT runtime-verified:** webhook payload fix (needs a real Vapi E2E call), rate limiting in the actual Vercel deployment (process-local store), the General Settings save/load flow against the real DB, and the new public provider routing in a real browser (component-tested with mocked SDKs only — no live Vapi or Dograh call made).
 
 ## 10. Architectural Decisions / Constraints
 
@@ -106,12 +107,12 @@ All four phases of the current brief are **COMPLETE (local commits, unpushed)**:
 
 ## 11. Exact Next Action Required to Resume
 
-- Brief Phases 1–4, Fixes A/B, webhook fixes F-5/F-1, and Stage 3 (General Settings Vapi): **ALL COMPLETE** (local commits; see PROGRESS_LOG).
-- **Current stop point (2026-11-13):** Stage 3 final report (8 items) delivered — **STOPPED, awaiting user approval.** Nothing pushed, nothing deployed, production provider still Dograh.
-  - Code commit: **`0ec7430`** (`feat(settings): Vapi Voice Agent controls in General Settings alongside Dograh`)
-  - Docs commits: `d0e71c4` (+ this handoff commit) — local `master` ahead of `origin/master` by 15.
+- Brief Phases 1–4, Fixes A/B, webhook fixes F-5/F-1, Stage 3 (General Settings Vapi), and Stage 4 (public provider routing): **ALL COMPLETE** (local commits; see PROGRESS_LOG).
+- **Current stop point (2026-11-14):** Stage 4 final report (13 items) delivered for the CRITICAL VOICE AGENT RECOVERY brief — **STOPPED, awaiting user approval.** Nothing pushed, nothing deployed, production provider still Dograh.
+  - Code commit: **`64df936`** (`fix(voice): route public Talk to Agent by selected provider, no Dograh fallback`)
+  - Docs commits: this handoff — local `master` ahead of `origin/master` by 17.
 - Resume sequence on approval:
-  1. **User review** of the General Settings work (report above: root causes, controls, permissions, APIs, tests).
+  1. **User review** of the provider-routing work (report: root causes, files, routing behaviour, permissions, env audit, tests).
   2. **Approval decision:** push new commits to `master` (auto-deploys Vercel) and/or re-push `deploy/pre-vapi` for Preview — each needs explicit approval.
   3. **Vapi E2E:** real browser Web SDK call; webhook credential = Header Name `X-Vapi-Secret`, Bearer prefix OFF, token = `VAPI_WEBHOOK_SECRET`; server URL `https://www.wall-v.com/api/webhooks/vapi`; verify duration semantics.
   4. **Deployment check:** rate limiting on Vercel (process-local store = per-instance only).
