@@ -63,6 +63,10 @@ export async function GET() {
       (typeof grouped.voice?.vapiPublicKey === "string" && grouped.voice.vapiPublicKey.trim()) ||
       getVapiPublicKey() ||
       "";
+    const vapiAssistantId =
+      (typeof grouped.voice?.vapiAssistantId === "string" && grouped.voice.vapiAssistantId.trim()) ||
+      getVapiAssistantId() ||
+      "";
 
     return NextResponse.json({
       success: true,
@@ -102,9 +106,13 @@ export async function GET() {
           systemPrompt: grouped.voice?.systemPrompt || "",
           // Non-secret Vapi values only (safe for the browser SDK).
           vapi: {
-            assistantId: grouped.voice?.vapiAssistantId || getVapiAssistantId() || "",
+            assistantId: vapiAssistantId,
             publicKey: vapiPublicKey,
             publicKeyConfigured: Boolean(vapiPublicKey),
+            assistantIdConfigured: Boolean(vapiAssistantId),
+            // Combined non-secret flag — public widgets gate on this to decide
+            // between the Vapi call UI and the "not configured" error.
+            configured: Boolean(vapiPublicKey && vapiAssistantId),
             firstMessage: grouped.voice?.vapiFirstMessage || "",
           },
         },

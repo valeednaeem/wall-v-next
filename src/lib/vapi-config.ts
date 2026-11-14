@@ -14,6 +14,14 @@ export const VAPI_API_KEY_ENV = "VAPI_API_KEY";
 export const VAPI_ORGANIZATION_ID_ENV = "VAPI_ORGANIZATION_ID";
 export const VAPI_SERVER_URL_ENV = "VAPI_SERVER_URL";
 
+/**
+ * Exact public-facing message shown when Vapi is the selected provider but
+ * its configuration (public key and/or assistant ID) is missing. Used by the
+ * public voice widgets — never init Dograh as a fallback in this state.
+ */
+export const VAPI_NOT_CONFIGURED_MESSAGE =
+  "Vapi Voice Agent is selected but not configured. Please contact the administrator.";
+
 export interface VapiResolvedConfig {
   publicKey: string | null;
   assistantId: string | null;

@@ -221,6 +221,25 @@ describe("GET /api/settings/public — browser projection", () => {
     expect(serialized).not.toContain("webhookSecret");
     expect(serialized).not.toContain("apiKey");
   });
+
+  it("exposes a combined non-secret 'configured' flag for public widget gating", async () => {
+    const res = (await publicSettingsGet()) as unknown as RouteResponse;
+    const vapi = (res.body as { data: { voice: { vapi: Record<string, unknown> } } }).data.voice.vapi;
+    expect(vapi.assistantIdConfigured).toBe(true);
+    expect(vapi.configured).toBe(true);
+    expect(typeof vapi.configured).toBe("boolean");
+  });
+
+  it("reports configured=false when the assistant ID is missing (public key alone is not enough)", async () => {
+    mockFind.mockReturnValue({
+      lean: jest.fn().mockResolvedValue(VOICE_DOCS.filter((d) => d.key !== "voice.vapiAssistantId")),
+    });
+    const res = (await publicSettingsGet()) as unknown as RouteResponse;
+    const vapi = (res.body as { data: { voice: { vapi: Record<string, unknown> } } }).data.voice.vapi;
+    expect(vapi.assistantId).toBe("");
+    expect(vapi.assistantIdConfigured).toBe(false);
+    expect(vapi.configured).toBe(false);
+  });
 });
 
 // ─── GET/PUT /api/settings/general — lifecycle + role matrix ────────────────

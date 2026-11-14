@@ -116,7 +116,7 @@ describe("General Settings → Voice Agent Configuration", () => {
     await renderVoiceTab();
 
     expect(screen.getByRole("heading", { name: "Voice Agent Configuration" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Dograh Agent/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Dograh Voice Agent/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Vapi Voice Agent/ })).toBeInTheDocument();
 
     // Saved provider is Dograh → Dograh controls visible, Vapi controls hidden.
@@ -180,7 +180,7 @@ describe("General Settings → Voice Agent Configuration", () => {
     await renderVoiceTab();
 
     const indicator = screen.getByText(/Active provider \(saved\)/);
-    expect(indicator.textContent).toContain("Dograh Agent");
+    expect(indicator.textContent).toContain("Dograh Voice Agent");
 
     fireEvent.click(screen.getByRole("button", { name: /Vapi Voice Agent/ }));
     expect(screen.getByText(/selected: Vapi Voice Agent \(applies when you save\)/)).toBeInTheDocument();
@@ -238,7 +238,7 @@ describe("General Settings → Voice Agent Configuration", () => {
     await renderVoiceTab();
     fireEvent.click(screen.getByRole("button", { name: /Vapi Voice Agent/ }));
 
-    fireEvent.click(screen.getByRole("button", { name: /Test configuration/ }));
+    fireEvent.click(await screen.findByRole("button", { name: /Validate Configuration/ }));
 
     expect(await screen.findByText("Vapi configuration looks complete.")).toBeInTheDocument();
   });
@@ -246,7 +246,7 @@ describe("General Settings → Voice Agent Configuration", () => {
   it("keeps Dograh controls intact after switching back", async () => {
     await renderVoiceTab();
     fireEvent.click(screen.getByRole("button", { name: /Vapi Voice Agent/ }));
-    fireEvent.click(screen.getByRole("button", { name: /Dograh Agent/ }));
+    fireEvent.click(await screen.findByRole("button", { name: /Dograh Voice Agent/ }));
 
     expect(screen.getByText("Widget Script URL")).toBeInTheDocument();
     expect(screen.getByDisplayValue("https://app.dograh.com/embed/dograh-widget.js?token=abc123")).toBeInTheDocument();

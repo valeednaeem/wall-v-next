@@ -509,7 +509,7 @@ BEHAVIOR:
               <div>
                 <h3 className="font-semibold">Voice Agent Configuration</h3>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Choose which provider powers the website voice widget. Dograh stays available as a fallback.
+                  Choose which provider powers the website voice widget. Dograh stays installed but is never used as an automatic fallback when Vapi is selected.
                 </p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
@@ -522,12 +522,12 @@ BEHAVIOR:
               <p className="text-xs text-muted-foreground">
                 Active provider (saved):{" "}
                 <span className="font-medium text-foreground">
-                  {voiceStatus.provider === "vapi" ? "Vapi Voice Agent" : "Dograh Agent"}
+                  {voiceStatus.provider === "vapi" ? "Vapi Voice Agent" : "Dograh Voice Agent"}
                 </span>
                 {voice.provider !== voiceStatus.provider && (
                   <span className="text-amber-600">
                     {" "}
-                    — selected: {voice.provider === "vapi" ? "Vapi Voice Agent" : "Dograh Agent"} (applies when you save)
+                    — selected: {voice.provider === "vapi" ? "Vapi Voice Agent" : "Dograh Voice Agent"} (applies when you save)
                   </span>
                 )}
               </p>
@@ -539,7 +539,7 @@ BEHAVIOR:
                 onClick={() => setVoice({ ...voice, provider: "dograh" })}
                 className={`rounded-lg border p-4 text-left transition-colors ${voice.provider === "dograh" ? "border-primary bg-primary/5" : "hover:border-primary/40"}`}
               >
-                <p className="font-medium">Dograh Agent</p>
+                <p className="font-medium">Dograh Voice Agent</p>
                 <p className="text-xs text-muted-foreground mt-1">Self-hosted Dograh widget (current production provider).</p>
               </button>
               <button
@@ -562,7 +562,7 @@ BEHAVIOR:
                   className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-xs font-medium hover:bg-muted disabled:opacity-50"
                 >
                   {testingVoice && <Loader2 className="h-3 w-3 animate-spin" />}
-                  Test configuration
+                  Validate Configuration
                 </button>
               </div>
               {voiceStatusError && <p className="text-xs text-amber-600">{voiceStatusError}</p>}

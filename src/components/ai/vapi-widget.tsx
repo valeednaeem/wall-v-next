@@ -3,15 +3,23 @@
 /**
  * Vapi floating voice widget.
  *
- * Renders only when the site's active voice provider is "vapi" and voice is
+ * Renders when the site's active voice provider is "vapi" and voice is
  * enabled. Uses the `useVapi` hook (Vapi Web SDK) with the DB-managed
  * assistant ID, system prompt, and first message from public settings.
  * Dograh is never imported or initialized here.
+ *
+ * Three-layer gating:
+ *  1. provider must be "vapi" (Dograh widget renders instead otherwise)
+ *  2. voice must be enabled
+ *  3. configuration must be complete (public key + assistant ID) — when it
+ *     is NOT, the required error is shown instead of silently rendering
+ *     nothing or falling back to Dograh.
  */
 import { useCallback, useEffect, useState } from "react";
-import { Mic, PhoneOff, Loader2 } from "lucide-react";
+import { Mic, PhoneOff, Loader2, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useVapi } from "@/hooks/useVapi";
+import { VAPI_NOT_CONFIGURED_MESSAGE } from "@/lib/vapi-config";
 
 interface VapiWidgetSettings {
   enabled: boolean;
@@ -24,6 +32,8 @@ interface VapiWidgetSettings {
     assistantId: string;
     publicKey: string;
     publicKeyConfigured: boolean;
+    assistantIdConfigured?: boolean;
+    configured?: boolean;
     firstMessage: string;
   };
 }
@@ -31,6 +41,7 @@ interface VapiWidgetSettings {
 export function VapiWidget() {
   const [settings, setSettings] = useState<VapiWidgetSettings | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const [startError, setStartError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/settings/public")
@@ -42,12 +53,17 @@ export function VapiWidget() {
       .catch(() => setLoaded(true));
   }, []);
 
-  const isActive = Boolean(
-    loaded && settings?.enabled && settings?.provider === "vapi"
+  const voiceActive = Boolean(loaded && settings?.enabled && settings?.provider === "vapi");
+  // Prefer the server-computed combined flag; fall back to component-level
+  // derivation for older cached responses.
+  const configured = Boolean(
+    voiceActive &&
+      (settings?.vapi?.configured ??
+        (settings?.vapi?.publicKeyConfigured && settings?.vapi?.assistantId))
   );
 
   const { status, duration, error, startCall, endCall } = useVapi({
-    enabled: isActive,
+    enabled: voiceActive && configured,
     assistantId: settings?.vapi?.assistantId || undefined,
     publicKey: settings?.vapi?.publicKey || undefined,
     onError: (err) => console.error("[Vapi] call error:", err),
@@ -58,28 +74,57 @@ export function VapiWidget() {
       endCall();
       return;
     }
+    setStartError(null);
     try {
       await startCall({
         systemPrompt: settings?.systemPrompt || undefined,
         firstMessage: settings?.vapi?.firstMessage || undefined,
       });
     } catch (err) {
+      // Surface the failure in the UI — never fail silently to the console.
+      const message = err instanceof Error ? err.message : "Failed to start the Vapi voice call.";
       console.error("[Vapi] failed to start call:", err);
+      setStartError(message);
     }
   }, [status, endCall, startCall, settings]);
 
   if (!loaded || !settings || settings.provider !== "vapi" || !settings.enabled) return null;
-  if (!settings.vapi?.publicKeyConfigured) return null;
 
   const isLive = status === "connected";
   const position = settings.position || "bottom-left";
   const positionClasses = position === "bottom-left" ? "left-6" : "right-6";
+
+  // Selected but unconfigured → required diagnostic (no Dograh fallback).
+  if (!configured) {
+    const missing = !settings.vapi?.publicKeyConfigured
+      ? "The Vapi Public API Key is missing."
+      : "The Vapi Assistant ID is missing.";
+    return (
+      <div
+        className={cn(
+          "fixed bottom-24 z-50 w-[320px] max-w-[calc(100vw-3rem)] rounded-xl border border-destructive/20 bg-destructive/5 p-4 text-xs shadow-lg",
+          positionClasses
+        )}
+        role="alert"
+      >
+        <div className="flex items-start gap-2">
+          <AlertCircle className="h-4 w-4 shrink-0 text-destructive mt-0.5" />
+          <div>
+            <p className="font-medium text-destructive">{VAPI_NOT_CONFIGURED_MESSAGE}</p>
+            <p className="mt-1 text-muted-foreground">{missing}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const formatDuration = (s: number) => {
     const m = Math.floor(s / 60);
     const sec = s % 60;
     return `${m}:${sec.toString().padStart(2, "0")}`;
   };
+
+  const shownError = error || startError;
 
   return (
     <>
@@ -105,7 +150,7 @@ export function VapiWidget() {
         {isLive && <span className="ml-1 text-xs opacity-80">{formatDuration(duration)}</span>}
       </button>
 
-      {error && !isLive && (
+      {shownError && !isLive && (
         <div
           className={cn(
             "fixed bottom-24 z-50 w-[300px] max-w-[calc(100vw-3rem)] rounded-xl border bg-white p-4 text-xs text-destructive shadow-lg",
@@ -113,7 +158,7 @@ export function VapiWidget() {
           )}
           role="status"
         >
-          {error}
+          {shownError}
         </div>
       )}
     </>
