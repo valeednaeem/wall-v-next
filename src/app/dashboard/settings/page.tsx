@@ -823,7 +823,9 @@ BEHAVIOR:
                     placeholder="You are Wall-V's AI voice assistant..."
                   />
                   <p className="text-xs text-muted-foreground mt-1">
-                    Passed to Vapi as <code>assistantOverrides.systemPrompt</code> when a call starts (via the useVapi hook).
+                    Passed to Dograh as <code>system_prompt</code> context when a call starts. Vapi does not accept a
+                    per-call system prompt override — when Vapi is the provider, this prompt must be configured on the
+                    Vapi assistant itself (in the Vapi dashboard).
                   </p>
                 </div>
 

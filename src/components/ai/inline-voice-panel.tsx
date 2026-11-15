@@ -11,7 +11,7 @@
  */
 import { useId, useCallback, useEffect, useRef, useState } from "react";
 import { useDograh } from "./voice-agent";
-import { useVapi } from "@/hooks/useVapi";
+import { useVapi, extractVapiErrorMessage } from "@/hooks/useVapi";
 import { VAPI_NOT_CONFIGURED_MESSAGE } from "@/lib/vapi-config";
 import { Mic, PhoneOff, Loader2, Phone, Volume2, AlertCircle, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -140,13 +140,16 @@ export function InlineVoicePanel({
   const handleVapiStart = useCallback(async () => {
     setStartError(null);
     try {
+      // NOTE: systemPrompt is intentionally not sent — Vapi's
+      // `AssistantOverrides` has no such field; the prompt lives on the
+      // Vapi assistant itself. (`systemPromptRef` remains in use for the
+      // Dograh path above.)
       await vapiStartCall({
-        systemPrompt: systemPromptRef.current || undefined,
         firstMessage: effective.vapi?.firstMessage || undefined,
       });
     } catch (err) {
       // Surface mic/browser/SDK failures in the UI instead of the console.
-      const message = err instanceof Error ? err.message : "Failed to start the Vapi voice call.";
+      const message = extractVapiErrorMessage(err, "Failed to start the Vapi voice call.");
       console.error("[Inline Voice] Vapi start failed:", err);
       setStartError(message);
     }

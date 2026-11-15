@@ -18,7 +18,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Mic, PhoneOff, Loader2, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useVapi } from "@/hooks/useVapi";
+import { useVapi, extractVapiErrorMessage } from "@/hooks/useVapi";
 import { VAPI_NOT_CONFIGURED_MESSAGE } from "@/lib/vapi-config";
 
 interface VapiWidgetSettings {
@@ -76,13 +76,15 @@ export function VapiWidget() {
     }
     setStartError(null);
     try {
+      // NOTE: systemPrompt is intentionally not sent — Vapi's
+      // `AssistantOverrides` has no such field; the prompt lives on the
+      // Vapi assistant itself.
       await startCall({
-        systemPrompt: settings?.systemPrompt || undefined,
         firstMessage: settings?.vapi?.firstMessage || undefined,
       });
     } catch (err) {
       // Surface the failure in the UI — never fail silently to the console.
-      const message = err instanceof Error ? err.message : "Failed to start the Vapi voice call.";
+      const message = extractVapiErrorMessage(err, "Failed to start the Vapi voice call.");
       console.error("[Vapi] failed to start call:", err);
       setStartError(message);
     }

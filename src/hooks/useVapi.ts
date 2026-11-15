@@ -10,9 +10,12 @@
  * - onStatusChange / onCallConnected / onCallDisconnected / onError
  *
  * Call context maps to Vapi `assistantOverrides`:
- * - `systemPrompt` → `assistantOverrides.systemPrompt` (system-role message)
  * - `firstMessage` → `assistantOverrides.firstMessage` (greeting)
  * - `variables` → `assistantOverrides.variableValues` (dynamic template vars)
+ *
+ * NOTE: `AssistantOverrides` has no `systemPrompt` field (verified against the
+ * SDK's generated `api.ts`), so the system prompt is intentionally NOT
+ * forwarded — it must be configured on the Vapi assistant itself.
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import Vapi from "@vapi-ai/web";
@@ -21,7 +24,6 @@ import { getVapiAssistantId, getVapiPublicKey } from "@/lib/vapi-config";
 export type VapiCallStatus = "idle" | "connecting" | "connected" | "failed";
 
 export interface VapiCallContextInput {
-  systemPrompt?: string;
   firstMessage?: string;
   variables?: Record<string, string>;
 }
@@ -48,6 +50,46 @@ export interface UseVapiResult {
 
 let vapiClient: Vapi | null = null;
 let vapiClientKey: string | null = null;
+
+/**
+ * Best-effort message extraction for Vapi SDK failures.
+ *
+ * The Web SDK's `error` events carry plain payloads such as
+ * `{ type, stage, error: { message, name, stack } }` rather than `Error`
+ * instances, so a bare `instanceof Error` check hides the real reason behind
+ * a generic fallback. Handles: `Error`, string, `{ message }`, and the
+ * SDK's nested `{ error: { message } }` / `{ error: "..." }` shapes.
+ *
+ * @param fallback Text to show when no message can be found.
+ */
+export function extractVapiErrorMessage(err: unknown, fallback: string): string {
+  if (err === null || err === undefined) return fallback;
+  if (err instanceof Error) return err.message.trim() || fallback;
+  if (typeof err === "string") return err.trim() || fallback;
+
+  if (typeof err === "object") {
+    const obj = err as Record<string, unknown>;
+    // Nested SDK shape: { type, stage, error: { message, name, stack } }
+    // or { error: "string" }.
+    const nested = obj["error"];
+    if (typeof nested === "string" && nested.trim()) return nested.trim();
+    if (nested !== null && typeof nested === "object") {
+      const msg = (nested as Record<string, unknown>)["message"];
+      if (typeof msg === "string" && msg.trim()) return msg.trim();
+    }
+    // Direct shape: { message: "..." }
+    const msg = obj["message"];
+    if (typeof msg === "string" && msg.trim()) return msg.trim();
+    // Last resort — at least name the failure stage instead of hiding it.
+    const type = typeof obj["type"] === "string" ? obj["type"] : "";
+    const stage = typeof obj["stage"] === "string" ? obj["stage"] : "";
+    if (type || stage) {
+      const label = type && stage && type !== stage ? `${type} (${stage})` : type || stage;
+      return `Vapi voice call error: ${label}.`;
+    }
+  }
+  return fallback;
+}
 
 function getVapiClient(publicKeyOverride?: string): Vapi | null {
   const publicKey = publicKeyOverride?.trim() || getVapiPublicKey();
@@ -111,8 +153,8 @@ export function useVapi(options: UseVapiOptions = {}): UseVapiResult {
       callbacksRef.current.onCallConnected?.({ callId: event?.callId });
     };
 
-    const handleCallStartFailed = (event: { error?: string }) => {
-      const message = event?.error ?? "Vapi call failed to start.";
+    const handleCallStartFailed = (event: { error?: unknown }) => {
+      const message = extractVapiErrorMessage(event?.error, "Vapi call failed to start.");
       setStatusSafe("failed");
       setError(message);
       callbacksRef.current.onError?.(new Error(message));
@@ -125,7 +167,7 @@ export function useVapi(options: UseVapiOptions = {}): UseVapiResult {
     };
 
     const handleError = (err: unknown) => {
-      const message = err instanceof Error ? err.message : "Vapi voice call error.";
+      const message = extractVapiErrorMessage(err, "Vapi voice call error.");
       setStatusSafe("failed");
       setError(message);
       callbacksRef.current.onError?.(err);
@@ -154,11 +196,12 @@ export function useVapi(options: UseVapiOptions = {}): UseVapiResult {
       if (!assistantId) throw new Error("Vapi assistant ID is not configured.");
 
       const assistantOverrides: {
-        systemPrompt?: string;
         firstMessage?: string;
         variableValues?: Record<string, string>;
       } = {};
-      if (context?.systemPrompt) assistantOverrides.systemPrompt = context.systemPrompt;
+      // NOTE: never send `systemPrompt` here — it is not a field of Vapi's
+      // `AssistantOverrides` and the API rejects/strips it. The system prompt
+      // is configured on the Vapi assistant itself.
       if (context?.firstMessage) assistantOverrides.firstMessage = context.firstMessage;
       if (context?.variables) assistantOverrides.variableValues = context.variables;
 

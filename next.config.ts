@@ -25,12 +25,23 @@ const securityHeaders = [
     key: "Content-Security-Policy",
     value: [
       "default-src 'self'",
-      `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://checkout.stripe.com https://apis.google.com https://accounts.google.com https://dograh.vercel.app https://app.dograh.com https://www.googletagmanager.com https://www.google-analytics.com https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://adservice.google.com${devScriptSrc}`,
+      // Vapi Web SDK → Daily.co runtime: the SDK loads Daily's
+      // call-machine bundle from c.daily.co at call start (blob: for
+      // Daily's audio workers). Dograh entries are retained untouched.
+      `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://checkout.stripe.com https://apis.google.com https://accounts.google.com https://dograh.vercel.app https://app.dograh.com https://www.googletagmanager.com https://www.google-analytics.com https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://adservice.google.com https://c.daily.co https://*.daily.co https://*.dailywebrtc.com https://*.dailywebrtc.net blob:${devScriptSrc}`,
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "img-src 'self' data: blob: https: http: https://www.google-analytics.com https://stats.g.doubleclick.net",
       "font-src 'self' https://fonts.gstatic.com",
-      `connect-src 'self' https://api.openai.com https://api.anthropic.com https://dograh.vercel.app https://app.dograh.com https://api.dograh.com wss://api.dograh.com https://www.google-analytics.com https://region1.google-analytics.com https://analytics.google.com https://stats.g.doubleclick.net${devConnectSrc}`,
+      // Vapi + Daily.co: the Vapi Web SDK creates the web call via
+      // POST https://api.vapi.ai, then joins a Daily.co room (HTTPS + WSS
+      // on Daily's allowed base domains). Sentry ingest is Daily's bundled
+      // error reporter. Dograh entries are retained untouched.
+      `connect-src 'self' https://api.openai.com https://api.anthropic.com https://dograh.vercel.app https://app.dograh.com https://api.dograh.com wss://api.dograh.com https://www.google-analytics.com https://region1.google-analytics.com https://analytics.google.com https://stats.g.doubleclick.net https://api.vapi.ai https://c.daily.co https://*.daily.co wss://*.daily.co https://*.dailywebrtc.com wss://*.dailywebrtc.com https://*.dailywebrtc.net wss://*.dailywebrtc.net https://*.ingest.sentry.io${devConnectSrc}`,
       "frame-src 'self' https://js.stripe.com https://checkout.stripe.com https://www.youtube.com https://storage.googleapis.com https://maps.google.com https://www.google.com https://pagead2.googlesyndication.com https://tpc.googlesyndication.com",
+      // Daily.co spawns audio-processing workers from blob: URLs and
+      // plays remote audio via blob:/mediastream: sources during a call.
+      "worker-src 'self' blob:",
+      "media-src 'self' blob: mediastream:",
     ].join("; "),
   },
 ];
